@@ -1,0 +1,12 @@
+:root {
+  --text: #1e293b;
+  --bg: #f8fafc;
+  --accent: #0f766e;
+}
+body {
+  color: var(--text);
+  background: linear-gradient(180deg, #f8fafc 0%, #ecfeff 100%);
+}
+a {
+  color: var(--accent);
+}
