@@ -7,6 +7,8 @@ title: Book Project
 
 This site is the landing page for the manuscript, proof-of-concept implementations, programming examples, and blog updates.
 
+<img src="/assets/img/spiders-web-2.png" alt="Spider web with Prolog query and answers" style="width: 6cm;">
+
 ## Project Repositories
 
 1. Manuscript (private): [torbjornlager/boken](https://github.com/torbjornlager/boken)
