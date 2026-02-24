@@ -1,0 +1,175 @@
+<><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Prolog Trinity Manifesto</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    --text: black;
+    --text-light: #555;
+    --bg: white;
+    --rule: #d4d0c8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-ui);
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 38em;
+    margin: 0 auto;
+    padding: 5rem 2rem 6rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  header h1 {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 2.5rem;
+    color: darkgreen;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.6rem;
+  }
+
+  header .subtitle {
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--text-light);
+    line-height: 1.6;
+  }
+
+  .preamble {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 1.05rem;
+    line-height: 1.9;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  .separator {
+    text-align: center;
+    margin: 2.5rem 0;
+    color: var(--rule);
+    letter-spacing: 0.5em;
+    font-size: 0.8rem;
+  }
+
+  .point {
+    margin-bottom: 1.8rem;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  .point-number {
+    font-weight: 600;
+    margin-right: 0.15em;
+  }
+
+  .point-title {
+    font-weight: 600;
+  }
+
+  .coda {
+    margin-top: 2.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-style: italic;
+    color: var(--text-light);
+    font-size: 1.05rem;
+    line-height: 1.8;
+  }
+
+  @media print {
+    .page { padding: 2rem 0; }
+    body { background: #fff; }
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 3rem 1.5rem 4rem; }
+    header h1 { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>The Prolog Trinity Manifesto</h1>
+  <p class="subtitle">Let's webize Prolog, prologize the Web, and<br>populate the Web with clever Prolog agents!</p>
+</header>
+
+<div class="preamble">
+We stand at a crossroads. The Web has become the dominant platform for computation, communication, and intelligence — yet logic programming, one of the most powerful paradigms ever conceived for knowledge representation and reasoning, remains largely absent from it. Meanwhile, an era of opaque statistical models threatens to reduce "intelligence" to pattern-matching without understanding. We refuse to accept this as inevitable. We propose instead a reassertion of symbolic reasoning, declarative knowledge, and logical coordination on the Web — through the Prolog Trinity ecosystem.
+</div>
+
+<div class="separator">* * *</div>
+
+<p class="point"><span class="point-number">I.</span> <span class="point-title">Logic on the Web must be executable, not merely representational.</span> The Semantic Web showed that structured meaning and shared representations matter. But representation without execution is inert. The Web needs a disciplined substrate for running queries, hosting rules, shipping code, and maintaining long-lived interactions under explicit operational rules. We propose to supply it.</p>
+
+<p class="point"><span class="point-number">II.</span> <span class="point-title">Prolog is a web technology in its own right.</span> The goal is not that Prolog can merely expose an HTTP endpoint. The goal is that Prolog becomes legible, usable, and adoptable in the way other web technologies are: with shared interfaces, test suites, playgrounds, public nodes, and a culture of composition. Prolog's traditional strengths — explicit representation, rule-based inference, nondeterminism, and meta-programming — belong in the places where web applications and agentic systems increasingly need them.</p>
+
+<p class="point"><span class="point-number">III.</span> <span class="point-title">The Prolog Trinity is one ecosystem seen from three angles.</span> Web Prolog, Prolog agents, and the Prolog Web are not three loosely related ideas. They are mutually constraining: the language profile determines what can be exposed safely and portably; the agent model determines which long-lived behaviours can be made robust; and the network substrate determines which forms of composition are realistic at web scale. Each strand keeps the others honest.</p>
+
+<p class="point"><span class="point-number">IV.</span> <span class="point-title">Web Prolog is Prolog reimagined for the open world.</span> Web Prolog is a carefully crafted profile of Prolog — a web logic programming language that combines the relational core of Prolog with Erlang-style actors and standard web protocols. It is intentionally bilingual at the transport level while remaining monolingual at the language level: the same Prolog terms and the same programming idioms scale from request–response querying to long-lived actor conversations.</p>
+
+<p class="point"><span class="point-number">V.</span> <span class="point-title">Agents are the primary abstraction.</span> We advocate a core shift: treat agents as the primary abstraction. Nodes are not merely servers; they are situated participants that expose capabilities under a policy, host persistent knowledge, and mediate between clients, services, and the network. Actors are not merely processes; they are long-lived loci of interaction with mailboxes, protocols, lifecycles, and failure modes that must be governed.</p>
+
+<p class="point"><span class="point-number">VI.</span> <span class="point-title">Concurrency belongs in logic programming, and Erlang showed us how.</span> The actor model — processes with mailboxes, message ordering as a semantic concern, failure propagation, and supervision — is the right foundation for concurrent and distributed Prolog. Web Prolog adopts Erlang's foundation while embedding it in a logic programming context, treating distribution as a natural extension of local message passing. The result is more capable than traditional Prolog or Erlang alone.</p>
+
+<p class="point"><span class="point-number">VII.</span> <span class="point-title">The Prolog Web is a network of logic-driven nodes, not a collection of isolated services.</span> Turn-key Prolog nodes provide the structure needed to populate a distributed network of message-passing, logic-driven agents. Nodes share a uniform design so that newcomers can learn them quickly, practitioners can use them effectively, and deployers can operate them with minimal effort. This consistency allows the Prolog Web to grow organically into a coherent, agent-populated environment.</p>
+
+<p class="point"><span class="point-number">VIII.</span> <span class="point-title">Nondeterministic remote procedure calls are a distinctive web-programming capability.</span> The Prolog Web supports forms of distributed interaction difficult to realise cleanly in other web programming models. A client can request multiple answers to a query from a remote node, mirroring Prolog's local search behaviour across the network. This preserves the declarative reading of logic programs while extending it seamlessly to distributed settings.</p>
+
+<p class="point"><span class="point-number">IX.</span> <span class="point-title">Two partitions serve different truths, and both are needed.</span> The sequential partition is the world of goals and relations — a client poses a goal and receives answers. The concurrent partition is the world of actors and interactions — message ordering, selective receive, process lifetime, failure propagation, and supervision. Many realistic systems will deliberately mix the two. The Trinity treats this not as a compromise but as a first-class design choice.</p>
+
+<p class="point"><span class="point-number">X.</span> <span class="point-title">Unification is the universal data contract.</span> Where other web frameworks negotiate data interchange through schema validators and serialisation layers, Web Prolog offers unification: a single, bidirectional mechanism that simultaneously tests compatibility, extracts information, and binds variables. This makes Prolog terms a natural lingua franca for the Prolog Web.</p>
+
+<p class="point"><span class="point-number">XI.</span> <span class="point-title">Federation, not unification.</span> The aim is not to design a new Prolog that all existing systems must become, nor to declare a single implementation as the reference centre of gravity. The aim is to create shared interaction surfaces — web-facing interfaces and execution profiles that multiple systems can implement while remaining free to diverge internally. Federation treats interoperability as a public good and internal design freedom as a local right.</p>
+
+<p class="point"><span class="point-number">XII.</span> <span class="point-title">Standardize the boundaries, not the internals.</span> It is not too early to standardize the shared surfaces that allow different implementations to compose and interoperate. Rather than standardising everything inside a system, standardise what must be shared between systems when they interact over the Web. Standardize the interoperable core early enough to enable a shared ecosystem, while leaving internal innovation free.</p>
+
+<p class="point"><span class="point-number">XIII.</span> <span class="point-title">Statechart actors make control a first-class, inspectable artefact.</span> A great deal of complexity in web applications and agent systems is not primarily about computation, but about control: event handling, protocol sequencing, timeouts, retries, and the disciplined handling of exceptional cases. Statechart actors turn the actor model from a mere concurrency substrate into a governable interaction platform, where protocol states, transitions, and guards are explicit and therefore reviewable.</p>
+
+<p class="point"><span class="point-number">XIV.</span> <span class="point-title">The Prolog Web is a natural platform for the Agentic Web.</span> Long-lived processes that perceive, decide, act, and coordinate — this is what the emerging Agentic Web demands. The Trinity integrates three capabilities such systems repeatedly need: a web-native network of nodes, a concurrency model for durable interactions, and a symbolic language for explicit representation and constraint. "Agentic" should not merely mean "chatty" — it should mean "durably interactive under explicit rules."</p>
+
+<p class="point"><span class="point-number">XV.</span> <span class="point-title">Symbolic AI and neural AI need each other, on our terms.</span> Statistical language models can be extraordinarily useful, but they are not reliable as autonomous governors of state and protocol. The Trinity treats statistical components, when present, as powerful but fallible modules, and places the responsibility for durable behaviour in explicit symbolic structures: statechart control, Prolog-level constraints and policies, and testable message protocols. The proper balance between symbolic and neural is as challenging as it is important.</p>
+
+<p class="point"><span class="point-number">XVI.</span> <span class="point-title">The Prolog Web aligns with the Semantic Web, it does not replace it.</span> Prolog and the Semantic Web community share a deep conviction: building software agents that are truly clever requires logic, reasoning, and a relational way of thinking. Web Prolog fits among the web logic languages defined and standardized by the W3C. The Trinity treats shared knowledge as a first-class web resource rather than as an implementation detail locked inside one agent.</p>
+
+<p class="point"><span class="point-number">XVII.</span> <span class="point-title">We walk in the footsteps of inventors, and we honour them by building.</span> Colmerauer gave us Prolog. Kowalski gave us its logical foundations. Armstrong gave us Erlang and the actor model. Berners-Lee gave us the Web. Harel gave us statecharts. The Prolog Trinity ecosystem combines chunks of their work into what we hope will emerge as a coherent whole — and preferably a whole greater than the simple sum of its parts.</p>
+
+<p class="point"><span class="point-number">XVIII.</span> <span class="point-title">An ecosystem is not something one invents — it is something one manages to invite into existence.</span> The Prolog Trinity ecosystem demands a collective, community-driven effort. Prolog programmers and system implementers, Erlang developers, logic programming researchers, Semantic Web practitioners, and AI builders are not merely an audience — they are stakeholders whose expertise and perspectives are essential for making this real.</p>
+
+<p class="point"><span class="point-number">XIX.</span> <span class="point-title">Prolog everywhere, but without hiding the Web.</span> The programmable Prolog Web means code and data can be shuffled back and forth across nodes, even into browsers. But we do not seek to hide the Web behind an abstraction. We seek to make Prolog a natural citizen of the Web, with URIs, HTTP, WebSockets, and JSON as part of its semantic surface — not bolted on as afterthoughts.</p>
+
+<p class="point"><span class="point-number">XX.</span> <span class="point-title">The Trinity is scaffolding, not a cage.</span> The proposal is not a competing system. It is scaffolding — an ecosystem skeleton — around which existing Prolog systems can collaborate without excluding anyone and without making any system less powerful. The promise is federative: define shared interaction surfaces that many implementations can adopt, while leaving internal design choices free. Success is measured by interoperation and reuse, not by replacement.</p>
+
+<p class="point"><span class="point-number">XXI.</span> <span class="point-title">Vision without execution is just hallucination.</span> We do not mistake articulation for achievement. Execution is not the last step after design — it is the process through which design becomes accountable: to users, to implementors, to adversarial conditions, and to the constraints of the Web. Ideas that are not stress-tested, interoperable boundaries that are not drawn, and responsibility that is not shared — these remain idle dreams.</p>
+
+<p class="point"><span class="point-number">XXII.</span> <span class="point-title">It may all be a pipe dream, but it is not a castle in the air.</span> Every component of the Trinity rests on proven, time-tested technologies: Prolog, Erlang's concurrency model, and the web standards on which our connected world depends. What ultimately matters is not whether the ecosystem comes to resemble our diagrams, but whether it helps carve out a stable place for executable logic and communicative agents in the Web's future. We intend to find out.</p>
+
+<div class="coda">
+The hard part is to get people to use the thing. For this, there are no guarantees. But at least we tried, and that is worth something.
+</div>
+
+</div>
+</body>
+</html>
