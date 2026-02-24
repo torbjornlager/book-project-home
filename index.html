@@ -1,31 +1,239 @@
----
-layout: default
-title: Book Project
----
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Trinity project</title>
+  <meta name="description" content="Landing page for the manuscript, proof-of-concept implementations, programming examples, and blog updates." />
 
-<h1>Book Project</h1>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
 
-<p>This site is the landing page for the manuscript, proof-of-concept implementations, programming examples, and blog updates.</p>
+  <style>
+    :root {
+      --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
 
-<img src="assets/img/spiders-web-2.png" alt="Spider web with Prolog query and answers" style="width: 6cm;">
+      --h1-font-family: var(--font-ui);
+      --h1-font-weight: 600;
 
-<h2>Project Repositories</h2>
+      /* Keep your overall hero padding, but reduce the bottom (~50%) */
+      --hero-pad-top: clamp(1.25rem, 4vw, 3rem);
+      --hero-pad-bottom: clamp(0.65rem, 2vw, 1.5rem);
 
-<ol>
-  <li>Manuscript (private): <a href="https://github.com/torbjornlager/boken">torbjornlager/boken</a></li>
-  <li>Proof-of-concepts: <a href="https://github.com/torbjornlager/book-poc">torbjornlager/book-poc</a></li>
-  <li>Programming examples: <a href="https://github.com/torbjornlager/book-examples">torbjornlager/book-examples</a></li>
-</ol>
+      /* Footer top padding reduced (~50%) */
+      --footer-pad-top: 1.5rem;
+      --footer-pad-bottom: 3rem;
+    }
 
-<h2>Public PDF</h2>
+    * { box-sizing: border-box; }
 
-<ul>
-  <li>Latest PDF: <a href="https://torbjornlager.github.io/book-pdf/latest/book.pdf">book.pdf</a></li>
-  <li>PDF archive: <a href="https://torbjornlager.github.io/book-pdf/">book-pdf site</a></li>
-</ul>
+    body {
+      margin: 0;
+      color: #000;
+      background: #fff;
+      font-family: var(--font-ui);
+    }
 
-<h2>Blog</h2>
+    .trinity-hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: var(--hero-pad-top) 1rem var(--hero-pad-bottom);
+    }
 
-<ul>
-  <li><a href="blog.md">Read the blog</a></li>
-</ul>
+    .trinity-hero__title {
+      font-family: var(--h1-font-family);
+      font-weight: var(--h1-font-weight);
+      font-size: clamp(2.53rem, 5.175vw, 4.83rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+
+      /* 50% more space below */
+      margin: 0 0 clamp(1.5rem, 4.5vw, 3rem) 0;
+
+      text-align: center;
+      color: darkgreen;
+    }
+    
+
+    .trinity-hero__nav {
+      display: grid;
+      grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 42vw) minmax(12rem, 1fr);
+      gap: clamp(1rem, 3vw, 2.5rem);
+      align-items: center;
+    }
+
+    .trinity-hero__center { margin: 0; }
+    .trinity-hero__center img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .trinity-hero__col {
+      display: grid;
+      gap: 0.9rem; /* more breathing room, like before */
+    }
+
+    .trinity-hero__col--left {
+      justify-items: end;
+      text-align: right;
+    }
+
+    .trinity-hero__col--right {
+      justify-items: start;
+      text-align: left;
+    }
+
+    .trinity-link {
+      font-family: var(--font-ui);
+      font-size: 2.15rem;     /* your earlier feel */
+      font-weight: 500;
+      text-decoration: none;
+      color: #000;
+      display: inline-block;
+      padding: 0.4rem 0;
+      transition: transform 0.15s ease;
+      line-height: 1.05;
+    }
+
+    .trinity-link:visited { color: #000; }
+    .trinity-link:hover { transform: scale(1.18); }
+    
+    .trinity-link:hover {
+      transform: scale(1.18);
+      text-shadow:
+        0 0 0.35em rgba(255, 200, 0, 0.8),
+        0 0 1em rgba(255, 200, 0, 0.45);
+    }
+
+    .trinity-link:focus-visible {
+      outline: 3px solid rgba(0, 0, 0, 0.65);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    /* Airy, responsive footer */
+    footer {
+      background: #fff;
+      text-align: center;
+      padding: 1.75rem 1rem 2.75rem; /* a bit airier than before */
+    }
+
+    footer h2 {
+      margin: 0 auto;
+      max-width: 38ch;
+      font-family: var(--font-ui);
+      font-weight: 600;
+      color: #000;
+      letter-spacing: -0.01em;
+
+      /* Responsive size */
+      font-size: clamp(0.95rem, 3.6vw, 1.81rem);
+
+      /* Overall air */
+      line-height: 1.22;
+    }
+
+    /* Extra space specifically between the two forced lines */
+    footer h2 br {
+      display: block;
+      content: "";
+      margin-bottom: 0.25em; /* “airy” */
+    }
+
+    /* Mobile: still compact enough not to dominate */
+    @media (max-width: 860px) {
+
+      .h1-hide-mobile {
+        display: none;
+      }
+
+      .trinity-hero__title {
+        font-size: clamp(3rem, 8vw, 4rem);
+      }
+
+      footer {
+        padding: 1.15rem 0.85rem 1.75rem;
+      }
+
+      footer h2 {
+        max-width: 33ch;
+        line-height: 1.2;
+      }
+
+      footer h2 br {
+        margin-bottom: 0.38em;
+      }
+
+      .trinity-hero__center img {
+        width: 75%;
+        margin: 0 auto;
+      }
+
+      .trinity-hero__nav {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .trinity-hero__col--left,
+      .trinity-hero__col--right {
+        justify-items: center;
+        text-align: center;
+      }
+
+      .trinity-hero__col {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.65rem 1.2rem;
+      }
+
+      .trinity-link {
+        font-size: 1.2rem;
+      }
+    }  </style>
+</head>
+
+<body>
+  <header class="trinity-hero">
+    <h1 class="trinity-hero__title">
+          The Prolog Trinity<span class="h1-hide-mobile"> ecosystem</span>
+    </h1>
+    <section class="trinity-hero__nav" aria-label="Primary navigation">
+      <nav class="trinity-hero__col trinity-hero__col--left" aria-label="Primary sections">
+        <a class="trinity-link" href="/book/">Book</a>
+        <a class="trinity-link" href="/software/">&nbsp;&nbsp;Software&nbsp;&nbsp;</a>
+        <a class="trinity-link" href="/errata/">Errata</a>
+      </nav>
+
+      <figure class="trinity-hero__center">
+        <img
+          src="assets/img/spider-prolog-1024.png"
+          alt="Three spiders in a web with Prolog goals."
+          width="1024"
+          height="1024"
+          loading="eager"
+          decoding="async"
+        />
+      </figure>
+
+      <nav class="trinity-hero__col trinity-hero__col--right" aria-label="More sections">
+        <a class="trinity-link" href="/blog/">Blog</a>
+        <a class="trinity-link" href="/author/">&nbsp;&nbsp;Author&nbsp;&nbsp;</a>
+        <a class="trinity-link" href="/talks/">Talks</a>
+      </nav>
+    </section>
+  </header>
+
+  <footer>
+    <h2>
+      Let's webize Prolog, prologize the Web, and<br>
+      populate the Web with clever Prolog agents!
+    </h2>
+  </footer>
+</body>
+</html>
