@@ -1,4 +1,5 @@
 title: Book Project
 markdown: kramdown
 theme: minima
+baseurl: /book-project-home
 plugins: []
