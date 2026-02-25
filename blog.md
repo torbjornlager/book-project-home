@@ -1,10 +1,8 @@
 ---
-layout: default
+layout: page
 title: Blog
 ---
 
-# Blog
-
 {% for post in site.posts %}
-- {{ post.date | date: "%Y-%m-%d" }}: [{{ post.title }}]({{ post.url }})
+- [{{ post.title }}]({{ post.url }}) <span style="color:#666; font-size:0.9rem;">{{ post.date | date: "%Y-%m-%d" }}</span>
 {% endfor %}
