@@ -1,26 +1,53 @@
 ---
-layout: default
 ---
-<article>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title }}</title>
+  <style>
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 720px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+      color: #222;
+    }
+    h1 { color: darkgreen; font-weight: 500; }
+    h2 { font-size: 1rem; font-weight: 600; color: #333; }
+    a { color: #0b57d0; }
+    .post-date { color: #666; font-size: 0.9rem; margin-bottom: 2rem; display: block; }
+    blockquote {
+      margin: 1.5rem 0 1.5rem 1.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid #ddd;
+      color: #555;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
   <h1>{{ page.title }}</h1>
-  <p style="color:#666; font-size:0.9rem;">{{ page.date | date: "%Y-%m-%d" }}</p>
+  <span class="post-date">{{ page.date | date: "%Y-%m-%d" }}</span>
   {{ content }}
-</article>
-
-<div style="margin-top: 3rem; border-top: 1px solid #ddd; padding-top: 2rem;">
-  <script src="https://giscus.app/client.js"
-          data-repo="torbjornlager/book-project-home"
-          data-repo-id="R_kgDORQv3sg"
-          data-category="Blog Comments"
-          data-category-id="DIC_kwDORQv3ss4C3Kf0"
-          data-mapping="pathname"
-          data-strict="0"
-          data-reactions-enabled="1"
-          data-emit-metadata="0"
-          data-input-position="bottom"
-          data-theme="light"
-          data-lang="en"
-          crossorigin="anonymous"
-          async>
-  </script>
-</div>
+  <div style="margin-top: 3rem; border-top: 1px solid #ddd; padding-top: 2rem;">
+    <script src="https://giscus.app/client.js"
+            data-repo="torbjornlager/book-project-home"
+            data-repo-id="R_kgDORQv3sg"
+            data-category="Blog Comments"
+            data-category-id="DIC_kwDORQv3ss4C3Kf0"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="light"
+            data-lang="en"
+            crossorigin="anonymous"
+            async>
+    </script>
+  </div>
+</body>
+</html>
