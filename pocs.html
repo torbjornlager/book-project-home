@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proofs-of-Concept</title>
+  <style>
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      line-height: 1.6;
+      max-width: 720px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+      color: #222;
+    }
+    h1 {
+      color: darkgreen;    
+      font-weight: 500;
+    }
+    a {
+      color: #0b57d0;
+    }
+  </style>
+</head>
+<body>
+
+<section class="implementations-intro">
+  <h1>Proof-of-Concept Implementations</h1>
+
+  <p>
+    Two proof-of-concept implementations of a Web Prolog node are available,
+    both written in SWI-Prolog. They exist to demonstrate that the ideas described
+    in the book are realizable, not to serve as production-ready systems. Neither
+    is complete, and both should be read in conjunction with the book.
+  </p>
+
+  <h2>The Transparent Node</h2>
+
+  <p>
+    This implementation is written for clarity. The code is meant to be read
+    alongside the book, and every design decision maps directly to a concept
+    described there. As a result, a number of features are absent or only
+    partially sketched out. It is the right starting point if your goal is to
+    understand how Web Prolog nodes work from the inside.
+  </p>
+
+  <p>
+    <a href="https://github.com/web-prolog/transparent-node">View on GitHub</a>
+  </p>
+
+  <h2>The Full-Featured Node</h2>
+
+  <p>
+    This implementation has been developed with breadth in mind. It covers a
+    considerably larger portion of the language and protocol, including features
+    that the transparent node deliberately omits. The code is more involved, and
+    less suited as a first read, but it gives a more realistic picture of what a
+    functioning Web Prolog node looks like in practice. Some features remain
+    unimplemented here as well.
+  </p>
+
+  <p>
+    <a href="https://github.com/web-prolog/full-node">View on GitHub</a>
+  </p>
+</section>
+</body>
+</html>
