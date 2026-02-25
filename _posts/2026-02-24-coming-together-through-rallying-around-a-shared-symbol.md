@@ -48,7 +48,7 @@ Prolog logotype based on this symbol. By replacing the name "Prolog" with the na
 logic programming languages, and varying the color of the name and the frame, logotypes for
 other languages implementing this paradigm can be formed.
 
-![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width="500"}
+![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width="700"}
 
 
 Of course, the logos need to look 2025-modern, not 1995-modern, so these visual mockups need
