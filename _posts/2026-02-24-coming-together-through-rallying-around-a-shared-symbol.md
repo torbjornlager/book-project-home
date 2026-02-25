@@ -32,24 +32,21 @@ an emblematic resource: the white-on-black geometric symbol at the heart of the 
 
 ![Alt text]({{ site.baseurl }}/assets/img/alp-logo.png){: width="500"}
 
-
 Familiar to logicians, the three glyphs ⊨, ≡ and ⊢ stand for semantic entailment, logical
 equivalence and syntactic inference, respectively. Though underutilized and perhaps
 underrecognized, the equation expresses a core thesis of logic programming: that syntax and
 semantics, process and meaning, are formally intertwined. The equation, while not fully
 realized in practical Prolog, remains a guiding principle of logic programming -- and a
-fitting philosophical emblem for Prolog.
+fitting philosophical emblem for Prolog. In the spirit of reuse and renewal, and adding 
+a frame and a bit of color, I'd like to propose a Prolog logotype based on this symbol. 
 
 ![Alt text]({{ site.baseurl }}/assets/img/prolog-logo.png){: width="220"}
 
-
-In the spirit of reuse and renewal, and adding a frame and a bit of color, I'd like to propose a
-Prolog logotype based on this symbol. By replacing the name "Prolog" with the names of other
+By replacing the name "Prolog" with the names of other
 logic programming languages, and varying the color of the name and the frame, logotypes for
 other languages implementing this paradigm can be formed.
 
 ![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width="650"}
-
 
 Of course, the logos need to look 2025-modern, not 1995-modern, so these visual mockups need
 to be professionally rendered if they are to be taken seriously.
