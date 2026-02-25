@@ -16,7 +16,9 @@ users to connect, feel part of a community, and rally around a shared symbol. Th
 says something about what the language stands for, helping people get a quick sense of its
 vibe. Plus, it is useful for spreading the word; a good logo can make the language more
 visible in tutorials, online discussions, and conferences, making it stick in people's minds
-and building a legacy over time.
+and building a legacy over time. Here are the logotypes for four well-established languages:
+
+![Alt text]({{ site.baseurl }}/assets/img/pl-logos.png)
 
 By contrast, there is no Prolog logo broadly recognized across sub-communities. It may be
 that lack of a formal logo is intended to make a statement, signaling that Prolog is academic
