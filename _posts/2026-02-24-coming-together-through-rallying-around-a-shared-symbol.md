@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Coming Together Through Rallying Around a Shared Symbol"
+title: "Rallying Around a Shared Symbol"
 date: 2026-02-24
 ---
 
@@ -24,7 +24,7 @@ By contrast, there is no Prolog logo broadly recognized across sub-communities. 
 that lack of a formal logo is intended to make a statement, signaling that Prolog is academic
 software? However, in recent years, even niche languages have started adopting logos as
 branding and community-building become more central, especially in open-source and web-facing
-contexts. We do believe it is time for Prolog to follow suit.
+contexts. I believe it is time for Prolog to follow suit.
 
 Fortunately, we need not begin from scratch. The field of logic programming already possesses
 an emblematic resource: the white-on-black geometric symbol at the heart of the logo for the
@@ -43,7 +43,7 @@ fitting philosophical emblem for Prolog.
 ![Alt text]({{ site.baseurl }}/assets/img/prolog-logo.png){: width="220"}
 
 
-In the spirit of reuse and renewal, and adding a frame and a bit of color, we have proposed a
+In the spirit of reuse and renewal, and adding a frame and a bit of color, I'd like to propose a
 Prolog logotype based on this symbol. By replacing the name "Prolog" with the names of other
 logic programming languages, and varying the color of the name and the frame, logotypes for
 other languages implementing this paradigm can be formed.
@@ -54,7 +54,7 @@ other languages implementing this paradigm can be formed.
 Of course, the logos need to look 2025-modern, not 1995-modern, so these visual mockups need
 to be professionally rendered if they are to be taken seriously.
 
-Perception matters. A modern, compelling visual identity -- a Prolog Web logotype -- can serve
+Perception matters. A modern, compelling visual identity -- a Prolog logotype -- can serve
 as a powerful symbol of unity, innovation, and shared purpose. It helps to present Prolog not
 as a relic of the past, but as a forward-looking technology ready to tackle contemporary
-challenges. This is part of the "rebranding Prolog" effort that we believe is essential.
+challenges. 
