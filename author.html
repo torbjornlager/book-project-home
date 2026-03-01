@@ -37,18 +37,21 @@
       letter-spacing: 0.02em;
     }
     .portrait {
+      float: right;
       width: 220px;
-      height: 220px;
-      object-fit: cover;
+      height: 220px;                 /* make it square */
+      margin: 0.3rem 0 0 2rem;
       border-radius: 50%;
-      display: block;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      overflow: hidden;              /* actually clips the image */
+      shape-outside: circle(50%);    /* text wraps around a circle */
     }
-    
-
-
-    
-    
+    .portrait img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;             /* keeps aspect ratio, fills circle */
+      display: block;
+      filter: grayscale(10%) contrast(1.03);
+    }
     p {
       margin: 0 0 1rem 0;
       font-weight: 300;
@@ -63,6 +66,7 @@
       .portrait {
         float: none;
         width: 160px;
+        height: 160px;
         margin: 0 0 1.5rem 0;
       }
     }
