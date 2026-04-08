@@ -1,5 +1,6 @@
 title: Book Project
+url: https://trinity.elfenbenstornet.se
+baseurl: ""
 markdown: kramdown
 theme: minima
-baseurl: /book-project-home
 plugins: []
