@@ -28,43 +28,55 @@
 <body>
 
 <section class="implementations-intro">
-  <h1>Proof-of-Concept Implementations</h1>
+  <h1>Proof-of-concept implementations</h1>
 
   <p>
-    Two proof-of-concept implementations of a Web Prolog node are available,
-    both written in SWI-Prolog. They exist to demonstrate that the ideas described
+    Two proof-of-concept implementations of a Prolog node are available, both
+    written in SWI-Prolog. They exist to demonstrate that the ideas described
     in the book are realizable, not to serve as production-ready systems. Neither
-    is complete, and both should be read in conjunction with the book.
+    is complete, and both should be used in conjunction with the book.
   </p>
-
-  <h2>The Transparent Node</h2>
+  
+  <h2>Trinity demonstrator</h2>
 
   <p>
-    This implementation is written for clarity. The code is meant to be read
-    alongside the book, and every design decision maps directly to a concept
-    described there. As a result, a number of features are absent or only
-    partially sketched out. It is the right starting point if your goal is to
-    understand how Web Prolog nodes work from the inside.
-  </p>
-
-  <p>
-    <a href="https://github.com/web-prolog/transparent-node">View on GitHub</a>
-  </p>
-
-  <h2>The Full-Featured Node</h2>
-
-  <p>
-    This implementation has been developed with breadth in mind. It covers a
-    considerably larger portion of the language and protocol, including features
-    that the transparent node deliberately omits. The code is more involved, and
-    less suited as a first read, but it gives a more realistic picture of what a
-    functioning Web Prolog node looks like in practice. Some features remain
-    unimplemented here as well.
+    The implementation of the Trinity demonstrator covers a large portion of the 
+    language and protocols, and gives a realistic picture of what functioning
+    Web Prolog nodes look like in practice. The code is written in SWI-Prolog and
+    JavaScript, often by help from various LLMs such as Anthropic's Claude, OpenAI's 
+    ChatGPT and Google's Gemini. There is a lot of code, and it's quite involved. 
   </p>
 
   <p>
     <a href="https://github.com/torbjornlager/book-poc/tree/main/pocs/poc-002-web-prolog">View on GitHub</a>
   </p>
+
+  <h2>A simple node</h2>
+
+  <p>
+    This implementation is *much* smaller and is written for clarity. The code 
+    is meant to be read alongside the book. As a result, a number of features are absent or only
+    partially sketched out. It is one of many starting points if your goal 
+    is to understand how Web Prolog nodes written by work from the inside.
+  </p>
+
+  <p>
+    <a href="https://github.com/web-prolog/simple-node">View on GitHub</a>
+  </p>
+
+  <h2>A port to Trella Prolog</h2>
+
+  <p>
+    This is an attempt to port the simple node from SWI-Prolog to
+    [Trealla Prolog](https://github.com/trealla-prolog/trealla)
+    (v2.92.38). Incomplete at this point in time, but it's a start.
+  </p>
+
+  <p>
+    <a href="https://github.com/web-prolog/trealla-port">View on GitHub</a>
+  </p>
+  
+
 </section>
 </body>
 </html>
