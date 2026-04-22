@@ -30,21 +30,28 @@
 <section class="implementations-intro">
   <h1>Proof-of-concept implementations</h1>
 
-  <p>
-    Two proof-of-concept implementations of a Prolog node are available, both
-    written in SWI-Prolog. They exist to demonstrate that the ideas described
-    in the book are realizable, not to serve as production-ready systems. Neither
-    is complete, and both should be used in conjunction with the book.
-  </p>
   
-  <h2>Trinity demonstrator</h2>
+  <h2>The Trinity demonstrator</h2>
 
   <p>
-    The implementation of the Trinity demonstrator covers a large portion of the 
-    language and protocols, and gives a realistic picture of what functioning
-    Web Prolog nodes look like in practice. The code is written in SWI-Prolog and
-    JavaScript, often by help from various LLMs such as Anthropic's Claude, OpenAI's 
-    ChatGPT and Google's Gemini. There is a lot of code, and it's quite involved. 
+    The concepts described in the <a class="trinity-link" href="book.html">book manuscript</a> are
+    accompanied by a running implementation: the <a
+    href="https://n3.elfenbenstornet.se/portal">Trinity demonstrator</a>, a live system you can try
+    in your browser right now. eaders who wish to try things out - to run a query against a live
+    node, to spawn an actor, to load and exercise a statechart actor, to make remote procedure calls
+    between nodes that put the distributed side of things on display - will find the demonstrator a
+    useful companion. It is an attempt to make the essential ideas observable, reproducible, and
+    interactable, rather than merely readable.
+    
+    Two caveats deserve mention. First, this is a proof-of-concept, not a production system. The
+    demonstrator is hosted with best-effort availability, and readers should not be surprised if it
+    is occasionally unreachable. Second, the implementation covers SWI-Prolog specifically. But the
+    book's proposals are intended to be implementable on other Prolog systems as well, and one of the
+    long-term goals of the Trinity project is to encourage independent implementations that can be
+    compared and tested for interoperability. The SWI-Prolog proof of concept is a starting point,
+    not a reference implementation to be frozen.
+    
+    The implementation work has been done in cooperation with several AIs.
   </p>
 
   <p>
@@ -54,21 +61,21 @@
   <h2>A simple node</h2>
 
   <p>
-    This implementation is *much* smaller and is written for clarity. The code 
+    This implementation is <em>much</em> smaller and is written for clarity. The code 
     is meant to be read alongside the book. As a result, a number of features are absent or only
     partially sketched out. It is one of many starting points if your goal 
-    is to understand how Web Prolog nodes written by work from the inside.
+    is to understand how Web Prolog nodes work from the inside.
   </p>
 
   <p>
     <a href="https://github.com/torbjornlager/simple-node">View on GitHub</a>
   </p>
 
-  <h2>A port to Trella Prolog</h2>
+  <h3>A port to Trealla Prolog</h3>
 
   <p>
     This is an attempt to port the simple node from SWI-Prolog to
-    <a href="https://github.com/trealla-prolog/trealla">Trealla Prolog (v2.92.38)</a>
+    <a href="https://github.com/trealla-prolog/trealla">Trealla Prolog (v2.92.38)</a>.
     The port is very incomplete at this point in time, but it's a start.
   </p>
 
