@@ -41,11 +41,11 @@ a frame and a bit of color, I'd like to propose a Prolog logotype based on this 
 
 And once that basic idea is in place, it can easily be extended. Replace the name “Prolog” with the names of other logic programming languages, vary the colours, and you get a family of related logotypes for the broader logic programming world:
 
-![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width=“400”}
+![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width=“650”}
 
 Of course, there is a catch. These logos need to look 2025-modern, not 1995-modern. A good concept is not enough if the rendering makes it look dated. So the mockups need professional polish if the idea is to be taken seriously. Still, it is interesting to see what happens when one lets ChatGPT take a first stab at the Prolog logo:
 
-![Alt text]({{ site.baseurl }}/assets/img/prolog-logo-pro.png){: width=“220”}
+![Alt text]({{ site.baseurl }}/assets/img/prolog-logo-pro.png){: width=“400”}
 
 And here is what it did with the others:
 
