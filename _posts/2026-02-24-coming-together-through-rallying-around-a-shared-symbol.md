@@ -49,7 +49,12 @@ other languages implementing this paradigm can be formed.
 ![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width="650"}
 
 Of course, the logos need to look 2025-modern, not 1995-modern, so these visual mockups need
-to be professionally rendered if they are to be taken seriously.
+to be professionally rendered if they are to be taken seriously. Here is the result of making 
+ChatGPT work on them:
+
+![Alt text]({{ site.baseurl }}/assets/img/prolog-logo-pro.png){: width="220"}
+
+![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos-pro.png){: width="650"}
 
 Perception matters. A modern, compelling visual identity -- a Prolog logotype -- can serve
 as a powerful symbol of unity, innovation, and shared purpose. It helps to present Prolog not
