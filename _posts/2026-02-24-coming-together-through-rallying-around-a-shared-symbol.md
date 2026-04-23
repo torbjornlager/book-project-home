@@ -28,7 +28,7 @@ contexts. I believe it is time for Prolog to follow suit.
 
 Fortunately, we need not begin from scratch. The field of logic programming already possesses
 an emblematic resource: the white-on-black geometric symbol at the heart of the logo for the
-*Association for Logic Programming* (ALP).
+*Association for Logic Programming* (ALP):
 
 ![Alt text]({{ site.baseurl }}/assets/img/alp-logo.png){: width="450"}
 
@@ -38,13 +38,13 @@ underrecognized, the equation expresses a core thesis of logic programming: that
 semantics, process and meaning, are formally intertwined. The equation, while not fully
 realized in practical Prolog, remains a guiding principle of logic programming -- and a
 fitting philosophical emblem for Prolog. In the spirit of reuse and renewal, and adding 
-a frame and a bit of color, I'd like to propose a Prolog logotype based on this symbol. 
+a frame and a bit of color, I'd like to propose a Prolog logotype based on this symbol: 
 
 ![Alt text]({{ site.baseurl }}/assets/img/prolog-logo.png){: width="220"}
 
 By replacing the name "Prolog" with the names of other
 logic programming languages, and varying the color of the name and the frame, logotypes for
-other languages implementing this paradigm can be formed.
+other languages implementing this paradigm can be formed:
 
 ![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width="650"}
 
