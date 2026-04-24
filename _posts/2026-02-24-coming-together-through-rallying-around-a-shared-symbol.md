@@ -18,7 +18,7 @@ vibe. Plus, it is useful for spreading the word; a good logo can make the langua
 visible in tutorials, online discussions, and conferences, making it stick in people's minds
 and building a legacy over time. Here are the logotypes for four well-established languages:
 
-![Alt text]({{ site.baseurl }}/assets/img/pl-logos.png){: width="500"}
+![Alt text](https://trinity.elfenbenstornet.se/assets/img/pl-logos.png){: width="500"}
 
 By contrast, there is no Prolog logo broadly recognized across the language’s subcommunities. Perhaps that absence says something. Maybe Prolog has long been content to appear as an academic language rather than a public-facing technology. But the world has changed. Even niche languages now tend to have a clear visual identity, because branding, recognizability, and community-building matter more than they once did, especially in open-source and web-facing settings. Prolog should not be the odd one out forever.
 
@@ -26,7 +26,7 @@ The good news is that we need not begin from scratch. The field of logic program
 an emblematic resource: the white-on-black geometric symbol at the heart of the logo for the
 *Association for Logic Programming* (ALP):
 
-![Alt text]({{ site.baseurl }}/assets/img/alp-logo.png){: width="450"}
+![Alt text](https://trinity.elfenbenstornet.se/assets/img/alp-logo.png){: width="450"}
 
 Familiar to logicians, the three glyphs ⊨, ≡ and ⊢ stand for semantic entailment, logical
 equivalence and syntactic inference, respectively. Though underutilized and perhaps
@@ -38,23 +38,17 @@ a frame and a bit of color, I'd like to propose a Prolog logotype based on this 
 
 <img src="https://trinity.elfenbenstornet.se/assets/img/prolog-logo.png" alt="Alt Text" width="300">
 
-
-![Alt text]({{ site.baseurl }}/assets/img/prolog-logo.png){: width="400"}
-
 And once that basic idea is in place, it can easily be extended. Replace the name “Prolog” with the names of other logic programming languages, vary the colours, and you get a family of related logotypes for the broader logic programming world:
 
-![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos.png){: width=“650”}
+![Alt text](https://trinity.elfenbenstornet.se/assets/img/lp-languages-logos.png){: width=“650”}
 
 Of course, there is a catch. These logos need to look 2025-modern, not 1995-modern. A good concept is not enough if the rendering makes it look dated. So the mockups need professional polish if the idea is to be taken seriously. Still, it is interesting to see what happens when one lets ChatGPT take a first stab at the Prolog logo:
 
 <img src="https://trinity.elfenbenstornet.se/assets/img/prolog-logo-pro.png" alt="Alt Text" width="300">
 
-
-![Alt text]({{ site.baseurl }}/assets/img/prolog-logo-pro.png){: width=“400”}
-
 And here is what it did with the others:
 
-![Alt text]({{ site.baseurl }}/assets/img/lp-languages-logos-pro.png){: width=“650”}
+![Alt text](https://trinity.elfenbenstornet.se/assets/img/lp-languages-logos-pro.png){: width=“650”}
 
 Perception matters. A modern and memorable visual identity — a Prolog logotype — could become a symbol of unity, renewal, and shared ambition. It could help people see Prolog not as a relic, but as a language with unfinished business and a future still worth building.
 
