@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Rallying Around a Shared Symbol"
+title: "Greetings from the La-la land of logos"
 date: 2026-02-24
 ---
 
