@@ -52,4 +52,8 @@ And here is what it did with the others:
 
 Perception matters. A modern and memorable visual identity — a Prolog logotype — could become a symbol of unity, renewal, and shared ambition. It could help people see Prolog not as a relic, but as a language with unfinished business and a future still worth building.
 
+Or perhaps a 1972-retro look suits us better: 
+
+<img src="https://trinity.elfenbenstornet.se/assets/img/prolog-logo-retro.png" alt="Alt Text" width="300">
+
 What do you think?
