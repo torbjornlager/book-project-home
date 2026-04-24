@@ -47,7 +47,7 @@ And once that basic idea is in place, it can easily be extended. Replace the nam
 
 Of course, there is a catch. These logos need to look 2025-modern, not 1995-modern. A good concept is not enough if the rendering makes it look dated. So the mockups need professional polish if the idea is to be taken seriously. Still, it is interesting to see what happens when one lets ChatGPT take a first stab at the Prolog logo:
 
-<img src="https://trinity.elfenbenstornet.se/assets/img/prolog-logo.png" alt="Alt Text" width="300">
+<img src="https://trinity.elfenbenstornet.se/assets/img/prolog-logo-pro.png" alt="Alt Text" width="300">
 
 
 ![Alt text]({{ site.baseurl }}/assets/img/prolog-logo-pro.png){: width=“400”}
