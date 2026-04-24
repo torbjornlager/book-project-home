@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Greetings from the La-la land of logos"
+title: "Greetings from the La La Land of Logos"
 date: 2026-02-24
 ---
 
