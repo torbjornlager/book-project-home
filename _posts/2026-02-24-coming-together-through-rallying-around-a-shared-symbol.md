@@ -26,7 +26,7 @@ The good news is that we need not begin from scratch. The field of logic program
 an emblematic resource: the white-on-black geometric symbol at the heart of the logo for the
 *Association for Logic Programming* (ALP):
 
-![Alt text](https://trinity.elfenbenstornet.se/assets/img/alp-logo.png){: width="450"}
+![Alt text](https://trinity.elfenbenstornet.se/assets/img/alp-logo.png){: width="550"}
 
 Familiar to logicians, the three glyphs ⊨, ≡ and ⊢ stand for semantic entailment, logical
 equivalence and syntactic inference, respectively. Though underutilized and perhaps
