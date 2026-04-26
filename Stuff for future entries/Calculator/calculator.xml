@@ -1,0 +1,339 @@
+<!--
+
+    A calculator with a widget.
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart id="calc" datamodel="web-prolog" initial="wrapper">
+    <datamodel>
+        :- dynamic long_expr/1, short_expr/1, res/1.
+
+        normalize_token(Value, Atom) :-
+            atom(Value),
+            !,
+            Atom = Value.
+        normalize_token(Value, Atom) :-
+            string(Value),
+            !,
+            atom_string(Atom, Value).
+        normalize_token(Value, Atom) :-
+            number(Value),
+            !,
+            term_to_atom(Value, Atom).
+
+        digit(D) :-
+            integer(D),
+            between(0, 9, D).
+
+        nonzero_digit(D) :-
+            digit(D),
+            D > 0.
+
+        set_long_expr(Text0) :-
+            normalize_token(Text0, Text),
+            retractall(long_expr(_)),
+            asserta(long_expr(Text)).
+
+        set_short_expr(Text0) :-
+            normalize_token(Text0, Text),
+            retractall(short_expr(_)),
+            asserta(short_expr(Text)).
+
+        set_res(Value) :-
+            retractall(res(_)),
+            asserta(res(Value)).
+
+        clear_short_expr :-
+            set_short_expr('').
+
+        reset_all :-
+            set_long_expr(''),
+            set_short_expr('0'),
+            set_res(0).
+
+        append_event_digit :-
+            event(digit(D)),
+            normalize_token(D, Digit),
+            short_expr(Current),
+            atom_concat(Current, Digit, Next),
+            set_short_expr(Next).
+
+        append_point :-
+            short_expr(Current),
+            atom_concat(Current, '.', Next),
+            set_short_expr(Next).
+
+        set_short_negative :-
+            set_short_expr('-').
+
+        set_zero_from_sign :-
+            short_expr(Current),
+            (   Current == '-'
+            ->  set_short_expr('-0')
+            ;   set_short_expr('0')
+            ).
+
+        prepare_nonzero_after_zero :-
+            short_expr(Current),
+            (   Current == '0'
+            ->  clear_short_expr
+            ;   Current == '-0'
+            ->  set_short_expr('-')
+            ;   true
+            ).
+
+        operator_symbol(plus, '+').
+        operator_symbol(minus, '-').
+        operator_symbol(star, '*').
+        operator_symbol(div, '/').
+
+        display_value(Value) :-
+            short_expr(Short),
+            Short \== '',
+            !,
+            Value = Short.
+        display_value(Value) :-
+            res(Result),
+            normalize_token(Result, Value).
+
+        display_update :-
+            display_value(Value),
+            terminal_output(display(Value)).
+
+        append_short_expr_to_long_expr :-
+            short_expr(Short),
+            Short \== '',
+            long_expr(Long0),
+            format(atom(Long), '~w(~w)', [Long0, Short]),
+            set_long_expr(Long).
+        append_short_expr_to_long_expr.
+
+        eval_long_expr(Result) :-
+            long_expr(Long),
+            (   Long == ''
+            ->  Result = 0
+            ;   atom_to_term(Long, Expr, []),
+                Result is Expr
+            ).
+
+        calc_sub :-
+            append_short_expr_to_long_expr,
+            eval_long_expr(Result),
+            set_res(Result),
+            clear_short_expr,
+            raise(display_update).
+
+        calc_do :-
+            res(Result),
+            normalize_token(Result, Text),
+            set_short_expr(Text),
+            set_long_expr(''),
+            set_res(0).
+
+        op_insert(Op) :-
+            operator_symbol(Op, Symbol),
+            long_expr(Long0),
+            atom_concat(Long0, Symbol, Long),
+            set_long_expr(Long).
+
+        maybe_enter_op_state :-
+            (   event(oper(Op))
+            ->  raise(calc_sub),
+                raise(op_insert(Op))
+            ;   true
+            ).
+
+        clear_entry_to_zero :-
+            set_short_expr('0'),
+            raise(display_update).
+
+        :- reset_all.
+    </datamodel>
+
+    <state id="wrapper" initial="on">
+        <state id="on" initial="ready">
+            <onentry>
+                raise(display_update)
+            </onentry>
+
+            <state id="ready" initial="begin">
+                <state id="begin">
+                    <onentry>
+                        raise(display_update)
+                    </onentry>
+                    <go to="negated1" on="oper(minus)"/>
+                </state>
+
+                <state id="result"/>
+
+                <go to="opEntered" on="oper(Op)"/>
+                <go to="zero1" on="digit(0)">
+                    clear_short_expr
+                </go>
+                <go to="int1" on="digit(D)" if="nonzero_digit(D)">
+                    clear_short_expr
+                </go>
+                <go to="frac1" on="point">
+                    clear_short_expr
+                </go>
+            </state>
+
+            <state id="negated1">
+                <onentry>
+                    set_short_negative,
+                    raise(display_update)
+                </onentry>
+                <go to="zero1" on="digit(0)"/>
+                <go to="int1" on="digit(D)" if="nonzero_digit(D)"/>
+                <go to="frac1" on="point"/>
+                <go to="ready" on="ce">
+                    clear_entry_to_zero
+                </go>
+            </state>
+
+            <state id="operand1">
+                <state id="zero1">
+                    <onentry>
+                        set_zero_from_sign,
+                        raise(display_update)
+                    </onentry>
+                    <go to="int1" on="digit(D)" if="nonzero_digit(D)">
+                        prepare_nonzero_after_zero
+                    </go>
+                    <go to="frac1" on="point"/>
+                </state>
+
+                <state id="int1">
+                    <onentry>
+                        append_event_digit,
+                        raise(display_update)
+                    </onentry>
+                    <go to="frac1" on="point"/>
+                    <go on="digit(D)" if="digit(D)">
+                        append_event_digit,
+                        raise(display_update)
+                    </go>
+                </state>
+
+                <state id="frac1">
+                    <onentry>
+                        append_point,
+                        raise(display_update)
+                    </onentry>
+                    <go on="digit(D)" if="digit(D)">
+                        append_event_digit,
+                        raise(display_update)
+                    </go>
+                </state>
+
+                <go to="opEntered" on="oper(Op)"/>
+                <go to="ready" on="ce">
+                    clear_entry_to_zero
+                </go>
+            </state>
+
+            <state id="opEntered">
+                <onentry>
+                    maybe_enter_op_state
+                </onentry>
+                <go to="negated2" on="oper(minus)"/>
+                <go to="frac2" on="point">
+                    clear_short_expr
+                </go>
+                <go to="zero2" on="digit(0)">
+                    clear_short_expr
+                </go>
+                <go to="int2" on="digit(D)" if="nonzero_digit(D)">
+                    clear_short_expr
+                </go>
+            </state>
+
+            <state id="negated2">
+                <onentry>
+                    set_short_negative,
+                    raise(display_update)
+                </onentry>
+                <go to="zero2" on="digit(0)"/>
+                <go to="int2" on="digit(D)" if="nonzero_digit(D)"/>
+                <go to="frac2" on="point"/>
+                <go to="opEntered" on="ce">
+                    clear_entry_to_zero
+                </go>
+            </state>
+
+            <state id="operand2">
+                <state id="zero2">
+                    <onentry>
+                        set_zero_from_sign,
+                        raise(display_update)
+                    </onentry>
+                    <go to="int2" on="digit(D)" if="nonzero_digit(D)">
+                        prepare_nonzero_after_zero
+                    </go>
+                    <go to="frac2" on="point"/>
+                </state>
+
+                <state id="int2">
+                    <onentry>
+                        append_event_digit,
+                        raise(display_update)
+                    </onentry>
+                    <go on="digit(D)" if="digit(D)">
+                        append_event_digit,
+                        raise(display_update)
+                    </go>
+                    <go to="frac2" on="point"/>
+                </state>
+
+                <state id="frac2">
+                    <onentry>
+                        append_point,
+                        raise(display_update)
+                    </onentry>
+                    <go on="digit(D)" if="digit(D)">
+                        append_event_digit,
+                        raise(display_update)
+                    </go>
+                </state>
+
+                <go to="opEntered" on="oper(Op)"/>
+                <go to="result" on="equals">
+                    raise(calc_sub),
+                    raise(calc_do)
+                </go>
+                <go to="opEntered" on="ce">
+                    clear_entry_to_zero
+                </go>
+            </state>
+
+            <go to="on" on="c">
+                reset_all
+            </go>
+        </state>
+
+        <go on="calc_do">
+            calc_do
+        </go>
+
+        <go on="calc_sub">
+            calc_sub
+        </go>
+
+        <go on="display_update">
+            display_update
+        </go>
+
+        <go on="op_insert(Op)">
+            op_insert(Op)
+        </go>
+    </state>
+</statechart>
+
+<!-- <examples>
+
+?- interpret('statecharts/calculator.xml').
+
+-->
+
