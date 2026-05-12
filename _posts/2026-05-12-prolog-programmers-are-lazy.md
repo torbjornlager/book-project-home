@@ -20,10 +20,9 @@ libraries, code generators, and the entire culture of "don't repeat yourself" (D
 a day writing a script that saves a week of manual work every month, and you have made a
 rational investment.
 
-Other ecosystems show that this strategy works at scale. In the Prolog world, Jan
-Wielemaker's Cliopatria demonstrated how a substantial web application could be delivered
+Other ecosystems show that this strategy works at scale. In the Prolog world, [ClioPatria](https://cliopatria.swi-prolog.org/home) - an application platform developed by a team around Jan Wielemaker - demonstrated how a substantial web application could be delivered
 as a ready-to-run system: users provided their data, made modest extensions, and obtained
-a full Semantic Web portal. In the Elixir world, Phoenix goes even further by generating
+a full Semantic Web portal. In the Elixir world, [Phoenix](https://phoenixframework.org) goes even further by generating
 complete, fault-tolerant applications with supervision, telemetry, routing, and deployment
 already in place. Developers simply add the behaviour that makes the system theirs. These
 examples illustrate how a language ecosystem can supply standardised, reproducible scaffolds
