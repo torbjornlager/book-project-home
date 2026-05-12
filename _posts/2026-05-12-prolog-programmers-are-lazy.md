@@ -20,9 +20,11 @@ libraries, code generators, and the entire culture of "don't repeat yourself" (D
 a day writing a script that saves a week of manual work every month, and you have made a
 rational investment.
 
-Other ecosystems show that this strategy works at scale. In the Prolog world, [ClioPatria](https://cliopatria.swi-prolog.org/home) - an application platform developed by a team around Jan Wielemaker - demonstrated how a substantial web application could be delivered
+The most powerful expression of this instinct is the *application platform*: a pre-built, opinionated scaffold that packages the hard-won lessons of a community into a reusable starting point. Rather than assembling supervision trees, routing layers, persistence strategies, and deployment pipelines from scratch each time, a developer begins from a working system and customises inward. The platform does not constrain ambition — it removes the tax on getting started.
+
+In the Prolog world, [ClioPatria](https://cliopatria.swi-prolog.org/home) — an application platform developed by a team around Jan Wielemaker — demonstrated how a substantial web application could be delivered
 as a ready-to-run system: users provided their data, made modest extensions, and obtained
-a full Semantic Web portal. In the Elixir world, [Phoenix](https://phoenixframework.org) goes even further by generating
+a full Semantic Web portal. Other ecosystems show that this strategy works at scale. In the Elixir world, [Phoenix](https://phoenixframework.org) goes even further by generating
 complete, fault-tolerant applications with supervision, telemetry, routing, and deployment
 already in place. Developers simply add the behaviour that makes the system theirs. These
 examples illustrate how a language ecosystem can supply standardised, reproducible scaffolds
@@ -36,7 +38,7 @@ developers from boilerplate concerns and letting them focus on domain-specific r
 interaction.
 
 To make this concrete: suppose the owner of a node wants to make the contents of a file
-`mortal.pl` available to clients. A single command should (when this is implemented) be able to do the job:
+`mortal.pl` available to clients. A single command is all that will be needed:
 
 ```
 $ prolog-node --port=80 --src=mortal.pl --settings=settings.pl
@@ -56,5 +58,7 @@ to understand. Such simplicity and accessibility are essential if the Prolog Web
 into a living shared environment rather than remain a conceptual construct. In that sense,
 the laziness baked into the Trinity design is not a shortcut — it is a commitment to the
 idea that friction is the enemy of participation.
+
+What kind of application do you have in mind? Pass the relevant API descriptions to an AI and describe what you want to build — a fast-paced multiplayer game, a sophisticated embodied conversational agent, a shared RDF triple store open to the world. The AI will tell you which endpoint fits and sketch the client code to go with it. Most applications need a UI, and the easiest way to build one is probably to ask Claude or ChatGPT to do it for you.
 
 Prolog programmers are lazy. And that is exactly as it should be.
