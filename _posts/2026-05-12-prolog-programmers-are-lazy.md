@@ -4,7 +4,7 @@ title: "Prolog Programmers are Lazy"
 date: 2026-05-12
 ---
 
-<img src="{{ site.baseurl }}/assets/img/lazy-trinity.png" alt="Lazy Trinity" width="550">
+<img src="{{ site.baseurl }}/assets/img/lazy-trinity.png" alt="Lazy Trinity" width="650">
 
 A good programmer is often someone who would rather spend five hours automating a task
 than spend five minutes repeating it every day for years. But "laziness" here does not mean
