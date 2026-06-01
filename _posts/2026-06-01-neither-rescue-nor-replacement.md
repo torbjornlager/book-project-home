@@ -8,7 +8,7 @@ There is a fashionable way to talk about the meeting of logic programming and ar
 
 I want to ask two questions instead of one, because the interesting thing about the relationship is that it runs both ways.
 
-**What can web logic programming do for artificial intelligence? And what can artificial intelligence do for web logic programming?**
+**What can web logic programming do for artificial intelligence? And what can artificial intelligence do for logic programming?**
 
 The *web* in the first question is not decoration. A great deal of what makes logic programming newly relevant to AI is not the logic — we have had that since the 1970s — but the move to make it native to the web: distributed, addressable, concurrent. That is the wager of the Prolog Trinity. By the Prolog Web I mean a web of Prolog-speaking nodes — some small and stateless, some session-based, some actor-capable, all exposing logic-programming services through ordinary web protocols — and it is worth spelling out what each side stands to gain.
 
@@ -30,7 +30,7 @@ This is what I have come to call *interaction portability*, and it is the proper
 
 **A place for the symbolic and the statistical to meet.** None of this is an argument that logic should replace learning. The most interesting work — DeepProbLog, NeurASP, and the wider neuro-symbolic programme — treats the two as layers, with neural perception feeding symbolic inference and symbolic structure constraining neural search. The Prolog Web is, among other things, a candidate substrate for that meeting: a shared, networked space where a learned model can call a proof and a proof can call a learned model.
 
-## What AI can do for web logic programming
+## What AI can do for logic programming
 
 It is worth saying plainly that the present moment did not arrive because the symbolic tradition won an argument. It arrived because neural AI became impressive enough that we now want to let it *act* — and the moment you let a fluent system act, you need machinery for control, memory, permission, explanation, and accountability that the fluent system does not itself supply. Neural AI has, in other words, made the need for symbolic infrastructure visible again. But the traffic runs in both directions, and the reverse direction is, if anything, the more immediately practical. It bears directly on the oldest problem the language has.
 
