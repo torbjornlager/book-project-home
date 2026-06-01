@@ -1,4 +1,8 @@
-# Neither Rescue nor Replacement
+---
+layout: post
+title: "Neither Rescue nor Replacement"
+date: 2026-06-01
+---
 
 There is a fashionable way to talk about the meeting of logic programming and artificial intelligence, and it goes in one direction only. Neural networks have won; symbolic methods lost the long argument of the twentieth century; and the only role left for logic is to be bolted onto a language model as a kind of conscience, a fact-checker for a machine that does the real thinking. This is a tidy story, and like most tidy stories about the history of AI it is mostly wrong.
 
