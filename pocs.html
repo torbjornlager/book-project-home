@@ -99,6 +99,26 @@
     <a href="https://github.com/torbjornlager/ciao-port">View on GitHub</a>
   </p>
   
+  <h2>A GNU Prolog ISOBASE node</h2>
+
+  <p>
+    This proof of concept explores implementing a Web Prolog ISOBASE node with GNU Prolog
+    and a C HTTP server. It supports queries with paged answers, isolated source loading,
+    a shared database, and remote procedure calls, promises and yield. Each query runs in
+    a separate operating-system process, with resource limits and cleanup managed in C.
+    Shared database clauses can also be compiled into the worker executable.
+  </p>
+
+  <p>
+    The implementation is being tested against the SWI-Prolog demonstrator for conformance
+    and interoperability. It is still a work in progress: several host differences and
+    parts of the ISOBASE contract remain to be addressed.
+  </p>
+
+  <p>
+    <a href="https://github.com/torbjornlager/gprolog-port">View on GitHub</a>
+  </p>
+
 </section>
 </body>
 </html>
