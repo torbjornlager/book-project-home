@@ -50,8 +50,10 @@
     is occasionally unreachable. Second, the implementation covers SWI-Prolog specifically. But the
     book's proposals are intended to be implementable on other Prolog systems as well, and one of the
     long-term goals of the Trinity project is to encourage independent implementations that can be
-    compared and tested for interoperability. The SWI-Prolog proof of concept is a starting point,
-    not a reference implementation to be frozen.
+    compared and tested for interoperability. SWI-Prolog remains by far the most important
+    proof-of-concept implementation for the book, providing the integrated demonstrator and its
+    actor and statechart examples. Its implementation remains open to revision as these
+    complementary prototypes reveal differences and hidden assumptions.
   </p>
 
   <p>    
@@ -75,12 +77,26 @@
     <a href="https://github.com/torbjornlager/simple-node">View on GitHub</a>
   </p>
 
-  <h2>A port to Trealla Prolog</h2>
+  <h2>An ACTOR node in Trealla Prolog</h2>
 
   <p>
-    This is an attempt to port the simple node from SWI-Prolog to
-    <a href="https://github.com/trealla-prolog/trealla">Trealla Prolog (v2.95.4)</a>.
-    The port is almost complete at this point in time. 
+    This proof of concept ports the simple node's actor runtime and related facilities to
+    <a href="https://github.com/trealla-prolog/trealla">Trealla Prolog</a>, with current reported
+    tests using v3.12.6. It supports selective receive, links and monitors, private source
+    contexts, resumable toplevels, HTTP remote procedure calls, promises and yield. A native
+    WebSocket transport implements the Trinity version-1 actor protocol, with persistent
+    connections for remote spawning, messaging and toplevel control.
+  </p>
+
+  <p>
+    The reported tests exercise both Trealla-to-SWI and SWI-to-Trealla interactions. The
+    separate <a href="https://github.com/torbjornlager/trinity-conformance">Trinity conformance
+    suite</a> also contains draft cases exercised against both runtimes; passing those cases
+    does not establish complete ACTOR conformance. The port includes policy enforcement,
+    authentication and resource governance, but remains a proof of concept. Current limitations
+    include incomplete TLS hostname verification, empty private modules retained until process
+    exit, and reliance on process or container containment for resources without equivalent
+    runtime ceilings.
   </p>
 
   <p>
@@ -103,16 +119,22 @@
 
   <p>
     This proof of concept explores implementing a Web Prolog ISOBASE node with GNU Prolog
-    and a C HTTP server. It supports queries with paged answers, isolated source loading,
-    a shared database, and remote procedure calls, promises and yield. Each query runs in
-    a separate operating-system process, with resource limits and cleanup managed in C.
-    Shared database clauses can also be compiled into the worker executable.
+    and a loopback C HTTP server. It supports submitted source, JSON bindings, Prolog-text
+    answers, live pagination, a shared database, and HTTP(S) remote procedure calls, promises
+    and yield. Each active query has its own operating-system process, preserving bindings
+    and choice points between pages until completion, cancellation or expiry. C supervisors
+    manage deadlines, resource bounds and cleanup. Validated shared predicates can optionally
+    be compiled into a native node bundle; request-local source remains interpreted.
   </p>
 
   <p>
-    The implementation is being tested against the SWI-Prolog demonstrator for conformance
-    and interoperability. It is still a work in progress: several host differences and
-    parts of the ISOBASE contract remain to be addressed.
+    Reported tests cover GNU-to-GNU, GNU-to-SWI and SWI-to-GNU interoperability, timeouts,
+    cleanup and access policy. The process-worker design suits GNU Prolog's query interface
+    and lack of general heap garbage collection; ISOBASE is the immediate target, with
+    ISOTOPE a possible later extension. Remaining profile facilities, compatibility gaps
+    and hard security isolation are still open work. Memory budgets are sampled and may
+    overshoot their configured limits. These results demonstrate selected interactions,
+    rather than complete ISOBASE conformance or readiness for arbitrary public deployment.
   </p>
 
   <p>
