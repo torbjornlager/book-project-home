@@ -67,14 +67,17 @@
   <h2>A simple node</h2>
 
   <p>
-    This implementation is <em>much</em> smaller and is written for clarity. The code 
-    is meant to be read alongside the book. As a result, a number of features are absent or only
-    partially sketched out. It is one of many starting points if your goal 
-    is to understand how Web Prolog nodes work from the inside, or if you want to port its core components to another Prolog system.
+    A small, runnable companion to the book's implementation appendix. It includes
+    local actors, resumable toplevel processes, an HTTP endpoint with continuation
+    caching, and an RPC client. The repository provides setup instructions and
+    regression tests, including HTTP paging and cleanup under interruption.
+    It runs trusted local code and omits the full node's isolation, authentication,
+    and deployment protections. It is a starting point for understanding the core
+    mechanisms or porting them to another Prolog system.
   </p>
 
   <p>
-    <a href="https://github.com/torbjornlager/simple-node">View on GitHub</a>
+    <a href="https://github.com/torbjornlager/simple-node#requirements-and-tests">Read the code and run the tests</a>
   </p>
 
   <h2>An ACTOR node in Trealla Prolog</h2>
