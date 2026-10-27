@@ -17,7 +17,7 @@
       color: darkgreen;    
       font-weight: 500;
     }
-    h2 {
+    h2, h3 {
       color: darkgreen;    
     }
     a {
@@ -30,118 +30,193 @@
 <section class="implementations-intro">
   <h1>Proof-of-concept implementations</h1>
 
-  
+  <p>
+    The proposals in the <a class="trinity-link" href="book.html">book manuscript</a> are
+    accompanied by executable proof-of-concept implementations. These serve complementary
+    purposes: the Trinity demonstrator makes the ideas accessible through tutorials and
+    interactive examples; the node implementations explore their realization in different
+    Prolog systems; and the simple nodes expose the core mechanisms in code small enough
+    to study alongside the book.
+  </p>
+
+  <p>
+    A separate <a href="https://github.com/torbjornlager/trinity-conformance">Trinity
+    conformance suite</a> tests observable behaviour through public interfaces. Its
+    <a href="https://github.com/torbjornlager/trinity-conformance/blob/main/CURRENT_COVERAGE.md">current
+    coverage matrix</a> records selected language and protocol checks, interoperability
+    results, and remaining differences across native
+    <a href="https://www.swi-prolog.org/">SWI-Prolog</a>,
+    <a href="https://github.com/trealla-prolog/trealla">Trealla Prolog</a>,
+    <a href="http://www.gprolog.org/">GNU Prolog</a> and the browser runtimes.
+    The recorded results are encouraging: all selected required and supporting checks
+    in the consolidated matrix pass for their tested configurations. SWI-Prolog and
+    Trealla exchange actor messages and run remote queries in both directions; the
+    selected HTTP query, paging and promise tests also pass in every direction between
+    SWI-Prolog, Trealla and GNU Prolog. Separate diagnostics and experimental text
+    checks still expose differences. These results describe specific tested revisions
+    and facilities, rather than complete language conformance or production readiness.
+  </p>
+
+  <p>
+    The implementations also make the proposals tangible through executable examples.
+    The SWI-Prolog and Trealla nodes run shared tutorial and code examples, including
+    distributed interactions between them, while the browser runtimes provide another
+    way to explore the actor language. GNU Prolog and Ciao support query examples within
+    their narrower scope. Coverage therefore varies with each implementation's
+    facilities; Ciao has not yet been included in the shared conformance matrix.
+  </p>
+
+  <p>
+    The implementation work has been done in cooperation with several AIs.
+  </p>
+
   <h2>The Trinity demonstrator</h2>
 
   <p>
-    The concepts described in the <a class="trinity-link" href="book.html">book manuscript</a> are
-    accompanied by a running implementation: the <a
-    href="https://n3.elfenbenstornet.se/demonstrator">Trinity demonstrator</a>, a live system you can try
-    in your browser right now. Readers who wish to try things out &mdash; to run a query against a live
-    node, to spawn an actor, to load and exercise a statechart actor, to make remote procedure calls
-    between nodes that put the distributed side of things on display &mdash; will find the demonstrator a
-    useful companion. It is an attempt to make the essential ideas observable, reproducible, and
-    interactable, rather than merely readable.
+    The <a href="https://n3.elfenbenstornet.se/demonstrator">Trinity demonstrator</a>
+    is the interactive companion to the book. Readers can run queries against live nodes,
+    spawn actors, explore statecharts and make remote procedure calls between nodes.
+    Tutorials, examples and a shared language manual connect these experiments to the
+    book's proposals.
   </p>
 
-  <p>    
-    Two caveats deserve mention. First, this is a proof-of-concept, not a production system. The
-    demonstrator is hosted with best-effort availability, and readers should not be surprised if it
-    is occasionally unreachable. Second, the implementation covers SWI-Prolog specifically. But the
-    book's proposals are intended to be implementable on other Prolog systems as well, and one of the
-    long-term goals of the Trinity project is to encourage independent implementations that can be
-    compared and tested for interoperability. SWI-Prolog remains by far the most important
-    proof-of-concept implementation for the book, providing the integrated demonstrator and its
-    actor and statechart examples. Its implementation remains open to revision as these
-    complementary prototypes reveal differences and hidden assumptions.
+  <p>
+    The demonstrator brings together the browser interface, SWI-Prolog WebAssembly runtimes
+    and integration with native nodes. Its native SWI-Prolog implementation is now
+    maintained in the separate repository described below. This separation allows the
+    demonstrator and the node implementation to develop independently while sharing
+    the same language and protocols.
   </p>
 
-  <p>    
-    The implementation work has been done in cooperation with several AIs.
+  <p>
+    The hosted demonstrator has best-effort availability and may occasionally be unreachable.
   </p>
 
   <p>
     <a href="https://github.com/torbjornlager/trinity-demonstrator">View on GitHub</a>
   </p>
 
-  <h2>A simple node</h2>
+  <h2>The nodes</h2>
 
   <p>
-    A small, runnable companion to the book's implementation appendix. It includes
-    local actors, resumable toplevel processes, an HTTP endpoint with continuation
-    caching, and an RPC client. The repository provides setup instructions and
-    regression tests, including HTTP paging and cleanup under interruption.
-    It runs trusted local code and omits the full node's isolation, authentication,
-    and deployment protections. It is a starting point for understanding the core
-    mechanisms or porting them to another Prolog system.
+    The native node implementations explore how different Prolog systems can expose
+    common query and actor interfaces. Their scope varies: SWI-Prolog and Trealla support
+    distributed actors, while GNU Prolog targets ISOBASE and the
+    <a href="https://ciao-lang.org/">Ciao Prolog</a> prototype concentrates on paged
+    queries over a resident database. The conformance suite compares the facilities
+    each implementation supports.
+  </p>
+
+  <h3>The SWI-Prolog node</h3>
+
+  <p>
+    The SWI-Prolog node is the most developed implementation and the principal
+    implementation supporting the book. Extracted from the Trinity demonstrator,
+    it can now be loaded and tested as a standalone package.
   </p>
 
   <p>
-    <a href="https://github.com/torbjornlager/simple-node#requirements-and-tests">Read the code and run the tests</a>
-  </p>
-
-  <h2>An ACTOR node in Trealla Prolog</h2>
-
-  <p>
-    This proof of concept ports the simple node's actor runtime and related facilities to
-    <a href="https://github.com/trealla-prolog/trealla">Trealla Prolog</a>, with current reported
-    tests using v3.12.6. It supports selective receive, links and monitors, private source
-    contexts, resumable toplevels, HTTP remote procedure calls, promises and yield. A native
-    WebSocket transport implements the Trinity version-1 actor protocol, with persistent
-    connections for remote spawning, messaging and toplevel control.
+    Its layers provide local actors, selective receive, links and monitors, private
+    source contexts, resumable toplevels, generic servers, supervisors, statecharts
+    and parallel execution. HTTP supports remote queries, promises and yield;
+    WebSocket connections support distributed actor operations. The node layer adds
+    public profiles, authentication, execution policies and resource controls.
+    Individual lower layers can also be used independently.
   </p>
 
   <p>
-    The reported tests exercise both Trealla-to-SWI and SWI-to-Trealla interactions. The
-    separate <a href="https://github.com/torbjornlager/trinity-conformance">Trinity conformance
-    suite</a> also contains draft cases exercised against both runtimes; passing those cases
-    does not establish complete ACTOR conformance. The port includes policy enforcement,
-    authentication and resource governance, but remains a proof of concept. Current limitations
-    include incomplete TLS hostname verification, empty private modules retained until process
-    exit, and reliance on process or container containment for resources without equivalent
-    runtime ceilings.
+    <a href="https://github.com/torbjornlager/swi-prolog-node">View on GitHub</a>
+  </p>
+
+  <h3>The Trealla Prolog node</h3>
+
+  <p>
+    The Trealla implementation began as a port of the simple SWI-Prolog node and has
+    grown into an independent ACTOR-capable node. Alongside actors, private source
+    contexts and resumable toplevels, it now implements generic servers, supervisors,
+    parallel execution and SXML statecharts.
+  </p>
+
+  <p>
+    HTTP provides remote queries, promises and yield, while persistent WebSocket
+    connections support remote actor creation, messaging and toplevel control.
+    Shared conformance tests exercise selected behaviour and interoperability with
+    SWI-Prolog. Authentication, policy enforcement and resource governance are included,
+    although runtime differences and deployment limitations remain documented work.
   </p>
 
   <p>
     <a href="https://github.com/torbjornlager/trealla-port">View on GitHub</a>
   </p>
-  
-  <h2>A GNU Prolog ISOBASE node</h2>
+
+  <h3>The GNU Prolog node</h3>
 
   <p>
-    This proof of concept explores implementing a Web Prolog ISOBASE node with GNU Prolog
-    and a loopback C HTTP server. It supports submitted source, JSON bindings, Prolog-text
-    answers, live pagination, a shared database, and HTTP(S) remote procedure calls, promises
-    and yield. Each active query has its own operating-system process, preserving bindings
-    and choice points between pages until completion, cancellation or expiry. C supervisors
-    manage deadlines, resource bounds and cleanup. Validated shared predicates can optionally
-    be compiled into a native node bundle; request-local source remains interpreted.
+    The GNU Prolog implementation targets ISOBASE, with ISOTOPE a possible later
+    extension. A small C HTTP server supports submitted source, a shared database,
+    JSON bindings, Prolog-text answers and paged query execution. HTTP(S) clients
+    provide remote procedure calls, promises and yield.
   </p>
 
   <p>
-    Reported tests cover GNU-to-GNU, GNU-to-SWI and SWI-to-GNU interoperability, timeouts,
-    cleanup and access policy. The process-worker design suits GNU Prolog's query interface
-    and lack of general heap garbage collection; ISOBASE is the immediate target, with
-    ISOTOPE a possible later extension. Remaining profile facilities, compatibility gaps
-    and hard security isolation are still open work. Memory budgets are sampled and may
-    overshoot their configured limits. These results demonstrate selected interactions,
-    rather than complete ISOBASE conformance or readiness for arbitrary public deployment.
+    Each active query runs in a separate operating-system process, preserving bindings
+    and choice points between pages. Supervisors manage deadlines, resource bounds
+    and cleanup. This design accommodates GNU Prolog's query interface and lack of
+    general heap garbage collection. Selected HTTP interoperability tests include
+    SWI-Prolog and Trealla; broader conformance, compatibility and isolation work
+    remains open.
   </p>
 
   <p>
     <a href="https://github.com/torbjornlager/gprolog-port">View on GitHub</a>
   </p>
-  
-  <h2>An ISOBASE node in the Ciao System</h2>
+
+  <h3>The Ciao Prolog node</h3>
 
   <p>
-    This is an attempt to port the simple node from SWI-Prolog to
-    <a href="https://ciao-lang.org/">Ciao Prolog</a>.
-    This is only a port of a node (i.e. no actors, send or receive) and uses engines rather than threads.
+    The Ciao prototype explores a smaller part of the node interface: an HTTP
+    endpoint that evaluates queries over a static, node-resident database and returns
+    paged Prolog-text answers. Ciao engines preserve suspended computations between
+    requests.
+  </p>
+
+  <p>
+    Queries execute through a database module using Ciao's pure package, restricting
+    the predicates available to submitted goals. This provides a useful boundary but
+    does not bound execution time or memory use. The prototype does not currently
+    provide actors or JSON answers, and complete ISOBASE conformance has not been
+    established.
   </p>
 
   <p>
     <a href="https://github.com/torbjornlager/ciao-port">View on GitHub</a>
+  </p>
+
+  <h2>The simple nodes</h2>
+
+  <p>
+    The book's implementation appendix develops small nodes to explain the mechanisms
+    behind the larger implementations. The runnable
+    <a href="https://github.com/torbjornlager/simple-node">simple-node repository</a>
+    accompanies this presentation with local actors, resumable toplevel processes,
+    an HTTP endpoint with continuation caching, and an RPC client.
+  </p>
+
+  <p>
+    The emphasis is on readable code and experiments that readers can reproduce.
+    Regression tests cover actor behaviour, HTTP paging, term transfer and cleanup
+    under interruption; companion checks also exercise the appendix listings.
+  </p>
+
+  <p>
+    These teaching implementations run trusted local code. Actors share the host
+    database, and the examples omit authentication, sandboxing, private actor databases
+    and distributed actor transport. They provide a starting point for understanding
+    the mechanisms and exploring ports to other Prolog systems.
+  </p>
+
+  <p>
+    <a href="https://github.com/torbjornlager/simple-node#requirements-and-tests">Read the code and run the tests</a>
   </p>
 </section>
 </body>
