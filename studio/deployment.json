@@ -1,0 +1,55 @@
+{
+  "application": {
+    "path": "experiments/browser-studio",
+    "repository": "torbjornlager/trinity-demonstrator",
+    "revision": "d1dcbe834396b8f4f51601ad9e871ac71e3eda70"
+  },
+  "editor": {
+    "files": {
+      "codemirror.min.css": "11077112ab6955d29fe41085c62365c7d4a2f00a570c7475e2aec2a8cbc85fc4",
+      "codemirror.min.js": "f102bb61fb2ac45c3a611847edd9948faad0ab22a83a2dfa9974be5031079b15"
+    },
+    "name": "CodeMirror",
+    "source_revision": "d1dcbe834396b8f4f51601ad9e871ac71e3eda70",
+    "version": "5.65.16"
+  },
+  "files": {
+    "ABOUT.txt": "a03b20631da50c641be164b214338629be39a0d40d7dda18a05d59763a4e81a6",
+    "CODEMIRROR-LICENSE.txt": "168a4becc968f5001e2ee2e0291b6e4daabafc1894a11ade1e11d56e96096e07",
+    "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
+    "index.html": "2dbc47dfd4464429c7e05cdd0ea8f542c2b24b593699f7d1c1cb4916c228cc7c",
+    "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
+    "runtime/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
+    "runtime/swipl-bundle.js": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+    "runtime/third_party/LICENSE.txt": "770594d0f4463b71f1485f00e4bc5cf4b6f667d62ef6bc9bde2fee236541992a",
+    "runtime/vendor/codemirror.min.css": "11077112ab6955d29fe41085c62365c7d4a2f00a570c7475e2aec2a8cbc85fc4",
+    "runtime/vendor/codemirror.min.js": "f102bb61fb2ac45c3a611847edd9948faad0ab22a83a2dfa9974be5031079b15",
+    "runtime/vendor/swi-wasm-minimal.html": "81d55131b662631de137072c50690dc70b735f49578959c4160ac43534e6c5d1",
+    "runtime/vendor/swi-wasm-node.js": "4dd39ff9f207b5c4381606754ef0914f6507202a3540b399d31bba9659250436",
+    "runtime/wasm/shared_db.pl": "806b92e31dd7b12b9f764e72af2b3812cdd0f8292bad385f0ca1d91fc98c439f",
+    "runtime/wasm/statechart_wasm.pl": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
+    "runtime/wasm/statechart_wasm_exec.pl": "0ea5653d596acd99e5dc5afa54db7d4d21af733954a488d0ff354c242fb29bed",
+    "runtime/wasm/statechart_wasm_model.pl": "c85d4d3a0e666a2177a12ae56181343cf89d0fde8e4b06edfed20fda01d26712",
+    "runtime/wasm/statechart_wasm_runtime.pl": "8ed9f5940037dad66e12d5e8d3dcfe020651601e7250e79e3d4e1910a6761da7",
+    "runtime/wasm/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
+    "studio.css": "6b210fc99dac175ad8b70a9c66507e563cc8adff8e2d6c99ece80b6a84882835",
+    "studio.js": "ae93a0cc41be60052b45ed0760591a0d5efa59c723bab7b4f6a3c79b09eb7c5d"
+  },
+  "format": 1,
+  "runtime": {
+    "engine": {
+      "bundle": "web/swipl-bundle.js",
+      "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+      "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+      "engine_version": "10.1.19",
+      "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+      "package": "swipl-wasm",
+      "package_version": "8.2.5",
+      "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz"
+    },
+    "manifest_sha256": "59018548f0b810e88a96f4fec4dab5f4f7f35c11a7544e0d51c7e1cdae99edcf",
+    "repository": "torbjornlager/swi-wasm-node",
+    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f",
+    "version": "0.1.0"
+  }
+}

@@ -35,3 +35,31 @@ runtime costs approximately 6.6 MB before transfer compression.
 
 The family database is private to the page's Worker and is not automatically
 persisted. Visitors can download current Prolog facts and rules before leaving.
+
+
+## Hosted Trinity Studio experiment
+
+The separate IDE-style UI is published at
+https://trinity.elfenbenstornet.se/studio/ and linked from `pocs.html`.
+Its source lives in `trinity-demonstrator/experiments/browser-studio`.
+The tracked `studio/` snapshot includes its own pinned SWI-WASM runtime,
+CodeMirror 5.65.16 editor assets, license notices and a deployment manifest.
+It works independently of the hosted demonstrator and the Genealogist page.
+
+Build from clean committed application/editor source and a runtime release:
+
+```sh
+python3 tools/package_studio.py \
+  --experiment-root /path/to/trinity-demonstrator/experiments/browser-studio \
+  --runtime-package /path/to/swi-wasm-node-package \
+  --output /fresh/path/studio
+python3 tools/package_studio.py --verify /fresh/path/studio
+```
+
+The Studio packager shares the build and checksum verification implementation
+with `package_genealogist.py`. Editor bytes are checked against their source
+commit; runtime files are checked against the upstream release manifest.
+Review and replace the deployed copy only after verifying a fresh build.
+Preview `/studio/` with a static server rooted at this repository. Source,
+query history and browser sessions are not automatically persisted; visitors
+should save source before reloading or closing the page.

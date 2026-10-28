@@ -1,0 +1,8 @@
+Trinity Studio: a browser-only Web Prolog experiment.
+Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/d1dcbe834396b8f4f51601ad9e871ac71e3eda70/experiments/browser-studio
+Runtime source: https://github.com/torbjornlager/swi-wasm-node/tree/278042d4f5928c35cacfe267fe6bd7f83013533f
+The Prolog database belongs to this page and is not sent to a server.
+Save source before closing or reloading. No automatic persistence.
+Application/runtime licenses: LICENSE, runtime/LICENSE, runtime/third_party/LICENSE.txt
+Rebuild instructions: ../README.md and ../tools/package_studio.py
+Editor license: CODEMIRROR-LICENSE.txt (CodeMirror 5.65.16).
