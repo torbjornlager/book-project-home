@@ -1,0 +1,44 @@
+{
+  "application": {
+    "path": "experiments/genealogist",
+    "repository": "torbjornlager/trinity-demonstrator",
+    "revision": "fb0294a955e345b89a5ddbd535e4825d6d3a4223"
+  },
+  "files": {
+    "ABOUT.txt": "fba44c8f010d6667870fe923a6679cc39205fb3567f0e1c94573f9047de69c3c",
+    "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
+    "genealogist.css": "2c53614cab1e0e1adbfebf850160293141f5020c0fe551a52601573e0b84f8f9",
+    "genealogist.js": "c449973b271c445be892c9f5490f089be5bf987b65935e31f30a0e7049f65705",
+    "genealogist.pl": "4b96704f34bb0005f1c4331a29ae51fda28ec3e2b686b83530de4f0665a577a2",
+    "index.html": "423b1adc34bf38b8cb7c339e96da201725b8285f741ab13152f322dd49b789e6",
+    "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
+    "runtime/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
+    "runtime/swipl-bundle.js": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+    "runtime/third_party/LICENSE.txt": "770594d0f4463b71f1485f00e4bc5cf4b6f667d62ef6bc9bde2fee236541992a",
+    "runtime/vendor/swi-wasm-minimal.html": "81d55131b662631de137072c50690dc70b735f49578959c4160ac43534e6c5d1",
+    "runtime/vendor/swi-wasm-node.js": "4dd39ff9f207b5c4381606754ef0914f6507202a3540b399d31bba9659250436",
+    "runtime/wasm/shared_db.pl": "806b92e31dd7b12b9f764e72af2b3812cdd0f8292bad385f0ca1d91fc98c439f",
+    "runtime/wasm/statechart_wasm.pl": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
+    "runtime/wasm/statechart_wasm_exec.pl": "0ea5653d596acd99e5dc5afa54db7d4d21af733954a488d0ff354c242fb29bed",
+    "runtime/wasm/statechart_wasm_model.pl": "c85d4d3a0e666a2177a12ae56181343cf89d0fde8e4b06edfed20fda01d26712",
+    "runtime/wasm/statechart_wasm_runtime.pl": "8ed9f5940037dad66e12d5e8d3dcfe020651601e7250e79e3d4e1910a6761da7",
+    "runtime/wasm/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592"
+  },
+  "format": 1,
+  "runtime": {
+    "engine": {
+      "bundle": "web/swipl-bundle.js",
+      "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+      "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+      "engine_version": "10.1.19",
+      "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+      "package": "swipl-wasm",
+      "package_version": "8.2.5",
+      "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz"
+    },
+    "manifest_sha256": "59018548f0b810e88a96f4fec4dab5f4f7f35c11a7544e0d51c7e1cdae99edcf",
+    "repository": "torbjornlager/swi-wasm-node",
+    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f",
+    "version": "0.1.0"
+  }
+}
