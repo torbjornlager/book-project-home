@@ -23,6 +23,24 @@
     a {
       color: darkgreen;
     }
+    .contents {
+      margin: 1.5rem 0 2rem;
+    }
+    #contents-title {
+      color: darkgreen;
+      margin-bottom: 0.4rem;
+    }
+    .contents ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .contents ol ol {
+      padding-left: 1.5rem;
+    }
+    .contents li {
+      margin: 0.15rem 0;
+    }
   </style>
 </head>
 <body>
@@ -70,7 +88,25 @@
     The implementation work has been done in cooperation with several AIs.
   </p>
 
-  <h2>The Trinity demonstrator</h2>
+  <nav class="contents" aria-labelledby="contents-title">
+    <p id="contents-title"><strong>Contents</strong></p>
+    <ol role="list">
+      <li><a href="#trinity-demonstrator">1. The Trinity demonstrator</a></li>
+      <li>
+        <a href="#nodes">2. The nodes</a>
+        <ol role="list">
+          <li><a href="#swi-prolog-node">2.1. The SWI-Prolog node</a></li>
+          <li><a href="#swi-wasm-node">2.2. The SWI-WASM browser node</a></li>
+          <li><a href="#trealla-prolog-node">2.3. The Trealla Prolog node</a></li>
+          <li><a href="#gnu-prolog-node">2.4. The GNU Prolog node</a></li>
+          <li><a href="#ciao-prolog-node">2.5. The Ciao Prolog node</a></li>
+        </ol>
+      </li>
+      <li><a href="#simple-nodes">3. The simple nodes</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="trinity-demonstrator">1. The Trinity demonstrator</h2>
 
   <p>
     The <a href="https://n3.elfenbenstornet.se/demonstrator">Trinity demonstrator</a>
@@ -96,7 +132,7 @@
     <a href="https://github.com/torbjornlager/trinity-demonstrator">View on GitHub</a>
   </p>
 
-  <h2>The nodes</h2>
+  <h2 id="nodes">2. The nodes</h2>
 
   <p>
     The node implementations explore how different Prolog systems can expose common
@@ -108,7 +144,7 @@
     each implementation supports.
   </p>
 
-  <h3>The SWI-Prolog node</h3>
+  <h3 id="swi-prolog-node">2.1. The SWI-Prolog node</h3>
 
   <p>
     The SWI-Prolog node is the most developed implementation and the principal
@@ -129,7 +165,7 @@
     <a href="https://github.com/torbjornlager/swi-prolog-node">View on GitHub</a>
   </p>
 
-  <h3>The SWI-WASM browser node</h3>
+  <h3 id="swi-wasm-node">2.2. The SWI-WASM browser node</h3>
 
   <p>
     The <a href="https://github.com/torbjornlager/swi-wasm-node">SWI-WASM browser node</a>
@@ -150,7 +186,7 @@
     <a href="https://github.com/torbjornlager/swi-wasm-node">View on GitHub</a>
   </p>
 
-  <h3>The Trealla Prolog node</h3>
+  <h3 id="trealla-prolog-node">2.3. The Trealla Prolog node</h3>
 
   <p>
     The Trealla implementation began as a port of the simple SWI-Prolog node and has
@@ -171,7 +207,7 @@
     <a href="https://github.com/torbjornlager/trealla-port">View on GitHub</a>
   </p>
 
-  <h3>The GNU Prolog node</h3>
+  <h3 id="gnu-prolog-node">2.4. The GNU Prolog node</h3>
 
   <p>
     The GNU Prolog implementation targets ISOBASE, with ISOTOPE a possible later
@@ -193,7 +229,7 @@
     <a href="https://github.com/torbjornlager/gprolog-port">View on GitHub</a>
   </p>
 
-  <h3>The Ciao Prolog node</h3>
+  <h3 id="ciao-prolog-node">2.5. The Ciao Prolog node</h3>
 
   <p>
     The Ciao prototype explores a smaller part of the node interface: an HTTP
@@ -214,7 +250,7 @@
     <a href="https://github.com/torbjornlager/ciao-port">View on GitHub</a>
   </p>
 
-  <h2>The simple nodes</h2>
+  <h2 id="simple-nodes">3. The simple nodes</h2>
 
   <p>
     The book's implementation appendix develops small nodes to explain the mechanisms
