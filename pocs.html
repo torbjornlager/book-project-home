@@ -81,11 +81,11 @@
   </p>
 
   <p>
-    The demonstrator brings together the browser interface, SWI-Prolog WebAssembly runtimes
-    and integration with native nodes. Its native SWI-Prolog implementation is now
-    maintained in the separate repository described below. This separation allows the
-    demonstrator and the node implementation to develop independently while sharing
-    the same language and protocols.
+    The demonstrator brings together the browser interface and integration with
+    browser-based and native nodes. Its native SWI-Prolog node and SWI-WASM browser
+    runtime are now maintained in separate repositories, described below. This separation
+    allows the demonstrator and the node implementations to develop independently while
+    sharing the same language and protocols.
   </p>
 
   <p>
@@ -99,9 +99,10 @@
   <h2>The nodes</h2>
 
   <p>
-    The native node implementations explore how different Prolog systems can expose
-    common query and actor interfaces. Their scope varies: SWI-Prolog and Trealla support
-    distributed actors, while GNU Prolog targets ISOBASE and the
+    The node implementations explore how different Prolog systems can expose common
+    query and actor interfaces, both in native processes and in the browser. Their scope
+    varies: SWI-Prolog, Trealla and SWI-WASM support actors, while GNU Prolog targets
+    ISOBASE and the
     <a href="https://ciao-lang.org/">Ciao Prolog</a> prototype concentrates on paged
     queries over a resident database. The conformance suite compares the facilities
     each implementation supports.
@@ -126,6 +127,27 @@
 
   <p>
     <a href="https://github.com/torbjornlager/swi-prolog-node">View on GitHub</a>
+  </p>
+
+  <h3>The SWI-WASM browser node</h3>
+
+  <p>
+    The <a href="https://github.com/torbjornlager/swi-wasm-node">SWI-WASM browser node</a>
+    runs Web Prolog in the browser using SWI-Prolog compiled to WebAssembly. It supports
+    actors, private query sessions, paging, monitors and statecharts, together with HTTP
+    remote queries and WebSocket communication with native nodes.
+  </p>
+
+  <p>
+    Extracted from the Trinity demonstrator, the runtime can now be packaged, tested and
+    used independently. Its primary execution model places actors in Web Workers; an
+    alternative main-thread model provides access to the browser's document. Local
+    execution requires no running Prolog server, while distributed examples connect to
+    remote peers.
+  </p>
+
+  <p>
+    <a href="https://github.com/torbjornlager/swi-wasm-node">View on GitHub</a>
   </p>
 
   <h3>The Trealla Prolog node</h3>
