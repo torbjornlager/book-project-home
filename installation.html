@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installing and connecting Web Prolog components</title>
+  <style>
+    body { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6; max-width: 720px; margin: 3rem auto; padding: 0 1rem; color: #222; }
+    h1, h2, h3, a { color: darkgreen; }
+    h1 { font-weight: 500; }
+    pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; line-height: 1.5; }
+    code { font-size: 0.92em; }
+    .contents ol { list-style: none; padding-left: 0; }
+    .contents li { margin: 0.2rem 0; }
+    .table-scroll { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #ccc; padding: 0.6rem; text-align: left; vertical-align: top; }
+    a { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h1>Installing and connecting Web Prolog components</h1>
+  <p>Web Prolog programs can run in an ordinary Prolog process, in a browser, or across several connected nodes. A user interface is a separate component: the Trinity demonstrator is one such interface, and other interfaces can be built for teaching, development or particular applications.</p>
+  <p>This guide explains the choices before giving local installation recipes. For the implementations and their current conformance coverage, see <a href="pocs.html">Proof-of-concept implementations</a>. These are experimental implementations; the facilities available depend on the selected node and version.</p>
+
+  <nav class="contents" aria-labelledby="contents-title">
+    <p id="contents-title"><strong>Contents</strong></p>
+    <ol role="list">
+      <li><a href="#components">1. Nodes and user interfaces</a></li>
+      <li><a href="#combinations">2. Choosing a combination</a></li>
+      <li><a href="#browser">3. Run Prolog in your browser</a></li>
+      <li><a href="#native">4. Run a native SWI-Prolog node</a></li>
+      <li><a href="#demonstrator">5. Install the Trinity demonstrator</a></li>
+      <li><a href="#other-nodes">6. Other native nodes</a></li>
+      <li><a href="#hosting">7. Separate hosting and CDN distribution</a></li>
+      <li><a href="#own-ui">8. Build your own user interface, with AI assistance</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="components">1. Nodes and user interfaces</h2>
+  <p>A <strong>native node</strong> runs as a process on your computer or a server. It executes Prolog and exposes supported query or actor interfaces to other programs. A browser is optional: another Prolog program can be its client. The process must remain running to provide its service.</p>
+  <p>A <strong>browser node</strong> executes Prolog inside a web page. The SWI-WASM node bundles a version of SWI-Prolog compiled to WebAssembly, a format browsers can execute. You do not need to install a native Prolog system to use it. Its usual execution mode uses Web Workers, which run computations separately from the page's interface.</p>
+  <p>A <strong>user interface</strong> supplies editors, buttons and displays. It can send queries to a native node, host a browser node, or do both. An interface that only sends queries to a native node does not need a Prolog engine in the browser. Conversely, a browser node can execute local programs without any native node.</p>
+  <p>Closing a page destroys its browser engines. A native service can remain running after a client disconnects, although its session-owned resources may be reclaimed. Saving a program or its results is a separate feature that the chosen interface must provide.</p>
+
+  <h2 id="combinations">2. Choosing a combination</h2>
+  <div class="table-scroll">
+    <table>
+      <caption>Common arrangements</caption>
+      <thead><tr><th scope="col">What you want</th><th scope="col">Components</th><th scope="col">Start with</th></tr></thead>
+      <tbody>
+        <tr><td>Experiment with Prolog entirely in a browser</td><td>Browser node and a compatible UI</td><td><a href="#browser">The minimal browser host</a></td></tr>
+        <tr><td>Provide a service for other programs</td><td>Native node; UI optional</td><td><a href="#native">The native SWI-Prolog node</a></td></tr>
+        <tr><td>Use a browser to query a native node</td><td>Native node and a compatible UI</td><td><a href="#demonstrator">The demonstrator installation</a></td></tr>
+        <tr><td>Explore local browser execution and distributed actors</td><td>Browser node, native peers and a compatible UI</td><td><a href="#demonstrator">The demonstrator installation</a></td></tr>
+        <tr><td>Connect different Prolog systems</td><td>Several native nodes; UI optional</td><td><a href="#other-nodes">The individual node guides</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Choose nodes by the facilities your application needs. Query support does not imply actor support, and sharing a protocol does not make every language feature interchangeable. The <a href="https://github.com/torbjornlager/trinity-conformance/blob/main/CURRENT_COVERAGE.md">conformance coverage matrix</a> records the combinations that have been tested.</p>
+
+  <h2 id="browser">3. Run Prolog in your browser</h2>
+  <p>The <a href="https://github.com/torbjornlager/swi-wasm-node">SWI-WASM node</a> includes a small independent interface for loading source and running queries. It does not require the demonstrator.</p>
+  <ol>
+    <li>Download <code>swi-wasm-node.tgz</code> from the <a href="https://github.com/torbjornlager/swi-wasm-node/releases/tag/v0.1.0">v0.1.0 release</a> and extract it.</li>
+    <li>Install Python 3.9 or later if necessary. Open a terminal in the extracted <code>swi-wasm-node</code> directory, the one containing <code>manifest.json</code>.</li>
+    <li>Start the supplied local file server:
+      <pre><code>python3 tools/serve.py --package . --port 8080</code></pre>
+    </li>
+    <li>Open <a href="http://localhost:8080/vendor/swi-wasm-minimal.html">http://localhost:8080/vendor/swi-wasm-minimal.html</a> in your browser.</li>
+  </ol>
+  <p>Keep the terminal's server running while using the page. It supplies files; the Prolog computation takes place in your browser. Opening the HTML file directly by double-clicking it is insufficient because the runtime needs to load its engine and Worker files through HTTP.</p>
+  <p>Try <code>member(X,[a,b,c])</code> and request the next answers. The packaged shared database is empty; supply your own program for application-specific predicates. Save any source you want to keep before closing the page.</p>
+
+  <h2 id="native">4. Run a native SWI-Prolog node</h2>
+  <p>The <a href="https://github.com/torbjornlager/swi-prolog-node">SWI-Prolog node</a> can run without any demonstrator files. Install Git and a threaded SWI-Prolog first; SWI-Prolog 10.1.19 is the tested baseline for the current implementation. In a terminal:</p>
+  <pre><code>git clone https://github.com/torbjornlager/swi-prolog-node.git
+cd swi-prolog-node
+swipl load.pl</code></pre>
+  <p>At the Prolog prompt, start a node for direct local development:</p>
+  <pre><code>?- node(3060, [profile(actor), auth(dev)]).</code></pre>
+  <p>Leave SWI-Prolog running. Open <a href="http://localhost:3060/call?goal=true&amp;format=json">http://localhost:3060/call?goal=true&amp;format=json</a> to check that the node answers a query. This endpoint returns data rather than a graphical interface.</p>
+  <p><code>auth(dev)</code> allows execution by direct loopback clients. It is a local development policy, not a deployment recipe for a public server or a server behind a proxy. The option does not itself restrict the listening socket to localhost. Consult the repository's deployment documentation before exposing the service.</p>
+
+  <h2 id="demonstrator">5. Install the Trinity demonstrator</h2>
+  <p>The <a href="https://github.com/torbjornlager/trinity-demonstrator">Trinity demonstrator</a> brings together tutorials, editors, native queries and browser execution. For a first installation, serve the UI and native node from the same address. This avoids additional configuration for connections between different websites.</p>
+  <p>With Git, Python 3 and the tested SWI-Prolog available, run:</p>
+  <pre><code>git clone https://github.com/torbjornlager/trinity-demonstrator.git
+cd trinity-demonstrator
+python3 tools/fetch_swi.py --destination .trinity/native
+python3 tools/fetch_browser.py --destination .trinity/swi-wasm-node
+python3 tools/setup_swi.py --native-root .trinity/native
+swipl load.pl</code></pre>
+  <p>The fetch commands obtain the dependency revisions selected by the demonstrator, and setup assembles the required files. Use fresh destination directories. At the Prolog prompt:</p>
+  <pre><code>?- node(3060, [profile(actor), auth(dev)]).</code></pre>
+  <p>Open <a href="http://localhost:3060/portal">http://localhost:3060/portal</a>. If you already started the standalone native node on port 3060, stop that process first or choose a different free port and adjust the address. The same local-development authentication qualification applies here.</p>
+  <p>The demonstrator's settings select browser execution modes and node connections. Begin with the Worker browser runtime. The optional main-thread mode provides DOM access but has different interruption and lifetime constraints. For distributed examples, use the actual addresses of running peers and check their supported facilities.</p>
+  <p><code>localhost</code> always means the computer making the connection. A localhost address in a browser on another computer will not reach your server.</p>
+
+  <h2 id="other-nodes">6. Other native nodes</h2>
+  <p>The <a href="https://github.com/torbjornlager/trealla-port">Trealla Prolog node</a> supports queries and actors. Follow its installation instructions for the matching Trealla executable and library files. Its server startup and configuration differ from SWI-Prolog's.</p>
+  <p>The <a href="https://github.com/torbjornlager/gprolog-port/blob/main/isobase/README.md">GNU Prolog node</a> provides ISOBASE query and RPC/promise facilities, rather than the actor interface. Its build currently requires a particular upstream GNU Prolog revision and a C toolchain; consult its own guide for prerequisites and tested platforms.</p>
+  <p>The <a href="https://github.com/torbjornlager/ciao-port">Ciao Prolog prototype</a> concentrates on paged text queries over a resident database. Do not assume that a UI written for the actor or JSON interfaces can connect to it unchanged.</p>
+
+  <h2 id="hosting">7. Separate hosting and CDN distribution</h2>
+  <p>A static UI consists of files a web server sends to the browser: HTML, styles, JavaScript and, if included, the browser runtime. A content delivery network (CDN) can distribute these files. The native node remains a separate running service. Downloading UI files does not install or start a native node.</p>
+  <p>The demonstrator has tools for packaging a static UI with its browser runtime. An operator can host that package and configure native-node addresses separately. A public CDN installation service is not yet provided. Local tests of connections and authentication from a separate origin have passed; verification over HTTPS with the real SSO deployment remains pending its availability.</p>
+  <p>An <strong>origin</strong> is the combination of scheme, hostname and port. Even <code>http://localhost:8080</code> and <code>http://localhost:3060</code> are different origins. Browsers require the node or its proxy to explicitly allow cross-origin HTTP requests (CORS), and WebSocket connections need their own origin checks. Merely moving a UI to another port is therefore not a complete setup.</p>
+  <p>For private nodes, the operator must also configure HTTPS and login. SSO means using a shared sign-in service; login normally happens in a browser page, while API requests use the resulting session. Cookie restrictions can affect connections between unrelated sites. Follow the demonstrator's <a href="https://github.com/torbjornlager/trinity-demonstrator/blob/main/docs/CDN_REMOTE_AUTH.md">remote-node and authentication guide</a> for this deployment work.</p>
+
+  <h2 id="own-ui">8. Build your own user interface, with AI assistance</h2>
+  <p>The demonstrator is one possible UI. You might prefer a small query console, a teaching exercise, a statechart editor or an interface that hides Prolog queries behind application-specific controls. Such an interface can host a browser node, connect to native nodes, or combine both approaches.</p>
+  <p>Working with an AI can be useful here, especially if you know Prolog but have little experience with HTML, CSS and JavaScript. Describe what the user should be able to do, provide a small Prolog program and its expected answers, and ask for an interface built around the existing runtime or node protocols.</p>
+  <p>We provide a <a href="ui-development-brief.txt">technical brief for UI development</a> that you can give to an AI. It describes the browser runtime's JavaScript interface, native HTTP and WebSocket interfaces, session handling and authentication, with links to the implementation sources. You can also <a href="ui-development-brief.txt" download>download the brief as a plain text file</a> and attach it to your conversation.</p>
+  <p>For example:</p>
+  <blockquote><p>Read the attached Web Prolog UI development brief. Help me build a small teaching interface that runs Prolog locally using swi-wasm-node. I will supply the Prolog program. Show one answer at a time, provide Next and Stop controls, and let me save my source. Explain the web code as we go. Use the real runtime and test with the example queries I provide.</p></blockquote>
+  <p>The AI should check the APIs against your selected implementation and version, and run the resulting interface against a real engine. Generated code still needs review and testing. Keep passwords and sign-in credentials out of the conversation and the published files.</p>
+  <p>Each new UI should document which nodes and versions it supports, where node addresses are configured, how login and reconnection work, and what is saved when a session or page closes. These details make it possible to use the UI independently of the demonstrator.</p>
+
+  <p><a href="pocs.html">Back to proof-of-concept implementations</a></p>
+</body>
+</html>

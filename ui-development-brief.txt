@@ -1,0 +1,291 @@
+WEB PROLOG: BRIEF FOR BUILDING AN INDEPENDENT USER INTERFACE
+Prepared 28 October 2026
+
+Give this file to an AI coding assistant together with your application idea,
+a small Prolog program, and example queries with expected answers. It is also
+intended for human UI authors. It describes current implementation interfaces;
+it does not define a new language or promise identical facilities in every node.
+
+1. AGREE ON THE APPLICATION
+
+Before coding, establish:
+- What should users do? Which queries and answers demonstrate success?
+- Should Prolog run locally in the browser, on native nodes, or both?
+- Which node implementations, versions and protocol profiles are required?
+- Where will the UI files and native nodes be hosted?
+- Is native-node access public, local development, or authenticated?
+- What should survive a new query, a reset, a disconnect or closing the page?
+- How should users load and save programs and results?
+
+Explain HTML, CSS and JavaScript choices to a Prolog programmer. Keep the first
+interface small. Use a real engine; never simulate successful Prolog execution
+with JavaScript, canned answers, or invented endpoints. Keep presentation code
+separate from a backend adapter for the chosen runtime or transport. This is a
+suggested application structure, not an existing universal adapter API.
+
+2. COMPONENT BOUNDARIES AND REFERENCES
+
+A UI can use a native node without embedding Prolog. A UI can host a SWI-WASM
+node without any native node. A hybrid UI can do both. The Trinity demonstrator
+is an example UI, not a dependency that every future UI must install.
+
+Primary references (check the selected revision before implementing):
+Browser runtime release:
+https://github.com/torbjornlager/swi-wasm-node/tree/v0.1.0
+Browser host API:
+https://github.com/torbjornlager/swi-wasm-node/blob/v0.1.0/README.md
+Browser implementation details:
+https://github.com/torbjornlager/swi-wasm-node/blob/v0.1.0/docs/runtime.md
+Browser actor transport:
+https://github.com/torbjornlager/swi-wasm-node/blob/v0.1.0/docs/browser_actor_transport.md
+Native SWI node and transport notes:
+https://github.com/torbjornlager/swi-prolog-node
+https://github.com/torbjornlager/swi-prolog-node/blob/main/prolog/web_prolog/README.md
+Shared Web Prolog language manual:
+https://github.com/torbjornlager/trinity-demonstrator/blob/main/web/manual.html
+HTTP query and interactive examples:
+https://github.com/torbjornlager/trinity-demonstrator/blob/main/examples/APIs/http_example-1.html
+https://github.com/torbjornlager/trinity-demonstrator/blob/main/examples/APIs/http-example-2.html
+WebSocket query and interactive examples:
+https://github.com/torbjornlager/trinity-demonstrator/blob/main/examples/APIs/ws-example-1.html
+https://github.com/torbjornlager/trinity-demonstrator/blob/main/examples/APIs/ws-example-2.html
+Conformance coverage:
+https://github.com/torbjornlager/trinity-conformance/blob/main/CURRENT_COVERAGE.md
+Separate-origin authentication:
+https://github.com/torbjornlager/trinity-demonstrator/blob/main/docs/CDN_REMOTE_AUTH.md
+
+Links to main can change. Record the actual revisions used by your application.
+SWI-Prolog and Trealla support actor facilities; GNU Prolog targets ISOBASE and
+RPC/promise facilities; the Ciao prototype has a narrower text-query interface.
+Do not assume that the HTTP/JSON and WebSocket recipes below apply to Ciao.
+Check the conformance matrix and each implementation's own documentation.
+
+3. EMBEDDING THE SWI-WASM BROWSER RUNTIME
+
+Use the packaged runtime as a pinned dependency. Its web/ directory is a complete
+static distribution. Serve that directory as a document root, or use the supplied
+package server. Keep runtime files, Worker, engine and Prolog libraries together.
+Do not copy the demonstrator's private Vue methods into a new UI.
+
+In the host HTML, load these classic scripts in this order (paths assume web/
+is the document root):
+
+  <script src="/swi_wasm_actor_worker.js"></script>
+  <script src="/vendor/swi-wasm-node.js"></script>
+
+The second exports the global SwiWasmNode. After loading them, an async function
+can run the following. The HTML must contain <pre id="output"></pre>.
+
+  const output = document.getElementById('output');
+  const node = SwiWasmNode.create({
+    workerUrl: '/swi_wasm_actor_worker.js',
+    engineUrl: '/swipl-bundle.js',
+    prologBaseUrl: '/wasm/',
+    sharedDatabaseUrl: null,
+    onEvent(event) {
+      if (event.type === 'output') {
+        output.appendChild(document.createTextNode(event.data));
+        return true;
+      }
+    },
+    onInput(text) { return window.prompt(text); }
+  });
+  try {
+    await node.open({source: 'square(X,Y) :- Y is X*X.'});
+    const answer = await node.query('square(3,Y)', {limit: 1});
+    output.appendChild(document.createTextNode(JSON.stringify(answer) + '\n'));
+  } finally {
+    node.dispose();
+  }
+
+This is a complete one-shot session, not a persistent editor. The expected first
+answer is a success envelope with a binding such as {"Y":"9"} in its data array.
+For a persistent UI, retain node until reset or component disposal. If more is
+true, await node.next() for another page, or await node.stop() to discard the
+remaining alternatives before starting a different query.
+
+Public Worker-session methods:
+  open({source: programText})  initialise a session; await before querying
+  query(goalText, {limit: 1})  execute a goal and await an answer/event envelope
+  next()                      resume a pending answer continuation
+  stop()                      discard the current query's remaining work
+  abort()                     interrupt current computation
+  input(text)                 supply input when using the prompt-event approach
+  dispose()                   release this host's runtime resources; idempotent
+
+Do not overlap ordinary query/next operations. A new query requires the preceding
+query to be exhausted or stopped. Stop or Abort can interrupt a pending query;
+in that case their immediate promise need not contain the interruption envelope:
+the outstanding query promise receives it. Handle its settlement and rejection.
+
+onEvent receives output, logs, traces and lifecycle events. Output must be
+accepted synchronously before acknowledged remote I/O continues; returning false
+declines output. onInput may supply a response asynchronously. If onInput is
+omitted, handle the prompt event and later call input(text). Cancelling a prompt
+must have an explicit UI policy, such as aborting the query; returning null alone
+does not mean the computation has finished.
+
+open is not a source-replacement command on an already live session. To replace
+a program, settle or cancel outstanding work, dispose the old host, then create
+and open a fresh one. Ignore stale callbacks from the previous host (for example,
+with an instance/generation token). Save source separately if it should survive.
+
+Success/failure/error/timeout are distinct outcomes. An exception or disposed
+host can also reject a JavaScript promise. Catch both protocol errors and promise
+rejections. Preserve output emitted before a final answer or exception.
+
+The default packaged database is empty. Supply application knowledge explicitly;
+sharedDatabaseUrl: null disables loading a shared database in this example.
+Runtime test fixtures are not an application database.
+
+Paths above are root-relative. For deployment under /my-app/, resolve every
+script, Worker, engine and Prolog-library URL against the actual asset base.
+Keep the classic Worker and its required assets on a compatible origin; do not
+assume arbitrary cross-origin CDN script URLs also work as Worker URLs. Verify
+HTTP content types, paths and loading in the deployed browser. A file:// page is
+not sufficient. Asset locations and remote native-node addresses are independent.
+
+The create API above runs Worker engines, which cannot directly access the DOM.
+The optional main-thread compatibility engine has DOM access and cooperative
+interruption, and uses a shared page engine. Do not promise the same isolation or
+hard interruption there. Page destruction ends all its browser engines. Forced
+Worker termination may bypass Prolog cleanup. Use the documented runtime for
+actor coordination rather than reimplementing its bridge messages.
+
+4. CONNECTING TO A NATIVE NODE FROM JAVASCRIPT
+
+Select an interface supported by the chosen node. Use URL/URLSearchParams for
+HTTP encoding and JSON.stringify for WebSocket frames. Treat pids as opaque
+identifiers. Do not construct Prolog terms by concatenating unescaped user input:
+URL encoding and JSON encoding do not provide Prolog-term escaping.
+
+ISOBASE: stateless HTTP queries
+
+A same-origin query against a compatible native node:
+
+  const url = new URL('/call', location.origin);
+  url.search = new URLSearchParams({
+    goal: 'member(X,[a,b,c])', format: 'json', offset: '0', limit: '1'
+  });
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  const answer = await response.json();
+
+For a remote node, replace location.origin with its configured base address and
+apply the authentication policy below. Preserve a configured path prefix when
+constructing endpoints; a leading / intentionally resolves at the origin root.
+
+Offset pagination reruns a query to reach the requested offset; it is not a
+persistent continuation. Repeated requests can repeat side effects. Use a
+stateful interface when you need a running interactive session. Check source
+loading and execution limits against the selected implementation.
+
+ISOTOPE: stateful HTTP sessions
+
+Use POST /toplevel_spawn with application/json, for example:
+  {"options":"[session(true)]"}
+Read the spawned pid from the response. Subsequent operations in the current
+examples use POST with application/x-www-form-urlencoded (URLSearchParams):
+  /toplevel_call     pid, goal, format=json, limit=1
+  /toplevel_next     pid, format=json
+  /toplevel_poll     pid, format=json
+  /toplevel_respond  pid, input, format=json
+  /toplevel_stop     pid, format=json
+  /toplevel_abort    pid, format=json
+  /toplevel_halt     pid, format=json
+
+Supply session source through src_text/1 in the spawn options, using correct
+Prolog quoting. Poll retrieves queued events; it does not request the next
+solution. Output and prompts can precede a final answer. Respond to prompts,
+then keep polling as appropriate. Stop abandons alternatives; Halt ends the
+session. Check endpoint support and ownership rules on the selected node.
+
+A polling timeout does not establish that the goal stopped. Cancelling fetch
+only stops the browser's wait, not necessarily the server's computation. Do not
+blindly retry spawn or query operations after a transport failure: they may have
+already executed. Native SWI's documented Web-Prolog-Seq/Ack replay mechanism is
+an implementation-specific aid; implement it fully before relying on retries.
+
+ACTOR: WebSocket sessions
+
+For a compatible node, open /ws using ws: for HTTP or wss: for HTTPS. After the
+socket opens, send:
+  {"command":"toplevel_spawn","options":"[session(true)]"}
+On the spawned event, retain its pid and send (replace PID with that value):
+  {"command":"toplevel_call","pid":PID,"goal":"member(X,[a,b,c])","options":"[limit(1)]"}
+For more answers:
+  {"command":"toplevel_next","pid":PID}
+Other commands include toplevel_stop, toplevel_abort, toplevel_halt and
+  {"command":"toplevel_respond","pid":PID,"input":"hello."}
+
+Load source through spawn options. Native SWI rejects a src_text field on a
+WebSocket toplevel_call. Route events by session and documented correlation
+fields; output, prompts, lifecycle events and actor traffic can interleave.
+Do not assume every frame is an answer, invent request identifiers, or assume
+reopening a socket resumes its previous session. Use the executable examples
+and transport notes for the complete state machine and negotiated extensions.
+Advanced actor transport includes correlation, acknowledgement and term-fidelity
+requirements; reuse the runtime bridge where applicable.
+
+With JSON query formatting, native SWI success data is an array of binding
+objects whose values are Prolog-text strings, e.g. {"X":"42"}. These are not
+arbitrary JavaScript objects or necessarily JavaScript numbers. Preserve quoted
+atoms, compound terms, Unicode, lists and variable information. Other formatting
+modes have different payloads; consult the manual rather than guessing a parser.
+
+5. HOSTING, LOGIN AND CONNECTION LIFETIMES
+
+Use textContent or text nodes for answers, output, diagnostics and source text.
+Do not evaluate returned Prolog text as JavaScript or inject it as HTML.
+
+An origin includes scheme, host and port. Cross-origin fetch needs the node or
+proxy's CORS policy; WebSocket origin validation is separate. Public HTTPS UIs
+need HTTPS/WSS peers. Do not bypass certificate errors or relax origins to make
+a failing test pass.
+
+For cookie-authenticated remote HTTP, credentials: 'include' is an explicit,
+scoped choice for that configured node. The server must allow the exact UI
+origin, allow credentials, and handle preflight. A wildcard origin is unsuitable
+for credentialed requests. API authentication failures should be machine-readable
+401 responses, not redirects to login HTML. Open login as top-level navigation
+or a separate tab, then explicitly reconnect. The browser supplies WebSocket
+cookies according to its cookie rules; WebSocket has no fetch credentials option.
+
+Host-only Secure, HttpOnly cookies and an authenticating proxy are deployment
+concerns. Unrelated sites may encounter third-party-cookie restrictions even
+with credentials enabled. Never put passwords or bearer tokens in public bundles,
+query URLs, source examples or localStorage. Do not forge proxy identity headers
+such as X-Web-Prolog-User. Demonstrator host configuration (WEB_PROLOG_HOST /
+TrinityHost) belongs to that UI and is not a universal node interface.
+
+On logout, close the UI's owned sessions and sockets and clear session metadata.
+Deleting a cookie does not itself revoke other already authenticated sockets;
+the operator must define expiry/revocation policy. On connection loss, show what
+is known and require deliberate recovery for potentially effectful operations.
+Native services can outlive a page, but session and actor cleanup depend on
+ownership rules. Do not promise persistence without implementing and testing it.
+Private authenticated RPC from the independent browser runtime is not certified
+by the demonstrator's HTTP/WebSocket login tests. Real HTTPS/SSO deployment
+verification is still pending as of this brief's date.
+
+6. VERIFICATION AND DELIVERY
+
+Test against the actual selected runtime/node, not only mocks. As applicable:
+- true, failure, an exception, and a genuine application query;
+- member(X,[a,b,c]) with one answer per page, exhaustion, Next and Stop;
+- output before answers, prompts and responses, and recovery after an error;
+- abort during computation, including settlement of the pending query promise;
+- new source/session isolation, disposal, stale callbacks and page closure;
+- reconnect after a dropped connection without replaying effects;
+- login, 401, expiry, logout, and rejection of an unapproved origin;
+- deployed asset paths, browser console errors and rejected promises.
+
+Document prerequisites, exact versions, launch steps, supported profiles,
+configured node and asset addresses, save/reset behavior, and known limitations.
+Keep node execution and backend-specific code out of presentation components.
+Pin package versions and upgrade deliberately. Retain runtime MIT notices and
+the bundled engine's redistribution terms, including third_party/LICENSE.txt.
+
+Deliver readable source and a small reproducible example with expected answers.
+Explain which checks ran and which deployments remain unverified. An interface
+is not complete merely because its buttons render or its mocked tests pass.
