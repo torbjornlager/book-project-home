@@ -37,6 +37,13 @@ Erlang provides a substantial body of experience relevant to those questions. Th
 
 [Joe Armstrong's conversation with Alan Kay at Code Mesh 2016](https://www.youtube.com/watch?v=fhOHn9TClXY&t=1845s) provides an interesting historical perspective. The relevant discussion begins at 30:45. The diagram below brings several of the relevant ideas together: Simula, Lisp, Planner, Smalltalk, Actors, and Prolog, with Linda and Erlang appearing at the bottom.
 
+<figure style="margin: 2rem 0;">
+  <a href="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg">
+    <img src="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg" alt="Alan Kay's diagram connecting programming-language ideas, including Planner, Smalltalk, Actors and Prolog, with Linda and Erlang listed at the bottom." width="1536" height="1143" loading="lazy">
+  </a>
+  <figcaption style="font-size: 0.9rem; color: #666;">Alan Kay's slide from <a href="https://www.youtube.com/watch?v=fhOHn9TClXY&amp;t=2160s">Joe Armstrong interviews Alan Kay, Code Mesh 2016 (around 36:00)</a>. Screenshot from the talk; click the image to view it at full size.</figcaption>
+</figure>
+
 Notice in particular the dashed arrows from Planner to both Prolog and Actors, and the connection from Smalltalk to Actors. Erlang is present, although no arrow connects it to the rest of the diagram.
 
 A diagram like this is a selective view of intellectual relationships, not a complete history or a proof that a particular language design is right. Nevertheless, looking at it, I cannot help wanting to draw a couple more arrows, bringing Prolog and Erlang together in Web Prolog.
@@ -64,10 +71,3 @@ There is a useful connection here with Hans Svensson, Lars-Åke Fredlund and Cla
 HTTP and WebSockets supply communication mechanisms. The larger proposal is to build common Prolog interaction contracts on top of them, so that different systems can cooperate across the web.
 
 So I am happy to discuss other models. But the interesting objection is not that alternatives exist. It is why a particular alternative would better serve this goal: *independent Prolog processes collaborating over the web.*
-
-<figure style="margin: 2rem 0;">
-  <a href="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg">
-    <img src="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg" alt="Alan Kay's diagram connecting programming-language ideas, including Planner, Smalltalk, Actors and Prolog, with Linda and Erlang listed at the bottom." width="1536" height="1143" loading="lazy">
-  </a>
-  <figcaption style="font-size: 0.9rem; color: #666;">Alan Kay's slide from <a href="https://www.youtube.com/watch?v=fhOHn9TClXY&amp;t=2160s">Joe Armstrong interviews Alan Kay, Code Mesh 2016 (around 36:00)</a>. Screenshot from the talk; click the image to view it at full size.</figcaption>
-</figure>
