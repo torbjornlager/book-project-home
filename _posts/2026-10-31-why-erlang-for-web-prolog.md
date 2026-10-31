@@ -51,6 +51,18 @@ Part of that choice is quite personal and pragmatic. HTTP and WebSockets are tec
 
 Nor am I claiming that combining Prolog with distributed message passing is new. Qu-Prolog is an important predecessor: Keith Clark, Peter J. Robinson, and Richard Hagen described its support for multiple threads and internet message communication in their 2001 paper, [*Multi-threading and message communication in Qu-Prolog*](https://doi.org/10.1017/S147106840100120X). The web already existed in 2001, but WebSockets did not: the WebSocket protocol was standardised a decade later, in December 2011, as [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455). That difference matters. WebSockets provide persistent, bidirectional communication between browsers and servers, making them a natural fit for the message passing I want to support. My emphasis is on bringing these earlier ideas into a programming model built around HTTP and WebSockets, using capabilities that were not available in that form to Qu-Prolog's designers at the time. That is what makes the combination particularly interesting to me: Prolog, Erlang-inspired concurrency, and the web.
 
+## Towards a common language between Prolog systems
+
+The web also gives the project a larger purpose: interoperability between Prolog implementations. I would like Web Prolog to become a *lingua franca* through which systems can expose relations, exchange goals and answers, and address communicating actors. Agreement at these interaction boundaries would let implementations retain their own strengths while participating in a shared environment.
+
+Participation should be incremental. A system could begin by exposing relations through the stateless HTTP interface, then add richer capabilities as needed. Supporting the complete actor model should not be the price of admission.
+
+For actors, the corresponding ambition is a common interaction model across locations. Spawning, sending, receiving and monitoring should remain recognisable whether an actor runs on a native node, in a browser worker or on another machine. Location still affects latency and possible failures; it should not require an entirely different way of programming cooperation.
+
+There is a useful connection here with Hans Svensson, Lars-Åke Fredlund and Clara Benac Earle's 2010 paper, [*A Unified Semantics for Future Erlang*](https://doi.org/10.1145/1863509.1863514). They proposed a cleaner semantics addressing the division between local and distributed Erlang. Trinity does not implement their formal semantics, but shares the aspiration to treat local and remote interaction more uniformly. This is another reason to see Erlang as a source of ideas that can be developed further.
+
+HTTP and WebSockets supply communication mechanisms. The larger proposal is to build common Prolog interaction contracts on top of them, so that different systems can cooperate across the web.
+
 So I am happy to discuss other models. But the interesting objection is not that alternatives exist. It is why a particular alternative would better serve this goal: *independent Prolog processes collaborating over the web.*
 
 <figure style="margin: 2rem 0;">
