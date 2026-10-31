@@ -43,6 +43,14 @@ A diagram like this is a selective view of intellectual relationships, not a com
 
 That is my proposed addition to the picture. The motivation is straightforward: preserve what makes Prolog interesting within each process, and draw on Erlang to organise communication and cooperation between processes across the web.
 
+## And one more ingredient: the web
+
+There is a third ingredient in my proposed combination: the web itself. Prolog and Erlang-inspired processes give us an interesting starting point for concurrent and distributed programming. With Web Prolog, I want to explore that combination specifically through HTTP and WebSockets, making the web the environment in which those processes and their clients meet.
+
+Part of that choice is quite personal and pragmatic. HTTP and WebSockets are technologies I know; other approaches to implementing distribution are less familiar territory for me. I am happy to admit that. Building on the web was a natural starting point. But the attraction goes beyond familiarity: it connects the language to browsers, web servers, and the wider ecosystem of web applications. The ambition is to make Prolog computations and communicating agents accessible through that existing environment.
+
+Nor am I claiming that combining Prolog with distributed message passing is new. Qu-Prolog is an important predecessor: Keith Clark, Peter J. Robinson, and Richard Hagen described its support for multiple threads and internet message communication in their 2001 paper, [*Multi-threading and message communication in Qu-Prolog*](https://doi.org/10.1017/S147106840100120X). The web already existed, so it would be misleading to say that they could not have used it. My emphasis is on bringing these ideas into a programming model explicitly built around today's web technologies. That is what makes the combination particularly interesting to me: Prolog, Erlang-inspired concurrency, and the web.
+
 So I am happy to discuss other models. But the interesting objection is not that alternatives exist. It is why a particular alternative would better serve this goal: *independent Prolog processes collaborating over the web.*
 
 <figure style="margin: 2rem 0;">
