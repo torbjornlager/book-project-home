@@ -35,7 +35,7 @@ Erlang provides a substantial body of experience relevant to those questions. Th
 
 ## A couple more arrows
 
-[Joe Armstrong's conversation with Alan Kay at Code Mesh 2016](https://www.youtube.com/watch?v=fhOHn9TClXY) provides an interesting historical perspective. The diagram below brings several of the relevant ideas together: Simula, Lisp, Planner, Smalltalk, Actors, and Prolog, with Linda and Erlang appearing at the bottom.
+[Joe Armstrong's conversation with Alan Kay at Code Mesh 2016](https://www.youtube.com/watch?v=fhOHn9TClXY&t=1845s) provides an interesting historical perspective. The relevant discussion begins at 30:45. The diagram below brings several of the relevant ideas together: Simula, Lisp, Planner, Smalltalk, Actors, and Prolog, with Linda and Erlang appearing at the bottom.
 
 Notice in particular the dashed arrows from Planner to both Prolog and Actors, and the connection from Smalltalk to Actors. Erlang is present, although no arrow connects it to the rest of the diagram.
 
@@ -49,5 +49,5 @@ So I am happy to discuss other models. But the interesting objection is not that
   <a href="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg">
     <img src="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg" alt="Alan Kay's diagram connecting programming-language ideas, including Planner, Smalltalk, Actors and Prolog, with Linda and Erlang listed at the bottom." width="1536" height="1143" loading="lazy">
   </a>
-  <figcaption style="font-size: 0.9rem; color: #666;">Alan Kay's slide from <a href="https://www.youtube.com/watch?v=fhOHn9TClXY">Joe Armstrong interviews Alan Kay, Code Mesh 2016</a>. Screenshot from the talk; click the image to view it at full size.</figcaption>
+  <figcaption style="font-size: 0.9rem; color: #666;">Alan Kay's slide from <a href="https://www.youtube.com/watch?v=fhOHn9TClXY&amp;t=2160s">Joe Armstrong interviews Alan Kay, Code Mesh 2016 (around 36:00)</a>. Screenshot from the talk; click the image to view it at full size.</figcaption>
 </figure>
