@@ -9,7 +9,7 @@ One objection I have encountered is that Erlang is not a particularly good sourc
 
 Of course there are. The Prolog world has a rich history of approaches to concurrency and parallelism: AND- and OR-parallelism, concurrent logic programming with dataflow and committed choice, threads with shared memory, and various forms of message passing. These are interesting approaches, addressing different needs. But listing alternatives is not, in itself, an argument against Erlang. The question is: *what kind of concurrency do we want, and for what purpose?*
 
-My goal with Web Prolog, the language at the heart of [the Prolog Trinity Ecosystem]({{ site.baseurl }}/book.html), is to make Prolog a language for distributed programming on the web. That involves more than making an individual computation run faster on multiple cores. It involves independent Prolog processes with their own lifecycles, communicating with one another across machines.
+My goal with Web Prolog, the language at the heart of [the Prolog Trinity Ecosystem]({{ site.baseurl }}/book.html), is to make Prolog a language for distributed programming on the Web. That involves more than making an individual computation run faster on multiple cores. It involves independent Prolog processes with their own lifecycles, communicating with one another across machines.
 
 This is where Erlang becomes particularly interesting.
 
@@ -33,34 +33,18 @@ For Web Prolog, however, the questions I want an alternative to answer are concr
 
 Erlang provides a substantial body of experience relevant to those questions. That is the case for taking it seriously as an inspiration.
 
-## A couple more arrows
 
-[Joe Armstrong's conversation with Alan Kay at Code Mesh 2016](https://www.youtube.com/watch?v=fhOHn9TClXY&t=1845s) provides an interesting historical perspective. The relevant discussion begins at 30:45. The diagram below brings several of the relevant ideas together: Simula, Lisp, Planner, Smalltalk, Actors, and Prolog, with Linda and Erlang appearing at the bottom.
+## And one more ingredient: the Web
 
-<figure style="margin: 2rem 0;">
-  <a href="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg">
-    <img src="{{ site.baseurl }}/assets/img/alan-kay-language-lineage.jpeg" alt="Alan Kay's diagram connecting programming-language ideas, including Planner, Smalltalk, Actors and Prolog, with Linda and Erlang listed at the bottom." width="1536" height="1143" loading="lazy">
-  </a>
-  <figcaption style="font-size: 0.9rem; color: #666;">Alan Kay's slide from <a href="https://www.youtube.com/watch?v=fhOHn9TClXY&amp;t=2160s">Joe Armstrong interviews Alan Kay, Code Mesh 2016 (around 36:00)</a>. Screenshot from the talk; click the image to view it at full size.</figcaption>
-</figure>
+There is a third ingredient in my proposed combination: the Web itself. Prolog and Erlang-inspired processes give us an interesting starting point for concurrent and distributed programming. With Web Prolog, I want to explore that combination specifically through HTTP and WebSockets, making the Web the environment in which those processes and their clients meet.
 
-Notice in particular the dashed arrows from Planner to both Prolog and Actors, and the connection from Smalltalk to Actors. Erlang is present, although no arrow connects it to the rest of the diagram.
+Part of that choice is quite personal and pragmatic. HTTP and WebSockets are technologies I know; other approaches to implementing distribution are less familiar territory for me. I am happy to admit that. Building on the Web was a natural starting point. But the attraction goes beyond familiarity: it connects the language to browsers, web servers, and the wider ecosystem of web applications. The ambition is to make Prolog computations and communicating agents accessible through that existing environment.
 
-A diagram like this is a selective view of intellectual relationships, not a complete history or a proof that a particular language design is right. Nevertheless, looking at it, I cannot help wanting to draw a couple more arrows, bringing Prolog and Erlang together in Web Prolog.
-
-That is my proposed addition to the picture. The motivation is straightforward: preserve what makes Prolog interesting within each process, and draw on Erlang to organise communication and cooperation between processes across the web.
-
-## And one more ingredient: the web
-
-There is a third ingredient in my proposed combination: the web itself. Prolog and Erlang-inspired processes give us an interesting starting point for concurrent and distributed programming. With Web Prolog, I want to explore that combination specifically through HTTP and WebSockets, making the web the environment in which those processes and their clients meet.
-
-Part of that choice is quite personal and pragmatic. HTTP and WebSockets are technologies I know; other approaches to implementing distribution are less familiar territory for me. I am happy to admit that. Building on the web was a natural starting point. But the attraction goes beyond familiarity: it connects the language to browsers, web servers, and the wider ecosystem of web applications. The ambition is to make Prolog computations and communicating agents accessible through that existing environment.
-
-Nor am I claiming that combining Prolog with distributed message passing is new. Qu-Prolog is an important predecessor: Keith Clark, Peter J. Robinson, and Richard Hagen described its support for multiple threads and internet message communication in their 2001 paper, [*Multi-threading and message communication in Qu-Prolog*](https://doi.org/10.1017/S147106840100120X). The web already existed in 2001, but WebSockets did not: the WebSocket protocol was standardised a decade later, in December 2011, as [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455). That difference matters. WebSockets provide persistent, bidirectional communication between browsers and servers, making them a natural fit for the message passing I want to support. My emphasis is on bringing these earlier ideas into a programming model built around HTTP and WebSockets, using capabilities that were not available in that form to Qu-Prolog's designers at the time. That is what makes the combination particularly interesting to me: Prolog, Erlang-inspired concurrency, and the web.
+Nor am I claiming that combining Prolog with distributed message passing is new. Qu-Prolog is an important predecessor: Keith Clark, Peter J. Robinson, and Richard Hagen described its support for multiple threads and internet message communication in their 2001 paper, [*Multi-threading and message communication in Qu-Prolog*](https://doi.org/10.1017/S147106840100120X). The web already existed in 2001, but WebSockets did not: the WebSocket protocol was standardised a decade later, in December 2011, as [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455). That difference matters. WebSockets provide persistent, bidirectional communication between browsers and servers, making them a natural fit for the message passing I want to support. My emphasis is on bringing these earlier ideas into a programming model built around HTTP and WebSockets, using capabilities that were not available in that form to Qu-Prolog's designers at the time. That is what makes the combination particularly interesting to me: Prolog, Erlang-inspired concurrency, and the Web.
 
 ## Towards a common language between Prolog systems
 
-The web also gives the project a larger purpose: interoperability between Prolog implementations. I would like Web Prolog to become a *lingua franca* through which systems can expose relations, exchange goals and answers, and address communicating actors. Agreement at these interaction boundaries would let implementations retain their own strengths while participating in a shared environment.
+The Web also gives the project a larger purpose: interoperability between Prolog implementations. I would like Web Prolog to become a *lingua franca* through which systems can expose relations, exchange goals and answers, and address communicating actors. Agreement at these interaction boundaries would let implementations retain their own strengths while participating in a shared environment.
 
 Participation should be incremental. A system could begin by exposing relations through the stateless HTTP interface, then add richer capabilities as needed. Supporting the complete actor model should not be the price of admission.
 
@@ -68,6 +52,6 @@ For actors, the corresponding ambition is a common interaction model across loca
 
 There is a useful connection here with Hans Svensson, Lars-Åke Fredlund and Clara Benac Earle's 2010 paper, [*A Unified Semantics for Future Erlang*](https://doi.org/10.1145/1863509.1863514). They proposed a cleaner semantics addressing the division between local and distributed Erlang. Trinity does not implement their formal semantics, but shares the aspiration to treat local and remote interaction more uniformly. This is another reason to see Erlang as a source of ideas that can be developed further.
 
-HTTP and WebSockets supply communication mechanisms. The larger proposal is to build common Prolog interaction contracts on top of them, so that different systems can cooperate across the web.
+HTTP and WebSockets supply communication mechanisms. The larger proposal is to build common Prolog interaction contracts on top of them, so that different systems can cooperate across the Web.
 
-So I am happy to discuss other models. But the interesting objection is not that alternatives exist. It is why a particular alternative would better serve this goal: *independent Prolog processes collaborating over the web.*
+So I am happy to discuss other models. But the interesting objection is not that alternatives exist. It is why a particular alternative would better serve this goal: *independent Prolog processes collaborating over the Web.*
