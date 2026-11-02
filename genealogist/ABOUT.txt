@@ -1,6 +1,6 @@
 The Genealogist: a browser-only Web Prolog experiment.
-Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/ec02eabf405dc18442b219c058dc89c3f9ab6079/experiments/genealogist
-Runtime source: https://github.com/torbjornlager/swi-wasm-node/tree/ad14a42334ec8014eeebaccda12312656cb20d17
+Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/c56bbc8e41a04de27a69f45bd849c2e673bb1452/experiments/genealogist
+Runtime source: https://github.com/torbjornlager/swi-wasm-node/tree/3df5bb75a55e0245693f70382d660d9461b540a1
 The Prolog database belongs to this page and is not sent to a server.
 Save Prolog before closing or reloading. No automatic persistence.
 Application/runtime licenses: LICENSE, runtime/LICENSE, runtime/third_party/LICENSE.txt

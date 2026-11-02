@@ -2,22 +2,22 @@
   "application": {
     "path": "experiments/genealogist-main",
     "repository": "torbjornlager/trinity-demonstrator",
-    "revision": "ec02eabf405dc18442b219c058dc89c3f9ab6079"
+    "revision": "c56bbc8e41a04de27a69f45bd849c2e673bb1452"
   },
   "files": {
-    "ABOUT.txt": "bf44e6f2979f101dad18128d7145b83c0e8fc2e690f44cbd0d96ae465dd31a58",
+    "ABOUT.txt": "a4bf85b855acb2bda55a44474b80a536a85db93c3ed85fe9125d03245de8bf04",
     "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
-    "genealogist.css": "2c53614cab1e0e1adbfebf850160293141f5020c0fe551a52601573e0b84f8f9",
-    "genealogist.js": "4551a32e29a769a4ce3c4d3e78cbafc3b43e62d0f0ae0c242796b753105f2670",
-    "genealogist.pl": "4b96704f34bb0005f1c4331a29ae51fda28ec3e2b686b83530de4f0665a577a2",
-    "genealogist_ui.pl": "8a528675ad581fa34f53f2d1b79ea586fc0323b333839327e978dbb89f8fd944",
-    "index.html": "737209e297b3996d8590033de35e2b06d6f5f4f4df61e106749d717fc8b6e7ed",
+    "genealogist.css": "e8cafe5e6f949a0bc03ef92c72838d9700a8f15def7cf0802be3682c55a5019d",
+    "genealogist.js": "8efbb06df04174f5d034034fde9edf99e5ba60f274f727f49bfbad5afdd6fd14",
+    "genealogist.pl": "a7b483c3dc0f3b964be95b626ae8021591991c8d980996180545c7224b49c19d",
+    "genealogist_ui.pl": "fa45b5038b850677bdfc9b632aeebd061788b7ecd2bf046b2df4418851f7b9b8",
+    "index.html": "cf360ffa2d2a83091b9b6d9f85f2564431256b239676122c24ddd62e93c16856",
     "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "runtime/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
     "runtime/swipl-bundle.js": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
     "runtime/third_party/LICENSE.txt": "770594d0f4463b71f1485f00e4bc5cf4b6f667d62ef6bc9bde2fee236541992a",
-    "runtime/vendor/swi-wasm-minimal.html": "487be2b7574633cbe2c6ff00f333b99c25bcdb23d08e95570bb5ec1ef255c916",
-    "runtime/vendor/swi-wasm-node.js": "35602f4dadee51f3a015aba62259777d83d56fd4b168e508a5a811a0dbbab975",
+    "runtime/vendor/swi-wasm-minimal.html": "0691e29a3a6e17284ec13e6fb4058e8e2d184a557251904c50e12a07ad1c2162",
+    "runtime/vendor/swi-wasm-node.js": "56ce664a475075222cad9ab29cb7283af4190f59cd4406de385358f7be399832",
     "runtime/wasm/shared_db.pl": "806b92e31dd7b12b9f764e72af2b3812cdd0f8292bad385f0ca1d91fc98c439f",
     "runtime/wasm/statechart_wasm.pl": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
     "runtime/wasm/statechart_wasm_exec.pl": "0ea5653d596acd99e5dc5afa54db7d4d21af733954a488d0ff354c242fb29bed",
@@ -37,9 +37,9 @@
       "package_version": "8.2.5",
       "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz"
     },
-    "manifest_sha256": "9e623da1ea0b91978a640afb4dc8fc7fc0ad0bfc52241a348408bf17d1c4f887",
+    "manifest_sha256": "e6138cdc0e8cc37727b0f3de962459ae51e4c3c332b5416ad4f5197cb107b909",
     "repository": "torbjornlager/swi-wasm-node",
-    "revision": "ad14a42334ec8014eeebaccda12312656cb20d17",
+    "revision": "3df5bb75a55e0245693f70382d660d9461b540a1",
     "version": "0.1.0"
   }
 }

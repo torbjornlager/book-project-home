@@ -214,10 +214,11 @@
   <section aria-labelledby="genealogist-comparison">
     <h4 id="genealogist-comparison">Comparing the two Genealogists</h4>
     <p>
-      <strong>Code size.</strong> The Worker actor UI uses 215 lines of JavaScript.
+      <strong>Code size.</strong> The formatted Worker actor UI spans 481 lines of JavaScript.
       The <a href="https://github.com/torbjornlager/trinity-demonstrator/tree/main/experiments/genealogist-main">Prolog-driven UI</a>
-      uses 71 lines of JavaScript and 197 lines of Prolog: 268 lines in total.
-      These counts exclude the shared runtime, family rules, HTML and CSS.
+      spans 144 lines of JavaScript and 595 lines of Prolog: 739 lines in total.
+      Counts include comments and blank lines, and exclude the shared runtime,
+      family rules, HTML and CSS. They depend on formatting and are not a complexity score.
     </p>
     <p>
       <strong>Maintainability.</strong> The worker version is smaller and separates

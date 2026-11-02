@@ -60,11 +60,12 @@ Source loads once per page, so edits survive subsequent queries. Answers are
 lazy; Stop unwinds the suspended search. Abort is cooperative, and a non-yielding
 goal can freeze the page. The under-the-hood panel includes a direct DOM example.
 
-The Worker app has 215 JavaScript lines. The Prolog-driven app has 71 JavaScript
-and 197 Prolog UI lines (268 total), excluding shared runtime, family rules,
-HTML and CSS. The former 128-line custom adapter has moved into the runtime's
-high-level main session implementation, with cross-mode browser tests. The
-runtime owns that maintenance now; its code has not disappeared. Source tests
+The formatted Worker app spans 481 JavaScript lines. The Prolog-driven app spans
+144 JavaScript and 595 Prolog UI lines (739 total), excluding shared runtime,
+family rules, HTML and CSS. These physical counts include comments and blank
+lines: they depend on layout and are not a complexity score. Session management
+belongs to the runtime's high-level API and cross-mode browser tests, rather
+than to an application-specific adapter. Source tests
 cover native DOM events, layout parity,
 query/input lifecycle, and cooperative Abort while a CPU query yields.
 
