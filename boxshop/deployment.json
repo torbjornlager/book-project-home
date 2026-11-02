@@ -2,18 +2,18 @@
   "application": {
     "path": "experiments/boxshop",
     "repository": "torbjornlager/trinity-demonstrator",
-    "revision": "b424a2b0fab23a6f547dac0d5080a424169f2590"
+    "revision": "283fc135729f4ba5a2b882e8d4df662e22d08e21"
   },
   "chart": {
     "path": "examples/statecharts/12 boxshop-2.xml",
     "sha256": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6"
   },
   "files": {
-    "ABOUT.txt": "4466ed31370e0fb3901192de50d220c781daf0d5871d930f4ef4486236c497a0",
+    "ABOUT.txt": "461f918a953346231d48ed78789a039d85194902662aa4f39b61a8bfcefac2da",
     "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "boxshop-2.xml": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6",
     "boxshop.css": "be250a63594ec62e929c15df73be21a81a28d569f02b47c80b56b2819677e9a9",
-    "boxshop.js": "3fd9f965b9c90264055d6dfdd966c83284c242e13040e5a754d45b11b0683f6e",
+    "boxshop.js": "f3166e8888224954708ab1dd95e904a216604cb7348cd751bec7fd274f8af8c6",
     "boxshop.pl": "1a7414dff85546b428d03840e8496e752a4fe40a8a35fa9aba9d2bc55ccfe940",
     "index.html": "e7a08970dfde6279ab997966b7778ecfcb82397f11b529062deb2cba5cb23658",
     "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
@@ -28,7 +28,7 @@
     "runtime/wasm/statechart_wasm_model.pl": "c85d4d3a0e666a2177a12ae56181343cf89d0fde8e4b06edfed20fda01d26712",
     "runtime/wasm/statechart_wasm_runtime.pl": "8ed9f5940037dad66e12d5e8d3dcfe020651601e7250e79e3d4e1910a6761da7",
     "runtime/wasm/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
-    "voice.js": "3278fa8b4dec263ca049a86da560ce195bc8e38f70f581d9569bf12b6c38e55b"
+    "voice.js": "5dd77ed0c72a72133fd8b63fd761087612796629b0ac4406a761e4231e80e991"
   },
   "format": 1,
   "runtime": {
