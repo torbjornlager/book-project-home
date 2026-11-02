@@ -211,6 +211,30 @@
     are also available.
   </p>
 
+  <section aria-labelledby="genealogist-comparison">
+    <h4 id="genealogist-comparison">Comparing the two Genealogists</h4>
+    <p>
+      <strong>Code size.</strong> The Worker actor UI uses 215 lines of JavaScript.
+      The <a href="https://github.com/torbjornlager/trinity-demonstrator/tree/main/experiments/genealogist-main">Prolog-driven UI</a>
+      uses 71 lines of JavaScript and 197 lines of Prolog: 268 lines in total.
+      These counts exclude the shared runtime, family rules, HTML and CSS.
+    </p>
+    <p>
+      <strong>Maintainability.</strong> The worker version is smaller and separates
+      the web interface from the Prolog engine. The main-thread version keeps
+      facts, validation calls, answer formatting and DOM events together, which
+      may be clearer for a Prolog-focused maintainer. Both use the same session
+      API; the runtime handles paging, input, interruption and cleanup.
+    </p>
+    <p>
+      <strong>Responsiveness.</strong> Both handle ordinary family queries well.
+      Main-thread queries yield cooperatively during Prolog computation, but a
+      call that cannot yield can freeze the interface. The worker keeps Prolog
+      computation off the UI thread and supports hard Abort. Direct DOM access
+      therefore trades some isolation for closer integration with the page.
+    </p>
+  </section>
+
   <p>
     <a href="https://github.com/torbjornlager/swi-wasm-node">View on GitHub</a>
   </p>
