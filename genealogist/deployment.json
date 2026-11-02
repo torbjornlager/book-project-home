@@ -2,21 +2,21 @@
   "application": {
     "path": "experiments/genealogist",
     "repository": "torbjornlager/trinity-demonstrator",
-    "revision": "fb0294a955e345b89a5ddbd535e4825d6d3a4223"
+    "revision": "ec02eabf405dc18442b219c058dc89c3f9ab6079"
   },
   "files": {
-    "ABOUT.txt": "fba44c8f010d6667870fe923a6679cc39205fb3567f0e1c94573f9047de69c3c",
+    "ABOUT.txt": "cfeb5455a596100b05341a091e2479632be6f24f03d3fe18160b5f672266f85e",
     "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "genealogist.css": "2c53614cab1e0e1adbfebf850160293141f5020c0fe551a52601573e0b84f8f9",
     "genealogist.js": "c449973b271c445be892c9f5490f089be5bf987b65935e31f30a0e7049f65705",
     "genealogist.pl": "4b96704f34bb0005f1c4331a29ae51fda28ec3e2b686b83530de4f0665a577a2",
-    "index.html": "423b1adc34bf38b8cb7c339e96da201725b8285f741ab13152f322dd49b789e6",
+    "index.html": "6158579c74b512d02efe2e10c220dbd28d4a31bdf0b2effe0e4425533e7dd15e",
     "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "runtime/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
     "runtime/swipl-bundle.js": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
     "runtime/third_party/LICENSE.txt": "770594d0f4463b71f1485f00e4bc5cf4b6f667d62ef6bc9bde2fee236541992a",
-    "runtime/vendor/swi-wasm-minimal.html": "81d55131b662631de137072c50690dc70b735f49578959c4160ac43534e6c5d1",
-    "runtime/vendor/swi-wasm-node.js": "4dd39ff9f207b5c4381606754ef0914f6507202a3540b399d31bba9659250436",
+    "runtime/vendor/swi-wasm-minimal.html": "487be2b7574633cbe2c6ff00f333b99c25bcdb23d08e95570bb5ec1ef255c916",
+    "runtime/vendor/swi-wasm-node.js": "35602f4dadee51f3a015aba62259777d83d56fd4b168e508a5a811a0dbbab975",
     "runtime/wasm/shared_db.pl": "806b92e31dd7b12b9f764e72af2b3812cdd0f8292bad385f0ca1d91fc98c439f",
     "runtime/wasm/statechart_wasm.pl": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
     "runtime/wasm/statechart_wasm_exec.pl": "0ea5653d596acd99e5dc5afa54db7d4d21af733954a488d0ff354c242fb29bed",
@@ -36,9 +36,9 @@
       "package_version": "8.2.5",
       "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz"
     },
-    "manifest_sha256": "59018548f0b810e88a96f4fec4dab5f4f7f35c11a7544e0d51c7e1cdae99edcf",
+    "manifest_sha256": "9e623da1ea0b91978a640afb4dc8fc7fc0ad0bfc52241a348408bf17d1c4f887",
     "repository": "torbjornlager/swi-wasm-node",
-    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f",
+    "revision": "ad14a42334ec8014eeebaccda12312656cb20d17",
     "version": "0.1.0"
   }
 }

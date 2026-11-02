@@ -1,0 +1,7 @@
+The Genealogist (Main thread + DOM): a browser-only Web Prolog experiment.
+Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/ec02eabf405dc18442b219c058dc89c3f9ab6079/experiments/genealogist-main
+Runtime source: https://github.com/torbjornlager/swi-wasm-node/tree/ad14a42334ec8014eeebaccda12312656cb20d17
+The Prolog database belongs to this page and is not sent to a server.
+Save Prolog before closing or reloading. No automatic persistence.
+Application/runtime licenses: LICENSE, runtime/LICENSE, runtime/third_party/LICENSE.txt
+Rebuild instructions: ../README.md and ../tools/package_genealogist_main.py
