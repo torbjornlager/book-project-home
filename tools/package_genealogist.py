@@ -26,14 +26,23 @@ def verify(root):
     return manifest
 
 def build(experiment, package, output, kind='genealogist', working_tree=False, development_runtime=False):
-    if kind not in ('genealogist', 'genealogist-main', 'studio'):
+    if kind not in ('genealogist', 'genealogist-main', 'studio', 'boxshop'):
         raise ValueError('Unknown experiment kind')
     studio = kind == 'studio'
-    app_files = ('index.html', 'studio.css', 'studio.js', 'CODEMIRROR-LICENSE.txt') if studio else APP_FILES
-    if kind == 'genealogist-main':
-        app_files += ('genealogist_ui.pl',)
-    script_name = 'studio.js' if studio else 'genealogist.js'
-    title = 'Trinity Studio' if studio else 'The Genealogist' + (' (Main thread + DOM)' if kind == 'genealogist-main' else '')
+    boxshop = kind == 'boxshop'
+    if studio:
+        app_files = ('index.html', 'studio.css', 'studio.js', 'CODEMIRROR-LICENSE.txt')
+        script_name, title = 'studio.js', 'Trinity Studio'
+    elif boxshop:
+        app_files = ('index.html', 'boxshop.css', 'boxshop.js', 'voice.js',
+                     'boxshop.pl', 'boxshop-2.xml')
+        script_name, title = 'boxshop.js', 'The Box Shop'
+    else:
+        app_files = APP_FILES
+        if kind == 'genealogist-main':
+            app_files += ('genealogist_ui.pl',)
+        script_name = 'genealogist.js'
+        title = 'The Genealogist' + (' (Main thread + DOM)' if kind == 'genealogist-main' else '')
     experiment, package, output = map(lambda p: Path(p).resolve(), (experiment, package, output))
     if output.exists():
         raise ValueError('Use a fresh output directory; review replacements explicitly')
@@ -54,6 +63,11 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
         if data != (experiment / name).read_bytes():
             raise ValueError('Source differs from commit: ' + name)
         sources[name] = data
+    if boxshop:
+        chart_path = 'examples/statecharts/12 boxshop-2.xml'
+        chart = subprocess.check_output(['git', '-C', str(repo), 'show', revision + ':' + chart_path])
+        if sources['boxshop-2.xml'] != chart:
+            raise ValueError('The Box Shop must use the original boxshop-2.xml unchanged')
     if b'"/runtime/' in sources['index.html'] or b"new URL('/runtime/" in sources[script_name]:
         raise ValueError('The experiment must use page-relative runtime URLs')
     editor_files = {}
@@ -95,7 +109,9 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
         'Runtime source: ' + ('development snapshot based on ' if upstream['source'].get('dirty') else '') +
         'https://github.com/torbjornlager/swi-wasm-node/tree/' + upstream['source']['revision'] + '\n'
         'The Prolog database belongs to this page and is not sent to a server.\n' +
-        ('Save source before closing or reloading. No automatic persistence.\n' if studio else
+        ('Browser speech recognition is optional and may use an external browser service.\n'
+         'Orders are demonstration data only; nothing is purchased or stored.\n' if boxshop else
+         'Save source before closing or reloading. No automatic persistence.\n' if studio else
          'Save Prolog before closing or reloading. No automatic persistence.\n') +
         'Application/runtime licenses: LICENSE, runtime/LICENSE, runtime/third_party/LICENSE.txt\n'
         'Rebuild instructions: ../README.md and ../tools/package_' + kind.replace('-', '_') + '.py\n' +
@@ -109,6 +125,9 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
     if studio:
         deployment['editor'] = dict(name='CodeMirror', version='5.65.16', source_revision=revision,
                                     files={name: hashlib.sha256(data).hexdigest() for name, data in editor_files.items()})
+    if boxshop:
+        deployment['chart'] = dict(path=chart_path,
+                                   sha256=hashlib.sha256(chart).hexdigest())
     if working_tree:
         deployment['application']['working_tree'] = True
         deployment['application']['source_files'] = {name: hashlib.sha256(data).hexdigest() for name, data in sources.items()}
@@ -118,7 +137,11 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
     return verify(output)
 
 def main(kind='genealogist'):
-    parser = argparse.ArgumentParser(description=('Build or verify the static Trinity Studio deployment; never fetches or publishes.' if kind == 'studio' else __doc__))
+    descriptions = {
+        'studio': 'Build or verify the static Trinity Studio deployment; never fetches or publishes.',
+        'boxshop': 'Build or verify the static Box Shop deployment; never fetches or publishes.',
+    }
+    parser = argparse.ArgumentParser(description=descriptions.get(kind, __doc__))
     parser.add_argument('--experiment-root', type=Path)
     parser.add_argument('--runtime-package', type=Path)
     parser.add_argument('--output', type=Path)

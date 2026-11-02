@@ -5,6 +5,32 @@ Landing page and blog for the overall book project.
 Live site: https://trinity.elfenbenstornet.se/
 
 
+## Hosted Box Shop statechart demo
+
+The Box Shop is published at https://trinity.elfenbenstornet.se/boxshop/ and
+linked from `pocs.html`. Its source is maintained in
+`trinity-demonstrator/experiments/boxshop`. The original `boxshop-2.xml` runs
+unchanged in a SWI-WASM statechart actor. A Prolog grammar maps speech, typed
+replies and buttons to the same semantic events. Browser speech is optional;
+recognition may use a browser-vendor service. No orders are purchased or stored.
+
+Build a fresh, verified snapshot from committed source:
+
+```sh
+python3 tools/package_boxshop.py \
+  --experiment-root /path/to/trinity-demonstrator/experiments/boxshop \
+  --runtime-package /path/to/swi-wasm-node-package \
+  --output /fresh/path/boxshop
+python3 tools/package_boxshop.py --verify /fresh/path/boxshop
+```
+
+The packager checks the chart against `examples/statecharts/12 boxshop-2.xml`
+at the same source commit, records its hash, retains runtime licenses and verifies
+all files. Preview with a server rooted here and test `/boxshop/`, including its
+module imports and runtime URL prefix. The source browser suite uses the actual
+engine and chart with stubbed speech-service events; live microphone recognition
+and audible speech require a supported browser and manual verification.
+
 ## Hosted Genealogist experiment
 
 The browser-only example is published at
