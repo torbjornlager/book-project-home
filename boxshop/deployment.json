@@ -2,7 +2,7 @@
   "application": {
     "path": "experiments/boxshop",
     "repository": "torbjornlager/trinity-demonstrator",
-    "revision": "946230f1c5ae725c3cf48d6ff168871edbfa730a"
+    "revision": "a8ab255418179bc186355bb9a030a87fc20498ec"
   },
   "chart": {
     "path": "examples/statecharts/12 boxshop-2.xml",
@@ -10,12 +10,12 @@
     "sha256": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6"
   },
   "files": {
-    "ABOUT.txt": "b9b87cfaf428936d98c38424286e0880cd97fd90f00b6d87f8394e89ceb9538e",
+    "ABOUT.txt": "7984fd4c807198e7c0041676cfdf97ce48a775c933f82ee2a7cf824e36e820fe",
     "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "boxshop-2.xml": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6",
-    "boxshop-voice.xml": "4db95b608f4c11c98c7aa6d420a30fb7bf1ac4b9b112a7d2aec9a51d9b432f86",
+    "boxshop-voice.xml": "a0399921937d5c43fa30f7f69324289b073426be046590935e6bdf84a274b116",
     "boxshop.css": "d9246460ee88f584f7328ccd61f3a3ef733a88064ca7437f0d2a0841eb2477d1",
-    "boxshop.js": "c5f4cb216a93c92f773bec7eadbe221dc6d0a5a51d57ce3a4e9e263e03cd8b25",
+    "boxshop.js": "5e3936cebd3401e6ce498f07a714a00834afbde9486b445450308ab3921134c1",
     "boxshop.pl": "9bf175cf7b84806d445b0e1062c8e1b64e68f01b700bec466daaa1fa05e8a243",
     "index.html": "91c4ef55c9c6f1c6471a75e6597bd9c53834dba6e7ce80475143ea284d352c6e",
     "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
@@ -30,7 +30,7 @@
     "runtime/wasm/statechart_wasm_model.pl": "c85d4d3a0e666a2177a12ae56181343cf89d0fde8e4b06edfed20fda01d26712",
     "runtime/wasm/statechart_wasm_runtime.pl": "8ed9f5940037dad66e12d5e8d3dcfe020651601e7250e79e3d4e1910a6761da7",
     "runtime/wasm/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
-    "voice.js": "8888a9afcf2627bb4649537c1360c1d28e357fcaf3ad0acca55efc03aea025f7"
+    "voice.js": "00e38152262f527b65f4bd1d3a2886873d8f31a19ef7d5a3e0fb0110abfe10fe"
   },
   "format": 1,
   "runtime": {
