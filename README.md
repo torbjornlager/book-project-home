@@ -9,10 +9,11 @@ Live site: https://trinity.elfenbenstornet.se/
 
 The Box Shop is published at https://trinity.elfenbenstornet.se/boxshop/ and
 linked from `pocs.html`. Its source is maintained in
-`trinity-demonstrator/experiments/boxshop`. The original `boxshop-2.xml` runs
-unchanged in a SWI-WASM statechart actor. A Prolog grammar maps speech, typed
-replies and buttons to the same semantic events. Browser speech is optional;
-recognition may use a browser-vendor service. No orders are purchased or stored.
+`trinity-demonstrator/experiments/boxshop`. A SWI-WASM statechart actor runs
+`boxshop-voice.xml`, a speech adaptation of the original `boxshop-2.xml`.
+The chat displays spoken prompts and recognised replies beside the Statechart,
+Grammar and Logger tabs. The browser needs speech recognition and synthesis.
+Recognition may use a browser-vendor service.
 
 Build a fresh, verified snapshot from committed source:
 
@@ -24,8 +25,8 @@ python3 tools/package_boxshop.py \
 python3 tools/package_boxshop.py --verify /fresh/path/boxshop
 ```
 
-The packager checks the chart against `examples/statecharts/12 boxshop-2.xml`
-at the same source commit, records its hash, retains runtime licenses and verifies
+The packager checks the reference chart against `examples/statecharts/12 boxshop-2.xml`
+at the same source commit, records the running chart and file hashes, retains runtime licenses and verifies
 all files. Preview with a server rooted here and test `/boxshop/`, including its
 module imports and runtime URL prefix. The source browser suite uses the actual
 engine and chart with stubbed speech-service events; live microphone recognition

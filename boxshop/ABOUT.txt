@@ -1,8 +1,8 @@
 The Box Shop: a browser-only Web Prolog experiment.
-Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/57309c82dd07fffe16817eaf72ce9e80f9d9d13b/experiments/boxshop
+Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/6ed2a9f1106b48c2fdfa8315c051e06225996f50/experiments/boxshop
 Runtime source: https://github.com/torbjornlager/swi-wasm-node/tree/3df5bb75a55e0245693f70382d660d9461b540a1
 The Prolog database belongs to this page and is not sent to a server.
-Browser speech recognition is optional and may use an external browser service.
+Browser speech recognition is required and may use an external browser service.
 Orders are demonstration data only; nothing is purchased or stored.
 Application/runtime licenses: LICENSE, runtime/LICENSE, runtime/third_party/LICENSE.txt
 Rebuild instructions: ../README.md and ../tools/package_boxshop.py

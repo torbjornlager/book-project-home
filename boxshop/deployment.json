@@ -2,20 +2,22 @@
   "application": {
     "path": "experiments/boxshop",
     "repository": "torbjornlager/trinity-demonstrator",
-    "revision": "57309c82dd07fffe16817eaf72ce9e80f9d9d13b"
+    "revision": "6ed2a9f1106b48c2fdfa8315c051e06225996f50"
   },
   "chart": {
     "path": "examples/statecharts/12 boxshop-2.xml",
+    "running": "boxshop-voice.xml",
     "sha256": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6"
   },
   "files": {
-    "ABOUT.txt": "93d0b6e218a18d86d003347ee23d2b8a17f800698814d0533623a02738ab83a4",
+    "ABOUT.txt": "a36e90fd0b799914592a57684e2a4a79f7cd76fda39798291773f08b139c2d56",
     "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "boxshop-2.xml": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6",
-    "boxshop.css": "be250a63594ec62e929c15df73be21a81a28d569f02b47c80b56b2819677e9a9",
-    "boxshop.js": "f3166e8888224954708ab1dd95e904a216604cb7348cd751bec7fd274f8af8c6",
+    "boxshop-voice.xml": "4db95b608f4c11c98c7aa6d420a30fb7bf1ac4b9b112a7d2aec9a51d9b432f86",
+    "boxshop.css": "d9246460ee88f584f7328ccd61f3a3ef733a88064ca7437f0d2a0841eb2477d1",
+    "boxshop.js": "9af56c86c90daeed31ae94628f4f1cdb7b671441b2dbabfe40e39b0d2550a3e5",
     "boxshop.pl": "9bf175cf7b84806d445b0e1062c8e1b64e68f01b700bec466daaa1fa05e8a243",
-    "index.html": "e7a08970dfde6279ab997966b7778ecfcb82397f11b529062deb2cba5cb23658",
+    "index.html": "91c4ef55c9c6f1c6471a75e6597bd9c53834dba6e7ce80475143ea284d352c6e",
     "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "runtime/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
     "runtime/swipl-bundle.js": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
@@ -28,7 +30,7 @@
     "runtime/wasm/statechart_wasm_model.pl": "c85d4d3a0e666a2177a12ae56181343cf89d0fde8e4b06edfed20fda01d26712",
     "runtime/wasm/statechart_wasm_runtime.pl": "8ed9f5940037dad66e12d5e8d3dcfe020651601e7250e79e3d4e1910a6761da7",
     "runtime/wasm/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
-    "voice.js": "5dd77ed0c72a72133fd8b63fd761087612796629b0ac4406a761e4231e80e991"
+    "voice.js": "844c28af6e07b8dd46937b59c94de59bfc7365e2967d6b6d6498a61e506cec17"
   },
   "format": 1,
   "runtime": {

@@ -35,7 +35,7 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
         script_name, title = 'studio.js', 'Trinity Studio'
     elif boxshop:
         app_files = ('index.html', 'boxshop.css', 'boxshop.js', 'voice.js',
-                     'boxshop.pl', 'boxshop-2.xml')
+                     'boxshop.pl', 'boxshop-2.xml', 'boxshop-voice.xml')
         script_name, title = 'boxshop.js', 'The Box Shop'
     else:
         app_files = APP_FILES
@@ -109,7 +109,7 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
         'Runtime source: ' + ('development snapshot based on ' if upstream['source'].get('dirty') else '') +
         'https://github.com/torbjornlager/swi-wasm-node/tree/' + upstream['source']['revision'] + '\n'
         'The Prolog database belongs to this page and is not sent to a server.\n' +
-        ('Browser speech recognition is optional and may use an external browser service.\n'
+        ('Browser speech recognition is required and may use an external browser service.\n'
          'Orders are demonstration data only; nothing is purchased or stored.\n' if boxshop else
          'Save source before closing or reloading. No automatic persistence.\n' if studio else
          'Save Prolog before closing or reloading. No automatic persistence.\n') +
@@ -127,7 +127,8 @@ def build(experiment, package, output, kind='genealogist', working_tree=False, d
                                     files={name: hashlib.sha256(data).hexdigest() for name, data in editor_files.items()})
     if boxshop:
         deployment['chart'] = dict(path=chart_path,
-                                   sha256=hashlib.sha256(chart).hexdigest())
+                                   sha256=hashlib.sha256(chart).hexdigest(),
+                                   running='boxshop-voice.xml')
     if working_tree:
         deployment['application']['working_tree'] = True
         deployment['application']['source_files'] = {name: hashlib.sha256(data).hexdigest() for name, data in sources.items()}
