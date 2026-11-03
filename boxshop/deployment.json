@@ -2,19 +2,19 @@
   "application": {
     "path": "experiments/boxshop",
     "repository": "torbjornlager/trinity-demonstrator",
-    "revision": "283fc135729f4ba5a2b882e8d4df662e22d08e21"
+    "revision": "57309c82dd07fffe16817eaf72ce9e80f9d9d13b"
   },
   "chart": {
     "path": "examples/statecharts/12 boxshop-2.xml",
     "sha256": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6"
   },
   "files": {
-    "ABOUT.txt": "461f918a953346231d48ed78789a039d85194902662aa4f39b61a8bfcefac2da",
+    "ABOUT.txt": "93d0b6e218a18d86d003347ee23d2b8a17f800698814d0533623a02738ab83a4",
     "LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "boxshop-2.xml": "faf09e3187d0481f30be38de0f2bc52506f71da97f89c25e3ad32004acecdda6",
     "boxshop.css": "be250a63594ec62e929c15df73be21a81a28d569f02b47c80b56b2819677e9a9",
     "boxshop.js": "f3166e8888224954708ab1dd95e904a216604cb7348cd751bec7fd274f8af8c6",
-    "boxshop.pl": "1a7414dff85546b428d03840e8496e752a4fe40a8a35fa9aba9d2bc55ccfe940",
+    "boxshop.pl": "9bf175cf7b84806d445b0e1062c8e1b64e68f01b700bec466daaa1fa05e8a243",
     "index.html": "e7a08970dfde6279ab997966b7778ecfcb82397f11b529062deb2cba5cb23658",
     "runtime/LICENSE": "c27c866f59d8f6412a07621a383c45878e69f6b93f9197cff70ce0838b87d86d",
     "runtime/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
