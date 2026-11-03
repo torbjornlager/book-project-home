@@ -1,5 +1,5 @@
 The Box Shop: a browser-only Web Prolog experiment.
-Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/6ed2a9f1106b48c2fdfa8315c051e06225996f50/experiments/boxshop
+Application source: https://github.com/torbjornlager/trinity-demonstrator/tree/4bcf938cb5a2713dcd036d7cb77644aa3bdb2921/experiments/boxshop
 Runtime source: https://github.com/torbjornlager/swi-wasm-node/tree/3df5bb75a55e0245693f70382d660d9461b540a1
 The Prolog database belongs to this page and is not sent to a server.
 Browser speech recognition is required and may use an external browser service.
