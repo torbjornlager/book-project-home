@@ -11,7 +11,7 @@ date: 2026-02-24
 > — *Jean-Louis Gassée*
 
 A logotype gives a programming language a unique look and feel that makes it instantly
-recognizable and easier to remember. It is more than just a nice design -- it is a way for
+recognisable and easier to remember. It is more than just a nice design -- it is a way for
 users to connect, feel part of a community, and rally around a shared symbol. The logo also
 says something about what the language stands for, helping people get a quick sense of its
 vibe. Plus, it is useful for spreading the word; a good logo can make the language more
@@ -20,7 +20,7 @@ and building a legacy over time. Here are the logotypes for four well-establishe
 
 ![Alt text](https://trinity.elfenbenstornet.se/assets/img/pl-logos.png){: width="500"}
 
-By contrast, there is no Prolog logo broadly recognized across the language’s subcommunities. Perhaps that absence says something. Maybe Prolog has long been content to appear as an academic language rather than a public-facing technology. But the world has changed. Even niche languages now tend to have a clear visual identity, because branding, recognizability, and community-building matter more than they once did, especially in open-source and web-facing settings. Prolog should not be the odd one out forever.
+By contrast, there is no Prolog logo broadly recognised across the language’s subcommunities. Perhaps that absence says something. Maybe Prolog has long been content to appear as an academic language rather than a public-facing technology. But the world has changed. Even niche languages now tend to have a clear visual identity, because branding, recognisability, and community-building matter more than they once did, especially in open-source and web-facing settings. Prolog should not be the odd one out forever.
 
 The good news is that we need not begin from scratch. The field of logic programming already possesses
 an emblematic resource: the white-on-black geometric symbol at the heart of the logo for the
@@ -29,12 +29,12 @@ an emblematic resource: the white-on-black geometric symbol at the heart of the 
 ![Alt text](https://trinity.elfenbenstornet.se/assets/img/alp-logo.png){: width="550"}
 
 Familiar to logicians, the three glyphs ⊨, ≡ and ⊢ stand for semantic entailment, logical
-equivalence and syntactic inference, respectively. Though underutilized and perhaps
-underrecognized, the equation expresses a core thesis of logic programming: that syntax and
+equivalence and syntactic inference, respectively. Though underutilised and perhaps
+underrecognised, the equation expresses a core thesis of logic programming: that syntax and
 semantics, process and meaning, are formally intertwined. The equation, while not fully
-realized in practical Prolog, remains a guiding principle of logic programming -- and a
+realised in practical Prolog, remains a guiding principle of logic programming -- and a
 fitting philosophical emblem for Prolog. In the spirit of reuse and renewal, and adding 
-a frame and a bit of color, I'd like to propose a Prolog logotype based on this symbol: 
+a frame and a bit of colour, I'd like to propose a Prolog logotype based on this symbol:
 
 <img src="https://trinity.elfenbenstornet.se/assets/img/prolog-logo.png" alt="Alt Text" width="300">
 
