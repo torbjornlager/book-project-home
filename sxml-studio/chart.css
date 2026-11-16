@@ -52,3 +52,6 @@ svg.chart .handle{cursor:crosshair}
 svg.chart .handle circle{fill:var(--blue);stroke:var(--editor);stroke-width:1.5}
 svg.chart .handle path{fill:none;stroke:var(--editor);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 svg.chart .rubber{fill:none;stroke:var(--blue);stroke-width:1.6;stroke-dasharray:5 4;pointer-events:none}
+svg.chart .ghost{fill:color-mix(in srgb,var(--blue) 12%,transparent);stroke:var(--blue);stroke-width:1.6;stroke-dasharray:5 4;pointer-events:none}
+svg.chart.moving{cursor:grabbing}
+svg.chart.moving .state{cursor:grabbing}

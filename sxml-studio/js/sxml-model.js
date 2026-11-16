@@ -117,6 +117,7 @@
     const rootEl = doc.documentElement;
     model.root = mk(rootEl, null);
     model.problems = validate(model);
+    model.layout = getLayout(doc);
     model.examples = exampleQueries(doc);
     model.description = description(doc);
     return model;
@@ -208,7 +209,7 @@
 
   function description(doc) {
     for (const n of Array.from(doc.childNodes)) {
-      if (n.nodeType === 8 && !/<examples>/.test(n.data)) return dedent(n.data);
+      if (n.nodeType === 8 && !/<examples>|<layout>/.test(n.data)) return dedent(n.data);
       if (n.nodeType === 1) break;
     }
     return '';
@@ -225,6 +226,31 @@
       }
     }
     return out;
+  }
+
+  /* ---------- manual arrangement, kept in a trailing <layout> comment ---------- */
+
+  function layoutComment(doc) {
+    return Array.from(doc.childNodes).find(n => n.nodeType === 8 && /^\s*<layout>/.test(n.data)) || null;
+  }
+
+  /* { parentKey: { childKey: [x, y], ... }, ... } or null */
+  function getLayout(doc) {
+    const c = layoutComment(doc);
+    if (!c) return null;
+    try {
+      const obj = JSON.parse(c.data.replace(/^\s*<layout>/, ''));
+      return obj && typeof obj === 'object' && Object.keys(obj).length ? obj : null;
+    } catch (e) { return null; }
+  }
+
+  function setLayout(doc, layout) {
+    const old = layoutComment(doc);
+    const keys = layout ? Object.keys(layout) : [];
+    if (!keys.length) { if (old) old.remove(); return; }
+    const body = ' <layout>\n{' + keys.map(k => JSON.stringify(k) + ': ' + JSON.stringify(layout[k])).join(',\n ') + '}\n';
+    if (old) old.data = body;
+    else doc.appendChild(doc.createComment(body));
   }
 
   /* ---------- serialisation ---------- */
@@ -419,6 +445,13 @@
     }
     const parent = el.parentNode;
     if (parent && parent.nodeType === 1 && parent.getAttribute('initial') === old) parent.setAttribute('initial', newId);
+    const layout = getLayout(doc);
+    if (layout) {
+      const re = k => k === old ? newId : k.startsWith(old + '/') ? newId + k.slice(old.length) : k;
+      const next = {};
+      for (const pk in layout) { next[re(pk)] = {}; for (const ck in layout[pk]) next[re(pk)][re(ck)] = layout[pk][ck]; }
+      setLayout(doc, next);
+    }
   }
 
   /* Delete an element.  Deleting a state also removes transitions that target
@@ -493,6 +526,6 @@
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
     parse, build, validate, serialize, locate, collapse, dedent, scriptText, isState, label,
-    addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, move, uniqueId, blank
+    getLayout, setLayout, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, move, uniqueId, blank
   };
 })(window);

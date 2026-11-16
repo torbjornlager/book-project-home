@@ -63,8 +63,15 @@
 
   /* ---------- ELK graph ---------- */
 
-  function toElk(model, direction) {
+  const INTERACTIVE = {
+    'elk.layered.cycleBreaking.strategy': 'INTERACTIVE',
+    'elk.layered.layering.strategy': 'INTERACTIVE',
+    'elk.layered.crossingMinimization.strategy': 'INTERACTIVE'
+  };
+
+  function toElk(model, direction, base) {
     const edges = [];
+    const hints = base ? model.layout : null;
     const info = new Map();      // elk id -> description
     function noteNode(dm, owner) {
       const all = dm.body.split('\n');
@@ -111,17 +118,27 @@
           info.set(id, { type: 'chain' });
         }
       }
-      if (n.kind === 'statechart') return { id: n.key, children: kids };
+      if (hints) {
+        const hint = hints[n.key] || {}, me = base.get(n.key);
+        kids.forEach((k, i) => {
+          const h = hint[k.id], b = base.get(k.id);
+          if (h) { k.x = h[0]; k.y = h[1]; }
+          else if (b && me) { k.x = b.x - me.x; k.y = b.y - me.y; }
+          else { k.x = 100000 + i; k.y = 100000 + i; }
+        });
+      }
+      const inter = {};
+      if (n.kind === 'statechart') return { id: n.key, children: kids, layoutOptions: Object.assign({ 'elk.padding': '[top=24,left=24,bottom=24,right=24]' }, inter) };
       if (!kids.length) {
         return { id: n.key, width: Math.max(72, headW, linesW), height: top + (lines.length ? 4 : 20) };
       }
       return {
         id: n.key, children: kids,
-        layoutOptions: {
+        layoutOptions: Object.assign({}, inter, {
           'elk.padding': '[top=' + (top + 14) + ',left=' + PAD + ',bottom=' + PAD + ',right=' + PAD + ']',
           'elk.nodeSize.constraints': 'MINIMUM_SIZE',
           'elk.nodeSize.minimum': '(' + Math.max(72, headW, linesW) + ',' + (top + 20) + ')'
-        }
+        })
       };
     }
     const root = node(model.root);
@@ -139,7 +156,6 @@
       });
     }
     root.edges = edges;
-    root.layoutOptions = { 'elk.padding': '[top=24,left=24,bottom=24,right=24]' };
     return { graph: root, info };
   }
 
@@ -168,7 +184,17 @@
   let elk = null;
   async function layout(model, direction, extra) {
     if (!elk) elk = new global.ELK();
-    const { graph, info } = toElk(model, direction);
+    const hinted = model.layout && Object.keys(model.layout).length > 0;
+    let geo = await run(model, direction, extra, null);
+    if (hinted) {
+      try { geo = await run(model, direction, Object.assign({}, INTERACTIVE, extra), geo.boxes); }
+      catch (e) { console.warn('Manual arrangement could not be applied; using automatic layout.', e); }
+    }
+    return geo;
+  }
+
+  async function run(model, direction, extra, base) {
+    const { graph, info } = toElk(model, direction, base);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), extra || {}) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -482,12 +508,20 @@
         ev.preventDefault();
         return;
       }
-      drag = { type: 'pan', x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
+      const movable = stateEl && !this.running && !this.readOnly && this.h.onMove;
+      drag = { type: movable ? 'move' : 'pan', key: movable ? stateEl.getAttribute('data-state') : null, x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
       svg.setPointerCapture(ev.pointerId);
     });
     svg.addEventListener('pointermove', ev => {
       if (!drag) return;
-      if (drag.type === 'pan') {
+      if (drag.type === 'move') {
+        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
+        if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
+        const b = this.geo.boxes.get(drag.key);
+        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
+        drag.dx = dx; drag.dy = dy;
+        drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy);
+      } else if (drag.type === 'pan') {
         const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
         drag.moved = true; svg.classList.add('panning');
@@ -513,6 +547,12 @@
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
         const over = ev.type === 'pointerup' ? this._stateAt(ev) : null;
         if (over && this.h.onConnect) this.h.onConnect(d.source, over);
+        return;
+      }
+      if (d.type === 'move' && d.moved) {
+        svg.classList.remove('moving');
+        d.ghost.remove();
+        if (ev.type === 'pointerup') this.h.onMove(d.key, d.dx, d.dy);
         return;
       }
       if (d.moved || ev.type !== 'pointerup') return;
@@ -558,7 +598,7 @@
     clone.setAttribute('height', Math.ceil(this.geo.height));
     clone.removeAttribute('tabindex');
     clone.lastChild.removeAttribute('transform');
-    for (const o of clone.querySelectorAll('.handle,.rubber')) o.remove();
+    for (const o of clone.querySelectorAll('.handle,.rubber,.ghost')) o.remove();
     const style = document.createElementNS(SVGNS, 'style');
     style.textContent = cssText;
     clone.insertBefore(style, clone.firstChild);

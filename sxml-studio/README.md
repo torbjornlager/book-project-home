@@ -25,6 +25,11 @@ Web Workers need HTTP, so serve this folder with any static server:
   another, edit everything in the Inspector, reorder transitions (document
   order is priority), rename a state (references follow), Delete removes a
   state together with transitions that target it.
+- Arrangement: drag a state to move it among its siblings. The drop position
+  is a hint (which layer, which order) for the layout engine, not an exact
+  pixel position, so edges are always re-routed tidily. Hints are saved in a
+  trailing `<!-- <layout> ... -->` comment, which the interpreter ignores;
+  the Auto button removes it.
 - Checks the Appendix C rules that need no Prolog engine (ids, initial,
   targets, on/after, spawn operands, vocabulary). The engine validates again
   when the chart is run.
@@ -48,8 +53,8 @@ Web Workers need HTTP, so serve this folder with any static server:
 
 ## Known limits
 
-- Layout is automatic; states cannot be positioned by hand, and a state
-  cannot be dragged into another parent (cut and paste in the source).
+- Dragging sets order and layer, not exact coordinates, and a state cannot
+  be dragged into another parent (cut and paste in the source).
 - A graphical edit reformats the whole document in a uniform style.
 - A nested statechart inside `<spawn type="statechart">` is edited as text
   and is not drawn.

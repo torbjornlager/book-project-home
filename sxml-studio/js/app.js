@@ -60,6 +60,7 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
   onOpen(key) { select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
   onConnect(source, target) { connect(source, target); },
+  onMove(key, dx, dy) { moveState(key, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -151,6 +152,7 @@ function updateChrome() {
   }
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
+  $('auto-layout').disabled = !model || !model.layout || !!run.pid;
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -248,6 +250,26 @@ function connect(sourceKey, targetKey) {
   const f = $('inspector').querySelector('input[data-f="on"]');
   if (f) f.focus();
   status('Transition ' + s.id + ' → ' + t.id + ' added · give it an event, guard or delay');
+}
+
+/* Dragging a state rearranges it among its siblings.  The arrangement is a
+   set of position hints for the layout engine, kept in a <layout> comment. */
+function moveState(key, dx, dy) {
+  if (!guard()) return;
+  const n = model.byKey.get(key);
+  if (!n || !n.parent) return;
+  const parent = n.parent, boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
+  const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
+  const hint = {};
+  for (const k of siblings) { const b = boxes.get(k); if (b) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
+  if (!hint[key]) return;
+  hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
+  const layout = Object.assign({}, model.layout || {});
+  layout[parent.key] = hint;
+  SXML.setLayout(model.doc, layout);
+  selEl = n.el;
+  commit();
+  status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
 }
 
 function removeSelected() {
@@ -848,6 +870,7 @@ $('delete').onclick = removeSelected;
 $('undo').onclick = () => editor.undo();
 $('redo').onclick = () => editor.redo();
 $('fit').onclick = () => diagram.fit();
+$('auto-layout').onclick = () => { if (!guard()) return; SXML.setLayout(model.doc, null); commit(); status('Automatic layout restored'); };
 $('zoom-in').onclick = () => diagram.zoomBy(1.2);
 $('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
 $('direction').onclick = () => {
