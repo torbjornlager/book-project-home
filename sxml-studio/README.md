@@ -1,0 +1,57 @@
+# Trinity SXML Studio
+
+A browser-only visualiser, graphical editor and live runner for SXML 0.2
+statecharts (book chapter "The statechart behavior", Appendix C).
+
+## Run it
+
+Web Workers need HTTP, so serve this folder with any static server:
+
+    python3 -m http.server 8080      # then open http://localhost:8080/
+
+`index.html#03` opens example 03 directly.
+
+## What it does
+
+- Draws the chart in the book's notation: nested states, dashed lines between
+  parallel regions, initial dots, H / H* history, bullseye finals. Entry/exit
+  actions, deferrals, spawns and targetless transitions are listed inside
+  their state; `<datamodel>` appears as a note.
+- Diagram and source stay in step both ways. Selecting in one highlights the
+  other. Graphical edits rewrite the SXML (comments and CDATA are kept);
+  Undo/Redo covers both.
+- Editing: add state / parallel / final / history inside the selection, drag
+  the blue handle (or use the Transition tool, key T) from one state to
+  another, edit everything in the Inspector, reorder transitions (document
+  order is priority), rename a state (references follow), Delete removes a
+  state together with transitions that target it.
+- Checks the Appendix C rules that need no Prolog engine (ids, initial,
+  targets, on/after, spawn operands, vocabulary). The engine validates again
+  when the chart is run.
+- Run chart spawns the document in the real SWI-WASM interpreter with
+  tracing on, and animates the active configuration and fired transitions.
+  The queries from the document's trailing `<examples>` comment become
+  buttons; `$Pid` stands for the running chart. Clicking a transition while
+  the chart runs sends its event.
+
+## Parts
+
+- `js/sxml-model.js`   parse, validate, edit, serialise
+- `js/sxml-diagram.js` layout (ELK layered, hierarchical) and SVG drawing
+- `js/app.js`          explorer, editor, inspector, run panel
+- `runtime/`           swi-wasm-node at 82aac08 (worker, host, statechart
+                       interpreter, SXML schema) with swipl-wasm 8.2.5.
+                       `runtime/wasm/shared_db.pl` holds the facts that
+                       example 10 expects in the node's shared database.
+- `vendor/elk.bundled.js` elkjs 0.12.1 (EPL-2.0), CodeMirror 5.65.16 (MIT)
+- `examples/`          examples 01–14 from trinity-demonstrator
+
+## Known limits
+
+- Layout is automatic; states cannot be positioned by hand, and a state
+  cannot be dragged into another parent (cut and paste in the source).
+- A graphical edit reformats the whole document in a uniform style.
+- A nested statechart inside `<spawn type="statechart">` is edited as text
+  and is not drawn.
+- When a state has several transitions with the same target, the one
+  highlighted as fired is inferred from the triggering event.

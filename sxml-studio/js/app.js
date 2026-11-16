@@ -1,0 +1,911 @@
+/* SXML Studio — application: explorer, source editor, inspector, live run. */
+'use strict';
+const $ = id => document.getElementById(id);
+const EXAMPLES = [
+  '01 pause-and-resume', '02 spaghetti', '03 emotions', '04 clock', '05 pingpong', '06 parallel',
+  '07 deferred-events', '08 closure', '09 gcd', '10 shared-database', '11 boxshop-1', '12 boxshop-2',
+  '13 spawn-actor', '14 spawn-toplevel'
+];
+const programs = EXAMPLES.map(name => ({ name: name + '.xml', url: 'examples/' + encodeURIComponent(name + '.xml'), source: null }));
+
+/* ---------- source editor ---------- */
+
+CodeMirror.defineMode('sxml', () => ({
+  startState: () => ({ ctx: 'text' }),
+  token(stream, st) {
+    if (st.ctx === 'comment') {
+      if (stream.skipTo('-->')) { stream.match('-->'); st.ctx = 'text'; } else stream.skipToEnd();
+      return 'comment';
+    }
+    if (st.ctx === 'cdata') {
+      if (stream.match(']]>')) { st.ctx = 'text'; return 'atom'; }
+      if (stream.match(/^<\/?[A-Za-z][\w-]*/)) return 'tag';
+      if (stream.match(/^"[^"]*"/)) return 'string';
+      stream.next(); return null;
+    }
+    if (st.ctx === 'tag') {
+      if (stream.eatSpace()) return null;
+      if (stream.match(/^\/?>/)) { st.ctx = 'text'; return 'tag'; }
+      if (stream.match(/^"[^"]*"?/) || stream.match(/^'[^']*'?/)) return 'string';
+      if (stream.match(/^[\w:.-]+/)) return 'attribute';
+      stream.next(); return null;
+    }
+    if (stream.match('<!--')) { st.ctx = 'comment'; return 'comment'; }
+    if (stream.match('<![CDATA[')) { st.ctx = 'cdata'; return 'atom'; }
+    if (stream.match(/^<\/?[A-Za-z][\w.-]*/)) { st.ctx = 'tag'; return 'tag'; }
+    if (stream.eatSpace()) return null;
+    if (stream.match(/^'(?:[^'\\]|\\.|'')*'/)) return 'string';
+    if (stream.match(/^[a-z]\w*/)) return null;
+    if (stream.match(/^[A-Z_]\w*/)) return 'variable-2';
+    if (stream.match(/^\d+(?:\.\d+)?/)) return 'number';
+    stream.next(); return null;
+  }
+}));
+const editor = CodeMirror.fromTextArea($('source'), { lineNumbers: true, mode: 'sxml', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { Tab: cm => cm.execCommand('insertSoftTab') } });
+editor.getInputField().setAttribute('aria-label', 'SXML source');
+
+/* ---------- state ---------- */
+
+let current = 0, loadedIndex = -1;
+let model = null;            // last model built from well-formed source
+let located = null;          // element -> source range
+let selEl = null;            // selected DOM element
+let selKey = '#root';
+let silent = false;          // suppress editor change handling during programmatic updates
+let parseTimer = null;
+let focusItem = null;        // item key to highlight in the inspector
+let selMark = null, errLine = null, locatedText = null;
+
+const diagram = new SXMLDiagram.Diagram($('chart'), {
+  onSelect(key) { onDiagramClick(key); },
+  onOpen(key) { select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
+  onConnect(source, target) { connect(source, target); },
+  onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
+  onKey(ev) { diagramKey(ev); }
+});
+
+function status(text) { $('status').textContent = '● ' + text; }
+
+/* ---------- model lifecycle ---------- */
+
+function entryFor(el) {
+  if (!model || !el) return null;
+  for (const n of model.nodes) if (n.el === el) return n;
+  for (const it of model.items.values()) if (it.el === el) return it;
+  return null;
+}
+function entryByKey(key) { return model ? (model.byKey.get(key) || model.items.get(key) || null) : null; }
+function ownerNode(entry) { return entry && entry.owner ? entry.owner : entry; }
+
+/* Parse the editor text and rebuild everything. */
+function reparse(opts) {
+  const text = editor.getValue();
+  const { doc, error } = SXML.parse(text);
+  if (errLine != null) { editor.removeLineClass(errLine, 'background', 'err-line'); errLine = null; }
+  if (error) {
+    $('chart').classList.add('stale');
+    showProblems([{ severity: 'error', message: 'Not well-formed XML: ' + error.message, line: error.line }]);
+    if (error.line) { errLine = editor.getLineHandle(error.line - 1); if (errLine) editor.addLineClass(errLine, 'background', 'err-line'); }
+    status('XML error · the diagram shows the last valid source');
+    updateChrome();
+    return;
+  }
+  adopt(doc, text, opts);
+}
+
+/* Install a DOM as the current document. */
+function adopt(doc, text, opts) {
+  const wasRunning = run.pid && run.source !== text;
+  model = SXML.build(doc);
+  located = SXML.locate(text, doc);
+  locatedText = text;
+  $('chart').classList.remove('stale');
+  let entry = entryFor(selEl) || entryByKey(selKey) || model.root;
+  selEl = entry.el; selKey = entry.key;
+  focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
+  showProblems(model.problems);
+  diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
+  renderInspector();
+  renderSuggestions();
+  markSelection(false);
+  updateChrome();
+  if (wasRunning) stopRun('Source changed · run the chart again to apply');
+  else if (!run.pid) status(model.problems.some(p => p.severity === 'error') ? 'Problems found · see the list under the diagram' : 'Ready · ' + programs[current].name);
+}
+
+/* Write the (edited) DOM back to the editor and refresh the views. */
+function commit() {
+  const spaceSlash = (editor.getValue().match(/" \/>/g) || []).length > (editor.getValue().match(/"\/>/g) || []).length;
+  const text = SXML.serialize(model.doc, { spaceSlash });
+  silent = true;
+  const scroll = editor.getScrollInfo();
+  editor.setValue(text);
+  editor.scrollTo(scroll.left, scroll.top);
+  silent = false;
+  adopt(model.doc, text);
+}
+
+function showProblems(list) {
+  const box = $('problems');
+  box.replaceChildren();
+  box.hidden = !list.length;
+  for (const p of list) {
+    const b = document.createElement('button');
+    b.className = p.severity; b.textContent = p.message;
+    b.onclick = () => {
+      if (p.key) select(p.key, { reveal: true, scroll: true });
+      else if (p.line) { editor.setCursor(p.line - 1, 0); editor.focus(); }
+    };
+    box.append(b);
+  }
+  diagram.fit && requestAnimationFrame(() => { if (!diagram.userMoved) diagram.fit(); });
+}
+
+function updateChrome() {
+  const p = programs[current];
+  $('filename').textContent = p.name;
+  $('dirty').textContent = p.source != null && editor.getValue() !== p.source ? '●' : '';
+  if (model) {
+    const states = model.nodes.filter(n => n.kind !== 'statechart').length;
+    $('stats').textContent = 'SXML 0.2 · ' + states + ' state' + (states === 1 ? '' : 's') + ' · ' + model.transitions.length + ' transition' + (model.transitions.length === 1 ? '' : 's');
+  }
+  const hist = editor.historySize();
+  $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
+  const entry = entryFor(selEl);
+  $('delete').disabled = !entry || entry === model.root || !!run.pid;
+  for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
+  diagram.readOnly = !!run.pid;
+}
+
+editor.on('change', () => {
+  if (silent) return;
+  clearTimeout(parseTimer);
+  parseTimer = setTimeout(() => reparse(), 280);
+  updateChrome();
+});
+
+/* ---------- selection ---------- */
+
+function select(key, opts) {
+  const entry = entryByKey(key) || model.root;
+  selEl = entry.el; selKey = entry.key;
+  focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
+  diagram.select(selKey);
+  if (opts && opts.reveal) diagram.reveal(ownerNode(entry).key);
+  renderInspector();
+  markSelection(!opts || opts.scroll !== false);
+  updateChrome();
+}
+
+function markSelection(scroll) {
+  if (selMark) { selMark.clear(); selMark = null; }
+  const r = located && located.map.get(selEl);
+  if (!r || selEl === model.doc.documentElement) return;
+  const from = editor.posFromIndex(r.start), to = editor.posFromIndex(r.end);
+  selMark = editor.markText(from, to, { className: 'sel-range' });
+  if (scroll && !editor.hasFocus()) editor.scrollIntoView({ from, to: editor.posFromIndex(r.openEnd) }, 60);
+}
+
+/* Cursor in the source selects the enclosing element in the diagram. */
+editor.on('cursorActivity', () => {
+  if (silent || !editor.hasFocus() || !located || !located.ranges.length || locatedText !== editor.getValue()) return;
+  const at = editor.indexFromPos(editor.getCursor());
+  let best = -1;
+  located.ranges.forEach((r, i) => { if (r.start <= at && at <= r.end) best = i; });
+  if (best < 0) return;
+  let el = located.els[best], entry = null;
+  while (el && el.nodeType === 1 && !(entry = entryFor(el))) el = el.parentNode;
+  if (entry && entry.key !== selKey) {
+    selEl = entry.el; selKey = entry.key;
+    focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
+    diagram.select(selKey); diagram.reveal(ownerNode(entry).key);
+    renderInspector(); markSelection(false); updateChrome();
+  }
+});
+
+function onDiagramClick(key) {
+  const entry = entryByKey(key);
+  if (run.pid && entry && entry.kind === 'go' && entry.on != null) { sendTransition(entry); return; }
+  select(key, { reveal: false });
+  if (!run.pid) showSide('inspector');
+}
+
+/* ---------- editing ---------- */
+
+function guard() {
+  if (run.pid) { status('Halt the running chart before editing'); return false; }
+  if (!model || $('chart').classList.contains('stale')) { status('Fix the XML error in the source first'); return false; }
+  return true;
+}
+
+function containerFor(kind) {
+  let entry = entryFor(selEl) || model.root;
+  let n = ownerNode(entry);
+  while (n && !(SXML.CHILDREN[n.kind] || []).includes(kind)) n = n.parent;
+  return n || model.root;
+}
+
+function addState(kind) {
+  if (!guard()) return;
+  const parent = containerFor(kind);
+  if (kind === 'history' && parent.kind === 'statechart') { status('Select a compound state to add a history state'); return; }
+  const el = SXML.addState(model.doc, parent.el, kind);
+  selEl = el; commit();
+  showSide('inspector');
+  const f = $('inspector').querySelector('input[data-f="id"]');
+  if (f) { f.focus(); f.select(); }
+}
+
+function connect(sourceKey, targetKey) {
+  if (!guard()) return;
+  const s = model.byKey.get(sourceKey), t = model.byKey.get(targetKey);
+  if (!s || !t || !t.id) return;
+  if (s.kind === 'final') { status('A final state cannot have transitions'); return; }
+  if (s.kind === 'history' && s.transitions.length) { s.transitions[0].el.setAttribute('to', t.id); selEl = s.transitions[0].el; commit(); return; }
+  selEl = SXML.addTransition(model.doc, s.el, t.id);
+  commit();
+  showSide('inspector');
+  const f = $('inspector').querySelector('input[data-f="on"]');
+  if (f) f.focus();
+  status('Transition ' + s.id + ' → ' + t.id + ' added · give it an event, guard or delay');
+}
+
+function removeSelected() {
+  if (!guard()) return;
+  const entry = entryFor(selEl);
+  if (!entry || entry === model.root) return;
+  const parent = ownerNode(entry) === entry ? entry.parent : entry.owner;
+  SXML.removeElement(model.doc, entry.el);
+  selEl = parent ? parent.el : model.doc.documentElement;
+  commit();
+}
+
+function diagramKey(ev) {
+  const mod = ev.ctrlKey || ev.metaKey;
+  if ((ev.key === 'Delete' || ev.key === 'Backspace') && !mod) { ev.preventDefault(); removeSelected(); }
+  else if (ev.key === 'Escape') { setTool(null); select('#root'); }
+  else if (mod && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? editor.redo() : editor.undo(); }
+  else if (mod && ev.key.toLowerCase() === 'y') { ev.preventDefault(); editor.redo(); }
+  else if (ev.key === 't' && !mod) setTool(diagram.tool === 'connect' ? null : 'connect');
+  else if (ev.key === '0' && !mod) diagram.fit();
+}
+
+function setTool(tool) {
+  diagram.tool = tool;
+  $('tool-connect').setAttribute('aria-pressed', String(tool === 'connect'));
+  $('chart').classList.toggle('connect', tool === 'connect');
+  if (tool === 'connect') status('Transition tool · drag from the source state to the target state');
+}
+
+/* ---------- inspector ---------- */
+
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e[k] = v;
+    else if (k === 'value') e.value = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null) e.append(kid);
+  return e;
+}
+
+/* Apply an edit, then refresh; keeps keyboard focus on the same field. */
+function edit(fn) {
+  if (!guard()) { renderInspector(); return; }
+  setTimeout(() => {
+    const a = document.activeElement, f = a && a.dataset ? a.dataset.f : null;
+    fn();
+    commit();
+    if (f) { const again = $('inspector').querySelector('[data-f="' + CSS.escape(f) + '"]'); if (again) again.focus(); }
+  }, 0);
+}
+
+function input(f, value, onchange, extra) {
+  return h('input', Object.assign({ 'data-f': f, value: value == null ? '' : value, spellcheck: 'false', autocomplete: 'off', onchange: ev => onchange(ev.target.value.trim()) }, extra || {}));
+}
+function area(f, value, onchange, rows) {
+  const lines = String(value || '').split('\n').length;
+  return h('textarea', { 'data-f': f, value: value || '', rows: Math.max(rows || 1, Math.min(12, lines)), spellcheck: 'false', onchange: ev => onchange(ev.target.value) });
+}
+function selectBox(f, options, value, onchange) {
+  const s = h('select', { 'data-f': f, onchange: ev => onchange(ev.target.value) }, options.map(o => h('option', { value: o[0] }, o[1])));
+  s.value = value;
+  return s;
+}
+const field = (label, control, block) => h('div', { class: 'field' + (block ? ' block' : '') }, h('label', {}, label), control);
+
+function renderInspector() {
+  const box = $('inspector');
+  const scroll = box.scrollTop;
+  box.replaceChildren();
+  if (!model) return;
+  const entry = entryFor(selEl) || model.root;
+  if (entry.kind === 'go') transitionInspector(box, entry);
+  else stateInspector(box, ownerNode(entry));
+  box.scrollTop = scroll;
+  const focus = box.querySelector('.card.focus');
+  if (focus) focus.scrollIntoView({ block: 'nearest' });
+}
+
+function pathOf(n) {
+  const parts = [];
+  for (let p = n; p; p = p.parent) parts.unshift(p);
+  const out = h('div', { class: 'insp-path' });
+  parts.forEach((p, i) => {
+    if (i) out.append(' › ');
+    out.append(h('a', { onclick: () => select(p.key, { reveal: true }) }, p.kind === 'statechart' ? 'statechart' : p.id || '(no id)'));
+  });
+  return out;
+}
+
+function scriptCards(box, n, list, name, title) {
+  box.append(h('div', { class: 'section-title' }, title, h('button', { onclick: () => edit(() => { selEl = SXML.addItem(model.doc, n.el, name); }) }, '+ Add')));
+  list.forEach((it, i) => {
+    box.append(h('div', { class: 'card' + (focusItem === it.key ? ' focus' : '') },
+      h('div', { class: 'card-top' }, h('span', {}, '<' + name + '>' + (list.length > 1 ? ' ' + (i + 1) : '')),
+        h('button', { class: 'mini', title: 'Remove', onclick: () => edit(() => { it.el.remove(); selEl = n.el; }) }, '×')),
+      area(it.key, it.body, v => edit(() => SXML.setScript(model.doc, it.el, v)), name === 'datamodel' ? 3 : 1)));
+  });
+}
+
+function summary(t) {
+  const trig = SXMLDiagram.trigger(t) || 'always';
+  return [h('b', {}, trig), t.to.length ? ' → ' + t.to.join(' ') : ' (stay)'];
+}
+
+function stateInspector(box, n) {
+  const root = n.kind === 'statechart';
+  box.append(h('div', { class: 'insp-head' }, h('span', { class: 'insp-kind' }, n.kind), h('span', { class: 'insp-title' }, root ? (n.id || 'statechart') : n.id || '(no id)')));
+  if (!root) box.append(pathOf(n));
+  if (!root) {
+    box.append(field('Type', selectBox('kind', [['state', 'state'], ['parallel', 'parallel'], ['final', 'final'], ['history', 'history']], n.kind,
+      v => edit(() => { selEl = SXML.retag(model.doc, n.el, v); }))));
+  }
+  box.append(field('Id', input('id', n.id, v => edit(() => {
+    if (root) SXML.setAttr(n.el, 'id', v);
+    else if (v && !/\s/.test(v)) SXML.renameState(model.doc, n.el, v);
+  }), root ? { placeholder: 'statechart_actor' } : {})));
+  if (root) box.append(field('Version', input('version', n.el.getAttribute('version'), v => edit(() => SXML.setAttr(n.el, 'version', v)))));
+  const kids = n.children.filter(c => c.kind !== 'history');
+  if ((root || n.kind === 'state') && (kids.length || n.initial)) {
+    const opts = kids.map(c => [c.id, c.id]);
+    if (!kids.some(c => c.id === n.initial)) opts.unshift([n.initial, n.initial ? n.initial + ' (missing)' : '(choose)']);
+    box.append(field('Initial', selectBox('initial', opts, n.initial, v => edit(() => SXML.setAttr(n.el, 'initial', v)))));
+  }
+  if (n.kind === 'history') {
+    box.append(field('History', selectBox('htype', [['shallow', 'shallow — immediate children'], ['deep', 'deep — full configuration']], n.htype,
+      v => edit(() => SXML.setAttr(n.el, 'type', v === 'shallow' ? '' : v)))));
+    const t = n.transitions[0];
+    const ids = n.parent.children.filter(c => c.kind !== 'history').map(c => [c.id, c.id]);
+    box.append(field('Default', selectBox('hdefault', t && !ids.some(o => o[0] === t.to[0]) ? [[t.to.join(' '), t.to.join(' ')], ...ids] : ids, t ? t.to.join(' ') : '',
+      v => edit(() => { const go = t ? t.el : SXML.addTransition(model.doc, n.el, v); go.setAttribute('to', v); }))));
+    box.append(h('p', { class: 'hint' }, 'A transition to “' + n.id + '” restores what was active in “' + (n.parent.id || 'the root') + '” when it was last exited. The default target is used before any history exists.'));
+  }
+  const allow = SXML.CHILDREN[n.kind];
+  if (allow.includes('datamodel') && (root || n.datamodels.length)) scriptCards(box, n, n.datamodels, 'datamodel', 'DATAMODEL · PROLOG SOURCE');
+  if (allow.includes('onentry')) scriptCards(box, n, n.onentry, 'onentry', 'ENTRY ACTIONS');
+  if (allow.includes('onexit')) scriptCards(box, n, n.onexit, 'onexit', 'EXIT ACTIONS');
+
+  if (allow.includes('go') && n.kind !== 'history') {
+    box.append(h('div', { class: 'section-title' }, 'TRANSITIONS · IN PRIORITY ORDER', h('button', { onclick: () => edit(() => { selEl = SXML.addTransition(model.doc, n.el, ''); }) }, '+ Add')));
+    n.transitions.forEach((t, i) => {
+      box.append(h('div', { class: 'trow' },
+        h('button', { class: 'tsum', title: 'Edit this transition', onclick: () => select(t.key, { reveal: false }) }, summary(t)),
+        h('button', { class: 'mini', title: 'Higher priority', disabled: i === 0, onclick: () => edit(() => SXML.move(t.el, -1)) }, '↑'),
+        h('button', { class: 'mini', title: 'Lower priority', disabled: i === n.transitions.length - 1, onclick: () => edit(() => SXML.move(t.el, 1)) }, '↓')));
+    });
+    if (!n.transitions.length) box.append(h('p', { class: 'hint' }, 'None. Drag from the blue handle on the selected state to another state, or use + Add for a reaction that stays in this state.'));
+  }
+
+  if (allow.includes('defer')) {
+    box.append(h('div', { class: 'section-title' }, 'DEFERRED EVENTS', h('button', { onclick: () => edit(() => { selEl = SXML.addItem(model.doc, n.el, 'defer'); }) }, '+ Add')));
+    for (const d of n.defers) {
+      box.append(h('div', { class: 'card' + (focusItem === d.key ? ' focus' : '') },
+        h('div', { class: 'card-top' }, h('span', {}, '<defer>'), h('button', { class: 'mini', title: 'Remove', onclick: () => edit(() => { d.el.remove(); selEl = n.el; }) }, '×')),
+        field('On', input(d.key + '/on', d.on, v => edit(() => SXML.setAttr(d.el, 'on', v)))),
+        field('If', input(d.key + '/if', d.cond, v => edit(() => SXML.setAttr(d.el, 'if', v)), { placeholder: 'true' }))));
+    }
+  }
+  if (allow.includes('spawn')) {
+    box.append(h('div', { class: 'section-title' }, 'SPAWNED ACTORS', h('button', { onclick: () => edit(() => { selEl = SXML.addItem(model.doc, n.el, 'spawn'); }) }, '+ Add')));
+    for (const s of n.spawns) {
+      const card = h('div', { class: 'card' + (focusItem === s.key ? ' focus' : '') },
+        h('div', { class: 'card-top' }, h('span', {}, '<spawn>'), h('button', { class: 'mini', title: 'Remove', onclick: () => edit(() => { s.el.remove(); selEl = n.el; }) }, '×')),
+        field('Type', selectBox(s.key + '/type', SXML.SPAWN_TYPES.map(t => [t, t]), s.type, v => edit(() => {
+          s.el.setAttribute('type', v);
+          for (const a of ['goal', 'callback', 'state', 'children']) if (!SXML.SPAWN_REQUIRED[v].includes(a)) s.el.removeAttribute(a);
+          for (const a of SXML.SPAWN_REQUIRED[v]) if (!s.el.hasAttribute(a)) s.el.setAttribute(a, a === 'children' ? '[]' : a === 'state' ? '0' : 'worker');
+        }))));
+      for (const a of SXML.SPAWN_REQUIRED[s.type] || []) {
+        card.append(field(a[0].toUpperCase() + a.slice(1), input(s.key + '/' + a, s.el.getAttribute(a), v => edit(() => SXML.setAttr(s.el, a, v)))));
+      }
+      card.append(field('Options', input(s.key + '/options', s.el.getAttribute('options'), v => edit(() => SXML.setAttr(s.el, 'options', v)), { placeholder: '[monitor(true)]' })));
+      card.append(field(s.type === 'statechart' ? 'Nested SXML (kept in CDATA)' : 'Prolog source', area(s.key, s.body, v => edit(() => SXML.setScript(model.doc, s.el, v)), 3), true));
+      box.append(card);
+    }
+  }
+  if (allow.includes('datamodel') && !root && !n.datamodels.length) {
+    box.append(h('div', { class: 'section-title' }, 'DATAMODEL', h('button', { onclick: () => edit(() => { selEl = SXML.addItem(model.doc, n.el, 'datamodel'); }) }, '+ Add')));
+  }
+
+  const actions = h('div', { class: 'insp-actions' });
+  for (const k of ['state', 'parallel', 'final', 'history']) {
+    if (allow.includes(k)) actions.append(h('button', { onclick: () => { selEl = n.el; addState(k); } }, '+ ' + k));
+  }
+  if (!root) actions.append(h('button', { class: 'danger', onclick: removeSelected }, 'Delete ' + n.kind));
+  if (actions.children.length) { box.append(h('div', { class: 'section-title' }, root ? 'ADD TO THE STATECHART' : 'ADD INSIDE · REMOVE'), actions); }
+  if (root && model.description) box.append(h('div', { class: 'section-title' }, 'ABOUT THIS CHART'), h('p', { class: 'about' }, model.description.replace(/\n(?!\n)/g, ' ').replace(/\n /g, '\n\n')));
+}
+
+function transitionInspector(box, t) {
+  const n = t.source;
+  box.append(h('div', { class: 'insp-head' }, h('span', { class: 'insp-kind' }, 'transition'), h('span', { class: 'insp-title' }, (n.id || 'statechart') + (t.to.length ? ' → ' + t.to.join(' ') : ' (stay)'))));
+  box.append(pathOf(n));
+  const ids = h('datalist', { id: 'state-ids' }, model.nodes.filter(x => x.id).map(x => h('option', { value: x.id })));
+  box.append(ids);
+  box.append(field('To', input('to', t.to.join(' '), v => edit(() => SXML.setAttr(t.el, 'to', v.split(/\s+/).filter(Boolean).join(' '))), { list: 'state-ids', placeholder: 'none — stay in ' + (n.id || 'place') })));
+  box.append(field('On', input('on', t.on, v => edit(() => { SXML.setAttr(t.el, 'on', v); if (v) t.el.removeAttribute('after'); }), { placeholder: 'event pattern, e.g. start(Job)' })));
+  box.append(field('If', input('if', t.cond, v => edit(() => SXML.setAttr(t.el, 'if', v)), { placeholder: 'guard goal · default true' })));
+  box.append(field('After', input('after', t.after, v => edit(() => { SXML.setAttr(t.el, 'after', v); if (v) t.el.removeAttribute('on'); }), { placeholder: 'seconds · instead of an event', inputmode: 'decimal' })));
+  box.append(field('Action · Prolog goal run when the transition is taken', area('body', t.body, v => edit(() => SXML.setScript(model.doc, t.el, v)), 3), true));
+  const kind = t.on != null ? 'Triggered by an event that unifies with the pattern.' : t.after != null ? 'Fires ' + t.after + ' s after its source state is entered; cancelled on exit.' : 'Eventless: taken as soon as its guard holds.';
+  box.append(h('p', { class: 'hint' }, kind + (t.to.length ? (t.to.length === 1 && t.to[0] === n.id ? ' Targets its own source, so the state is exited and re-entered.' : '') : ' Without a target the action runs and no state is exited or entered.')));
+  if (n.kind !== 'history') {
+    box.append(h('div', { class: 'section-title' }, 'PRIORITY AMONG TRANSITIONS OF ' + (n.id || 'ROOT').toUpperCase()));
+    n.transitions.forEach((x, i) => {
+      const row = h('div', { class: 'trow' },
+        h('button', { class: 'tsum', onclick: () => select(x.key, { reveal: false }) }, (i + 1) + '. ', summary(x)),
+        h('button', { class: 'mini', title: 'Higher priority', disabled: i === 0, onclick: () => edit(() => SXML.move(x.el, -1)) }, '↑'),
+        h('button', { class: 'mini', title: 'Lower priority', disabled: i === n.transitions.length - 1, onclick: () => edit(() => SXML.move(x.el, 1)) }, '↓'));
+      if (x === t) row.firstChild.style.borderColor = 'var(--blue)';
+      box.append(row);
+    });
+  }
+  box.append(h('div', { class: 'insp-actions' }, h('button', { class: 'danger', onclick: removeSelected }, 'Delete transition')));
+}
+
+/* ---------- live run ---------- */
+
+const run = { node: null, pid: null, source: null, busy: false, starting: false, generation: 0, active: [], fired: new Set(), lastEvent: null, queue: [], timer: null, done: false };
+let inputResolve = null;
+
+function logRow(cls, parts) {
+  const log = $('log');
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  const d = document.createElement('div');
+  d.className = cls;
+  for (const p of [].concat(parts)) d.append(p);
+  log.append(d);
+  while (log.childElementCount > 1500) log.firstChild.remove();
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+const bold = t => { const b = document.createElement('b'); b.textContent = t; return b; };
+
+function runControls() {
+  $('run-start').disabled = run.starting || run.busy;
+  $('run-start').textContent = run.pid ? '↻ Restart chart' : '▷ Run chart';
+  $('run-top').textContent = $('run-start').textContent;
+  $('run-top').disabled = $('run-start').disabled;
+  $('run-halt').disabled = !run.node || run.starting;
+  $('run-goal').disabled = run.starting || run.busy;
+  const badge = $('run-badge');
+  badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
+  badge.classList.toggle('live', !!run.pid && !run.done);
+  $('config').textContent = run.pid ? '{' + run.active.join(', ') + '}' : '';
+  $('config').title = run.pid ? 'Active configuration of ' + run.pid : '';
+  updateChrome();
+}
+
+function cancelInput() {
+  if (inputResolve) { const r = inputResolve; inputResolve = null; r(null); }
+  if ($('input-dialog').open) $('input-dialog').close();
+}
+$('input-dialog').addEventListener('close', () => {
+  if (!inputResolve) return;
+  const r = inputResolve; inputResolve = null;
+  r($('input-dialog').returnValue === 'send' ? $('input-value').value : null);
+});
+
+function disposeNode() {
+  run.generation++;
+  cancelInput();
+  if (run.node) { try { run.node.dispose(); } catch (e) { /* already gone */ } }
+  run.node = null; run.pid = null; run.busy = false; run.starting = false; run.done = false;
+  run.queue = []; clearTimeout(run.timer); run.timer = null;
+  run.active = []; run.fired = new Set(); run.lastEvent = null;
+  diagram.setRun(false);
+}
+
+function stopRun(message) {
+  if (!run.node) return;
+  disposeNode();
+  logRow('note', message || 'Engine stopped.');
+  status(message || 'Chart stopped');
+  runControls();
+}
+
+async function ensureNode() {
+  if (run.node) return run.node;
+  run.starting = true; runControls(); status('Starting a fresh engine…');
+  const token = ++run.generation;
+  const abs = p => new URL(p, location.href).href;
+  const node = SwiWasmNode.create({
+    workerUrl: abs('runtime/swi_wasm_actor_worker.js'),
+    engineUrl: abs('runtime/swipl-bundle.js'),
+    prologBaseUrl: abs('runtime/wasm/'),
+    sharedDatabaseUrl: abs('runtime/wasm/shared_db.pl'),
+    onEvent(event) {
+      if (token !== run.generation) return false;
+      if (event.type === 'output') { enqueue({ type: 'output', text: String(event.data) }); return true; }
+      if (event.type === 'statechart_trace') { enqueue({ type: 'trace', text: String(event.data) }); return true; }
+      if (event.type === 'shell_error' || event.type === 'error') logRow('err', 'Runtime: ' + event.error);
+    },
+    onInput: text => new Promise(resolve => {
+      if (token !== run.generation) return resolve(null);
+      $('input-prompt').textContent = text; $('input-value').value = ''; $('input-dialog').returnValue = '';
+      inputResolve = resolve; $('input-dialog').showModal(); $('input-value').focus();
+    })
+  });
+  run.node = node;
+  try {
+    await node.open({ source: '' });
+    if (token !== run.generation) throw new Error('cancelled');
+  } catch (error) {
+    if (token === run.generation) { disposeNode(); logRow('err', 'Could not start the engine: ' + error); status('Could not start the engine'); runControls(); }
+    throw error;
+  }
+  run.starting = false;
+  return node;
+}
+
+const quoteAtom = text => "'" + text.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+
+async function runGoal(raw) {
+  raw = String(raw).trim().replace(/^\?-\s*/, '').replace(/\.\s*$/, '');
+  if (!raw || run.busy || run.starting) return;
+  const spawns = /<editor>/.test(raw);
+  if (spawns) {
+    if (!model || $('chart').classList.contains('stale')) { status('Fix the XML error before running'); return; }
+    if (run.node) disposeNode();
+    $('log').replaceChildren();
+  }
+  if (/\$Pid\b/.test(raw) && !run.pid) { showSide('run'); logRow('err', 'No chart is running. Press “Run chart” first.'); status('No chart is running'); return; }
+  let node;
+  try { node = await ensureNode(); } catch (e) { return; }
+  const token = run.generation;
+  let goal = raw.replace(/\$Pid\b/g, run.pid || '_');
+  const source = editor.getValue();
+  if (spawns) {
+    const atom = quoteAtom(source), traced = /\btrace\(/.test(goal);
+    goal = goal.replace(/src_text\(\s*<editor>\s*\)|<editor>/g, m => m.length > 8 ? 'src_text(' + atom + ')' + (traced ? '' : ', trace(true)') : atom);
+    run.source = source;
+  }
+  run.busy = true; runControls();
+  enqueue({ type: 'goal', text: '?- ' + raw + '.' });
+  status(spawns ? 'Spawning the chart…' : 'Running query…');
+  try {
+    const answer = await node.query(goal, { limit: 1 });
+    if (token !== run.generation) return;
+    if (answer.type === 'success') {
+      const row = Array.isArray(answer.data) ? answer.data[0] : null;
+      const text = row && typeof row === 'object' ? Object.entries(row).map(([k, v]) => k + ' = ' + v).join(',\n') : '';
+      enqueue({ type: 'answer', text: text || 'true' });
+      if (spawns && row) {
+        run.pid = String(row.Pid || Object.values(row).find(v => /@/.test(String(v))) || '');
+        if (run.pid) { diagram.setRun(true, run.active, run.fired); status('Chart running as ' + run.pid + ' · send it events'); }
+      } else status('Query complete');
+    } else if (answer.type === 'failure') { enqueue({ type: 'answer', text: 'false' }); status('Query failed'); }
+    else {
+      const data = typeof answer.data === 'string' ? answer.data : JSON.stringify(answer.data);
+      enqueue({ type: 'error', text: tidyError(data) });
+      status(spawns ? 'The chart did not start · see the log' : 'Prolog exception');
+      if (spawns) diagram.setRun(false);
+    }
+  } catch (error) {
+    if (token === run.generation) { logRow('err', String(error)); status('Query failed · see the log'); }
+  } finally {
+    if (token === run.generation) { run.busy = false; runControls(); }
+  }
+}
+
+/* Startup errors arrive as character lists; make them readable. */
+function tidyError(text) {
+  return text.replace(/\[((?:(?:'(?:[^'\\]|\\.)*'|[^,\[\]']+),){6,}(?:'(?:[^'\\]|\\.)*'|[^,\[\]']+))\]/g, (m, body) => {
+    const chars = body.match(/'(?:[^'\\]|\\.)*'|[^,]+/g) || [];
+    if (!chars.every(c => c.replace(/^'|'$/g, '').replace(/\\(.)/g, '$1').length === 1)) return m;
+    return '"' + chars.map(c => c.replace(/^'|'$/g, '').replace(/\\(.)/g, '$1')).join('') + '"';
+  });
+}
+
+function startChart() {
+  showSide('run');
+  const spawn = (model && model.examples.find(g => /statechart_spawn/.test(g) && /<editor>/.test(g))) || 'statechart_spawn(Pid, [\n       src_text(<editor>)\n   ])';
+  runGoal(spawn);
+}
+
+async function haltChart() {
+  if (!run.node) return;
+  if (run.pid && !run.busy && !run.done) {
+    await runGoal('statechart_halt($Pid, Reply, 1)');
+    await new Promise(r => setTimeout(r, 150));
+  }
+  stopRun('Chart halted · engine disposed');
+}
+
+function sendTransition(t) {
+  const pattern = String(t.on).trim();
+  const bare = pattern.replace(/'(?:[^'\\]|\\.)*'/g, '');
+  if (/(^|[^\w])[A-Z_]\w*/.test(bare)) {
+    showSide('run');
+    $('goal').value = '$Pid ! ' + pattern;
+    $('goal').focus();
+    status('The pattern has variables · fill in a concrete event and press Enter');
+    return;
+  }
+  runGoal('$Pid ! ' + pattern);
+}
+
+/* ----- trace playback ----- */
+
+function enqueue(item) {
+  run.queue.push(item);
+  if (!run.timer) run.timer = setTimeout(drain, 0);
+}
+
+function drain() {
+  run.timer = null;
+  while (run.queue.length) {
+    const item = run.queue.shift();
+    const pause = play(item);
+    if (pause && run.queue.length < 400) {
+      run.timer = setTimeout(drain, run.queue.length > 40 ? 30 : 260);
+      return;
+    }
+  }
+}
+
+function splitTop(s) {
+  const out = []; let depth = 0, start = 0, q = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { if (c === '\\') i++; else if (c === "'") q = false; continue; }
+    if (c === "'") q = true;
+    else if ('([{'.includes(c)) depth++;
+    else if (')]}'.includes(c)) depth--;
+    else if (c === ',' && depth === 0) { out.push(s.slice(start, i)); start = i + 1; }
+  }
+  out.push(s.slice(start));
+  return out.map(x => x.trim()).filter(x => x !== '');
+}
+const unquote = a => /^'.*'$/.test(a) ? a.slice(1, -1).replace(/\\(.)/g, '$1').replace(/''/g, "'") : a;
+const listOf = t => /^\[.*\]$/.test(t) ? splitTop(t.slice(1, -1)).map(unquote) : [];
+function termOf(text) {
+  const m = /^([a-z]\w*)\(([\s\S]*)\)$/.exec(text);
+  return m ? { name: m[1], args: splitTop(m[2]) } : { name: text, args: [] };
+}
+
+function firedTransition(sourceId, targets) {
+  if (!model) return null;
+  const cands = model.transitions.filter(t => t.source.id === sourceId && t.to.length === targets.length && t.to.every((x, i) => x === targets[i]));
+  if (cands.length < 2) return cands[0] || null;
+  const ev = run.lastEvent;
+  if (ev && ev.name === 'after' && ev.args.length === 2) {
+    return cands.find(t => t.after != null && +t.after === +ev.args[1]) || cands.find(t => t.after != null) || cands[0];
+  }
+  if (ev) {
+    const same = cands.filter(t => { if (t.on == null) return false; const p = termOf(t.on.trim()); return p.name === ev.name && p.args.length === ev.args.length; });
+    if (same.length) return same[0];
+    const vars = cands.filter(t => t.on != null && /^[A-Z_]/.test(t.on.trim()));
+    if (vars.length) return vars[0];
+  }
+  return cands.find(t => t.on == null && t.after == null) || cands[0];
+}
+
+/* Show one queued item; returns true when the diagram changed (worth a pause). */
+function play(item) {
+  if (item.type === 'output') { logRow(/^Shell got down\(/.test(item.text) ? 'note' : 'out', item.text); return false; }
+  if (item.type === 'answer') { logRow('answer', item.text); return false; }
+  if (item.type === 'goal') { logRow('goal', item.text); return false; }
+  if (item.type === 'error') { logRow('err', item.text); return false; }
+  const t = termOf(item.text);
+  if (t.name === 'configuration') {
+    run.active = listOf(t.args[0] || '[]');
+    logRow('trace conf', ['configuration ', bold('{' + run.active.join(', ') + '}')]);
+    diagram.setRun(true, run.active, run.fired);
+    const only = run.active.length === 1 && model && model.byId.get(run.active[0]);
+    run.done = !!(only && only.kind === 'final' && only.parent === model.root);
+    if (run.done) status('The chart reached its final state “' + run.active[0] + '”');
+    runControls();
+    return true;
+  }
+  if (t.name === 'external_event' || t.name === 'internal_event') {
+    const inner = item.text.slice(t.name.length + 1, -1);
+    run.lastEvent = termOf(inner);
+    run.fired = new Set();
+    logRow('trace', [t.name === 'external_event' ? 'event ' : 'internal ', bold(inner)]);
+    return false;
+  }
+  if (t.name === 'transition') {
+    const src = unquote(t.args[0] || ''), targets = listOf(t.args[1] || '[]');
+    const tr = firedTransition(src, targets);
+    if (tr) run.fired.add(tr.key);
+    logRow('trace', ['  transition ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
+    if (!targets.length) { diagram.setRun(true, run.active, run.fired); return true; }
+    return false;
+  }
+  if (t.name === 'microstep') return false;
+  if (t.name === 'execution') { logRow('trace', '  run ' + item.text.slice(10, -1)); return false; }
+  if (t.name === 'unmatched') { logRow('trace', ['  unmatched ', bold(item.text.slice(10, -1))]); return false; }
+  logRow('trace', '  ' + item.text);
+  return false;
+}
+
+function renderSuggestions() {
+  const box = $('suggestions');
+  box.replaceChildren();
+  const goals = model ? model.examples.filter(g => !/<editor>/.test(g)) : [];
+  if (!goals.length) goals.push('statechart_halt($Pid, Reply, 1)');
+  for (const goal of goals) {
+    const b = document.createElement('button');
+    b.textContent = '?- ' + goal.replace(/\s+/g, ' ') + '.';
+    b.onclick = () => { $('goal').value = goal; /statechart_halt\(/.test(goal) ? haltChart() : runGoal(goal); };
+    box.append(b);
+  }
+}
+
+/* ---------- side panel, files, chrome ---------- */
+
+function showSide(name) {
+  for (const v of ['inspector', 'run']) {
+    $(v).hidden = v !== name;
+    $('tab-' + v).setAttribute('aria-selected', String(v === name));
+    $('tab-' + v).tabIndex = v === name ? 0 : -1;
+  }
+}
+$('tab-inspector').onclick = () => showSide('inspector');
+$('tab-run').onclick = () => showSide('run');
+
+function renderFiles() {
+  $('files').replaceChildren();
+  programs.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.textContent = p.name.replace(/\.xml$/, '');
+    b.title = p.name;
+    b.className = i === current ? 'active' : '';
+    b.setAttribute('aria-pressed', String(i === current));
+    b.onclick = () => selectFile(i);
+    $('files').append(b);
+  });
+}
+
+async function selectFile(index) {
+  if (programs[current] && programs[current].source != null && loadedIndex === current) programs[current].draft = editor.getValue();
+  if (run.node) stopRun('Engine stopped.');
+  current = index;
+  const p = programs[index];
+  renderFiles();
+  if (p.source == null) {
+    status('Loading ' + p.name + '…');
+    try {
+      const res = await fetch(p.url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      p.source = (await res.text()).replace(/\r\n?/g, '\n');
+    } catch (e) { p.source = SXML.blank(); status('Could not load ' + p.name + ' (' + e.message + ')'); }
+    if (current !== index) return;
+  }
+  clearTimeout(parseTimer);
+  loadedIndex = index;
+  silent = true;
+  editor.setValue(p.draft != null ? p.draft : p.source);
+  editor.clearHistory();
+  silent = false;
+  selEl = null; selKey = '#root'; focusItem = null;
+  diagram.userMoved = false;
+  $('log').replaceChildren();
+  $('goal').value = '$Pid ! ';
+  reparse({ fit: true });
+  showSide('inspector');
+  runControls();
+}
+
+$('new').onclick = () => {
+  let i = 1; while (programs.some(p => p.name === 'untitled-' + i + '.xml')) i++;
+  programs.push({ name: 'untitled-' + i + '.xml', source: SXML.blank() });
+  selectFile(programs.length - 1);
+};
+$('open').onclick = () => $('file-input').click();
+$('file-input').onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  programs.push({ name: file.name, source: (await file.text()).replace(/\r\n?/g, '\n') });
+  selectFile(programs.length - 1);
+  e.target.value = '';
+};
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('save').onclick = () => { download(programs[current].name, editor.getValue(), 'application/xml;charset=utf-8'); programs[current].source = editor.getValue(); updateChrome(); };
+
+$('export').onclick = async () => {
+  if (!diagram.geo) return;
+  const cs = getComputedStyle(document.body);
+  const vars = ['--fg', '--muted', '--line', '--accent', '--accent-bg', '--blue', '--editor', '--raised', '--state', '--state-compound', '--stroke', '--edge', '--note'];
+  let css = 'svg{' + vars.map(v => v + ':' + cs.getPropertyValue(v).trim()).join(';') + ';background:' + cs.getPropertyValue('--editor').trim() + '}\n';
+  try { css += (await (await fetch('chart.css')).text()).replace(/svg\.chart/g, 'svg'); } catch (e) { /* unstyled export */ }
+  download(programs[current].name.replace(/\.\w+$/, '') + '.svg', diagram.exportSVG(css), 'image/svg+xml');
+};
+
+for (const b of document.querySelectorAll('[data-add]')) b.onclick = () => addState(b.dataset.add);
+$('tool-connect').onclick = () => setTool(diagram.tool === 'connect' ? null : 'connect');
+$('delete').onclick = removeSelected;
+$('undo').onclick = () => editor.undo();
+$('redo').onclick = () => editor.redo();
+$('fit').onclick = () => diagram.fit();
+$('zoom-in').onclick = () => diagram.zoomBy(1.2);
+$('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
+$('direction').onclick = () => {
+  diagram.direction = diagram.direction === 'RIGHT' ? 'DOWN' : 'RIGHT';
+  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout →' : 'Layout ↓';
+  if (model) diagram.setModel(model, { fit: true }).then(() => diagram.select(selKey));
+};
+
+function setView(view) {
+  document.body.dataset.view = view;
+  for (const b of document.querySelectorAll('.view-switch button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+  editor.refresh();
+  requestAnimationFrame(() => diagram.fit());
+}
+for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => setView(b.dataset.view);
+
+$('run-start').onclick = startChart;
+$('run-top').onclick = startChart;
+$('run-halt').onclick = haltChart;
+$('query-form').onsubmit = e => { e.preventDefault(); runGoal($('goal').value); };
+$('goal').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runGoal($('goal').value); } };
+$('clear').onclick = () => $('log').replaceChildren();
+$('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
+$('theme').onclick = () => { const light = document.body.classList.toggle('light'); $('theme').textContent = light ? 'Dark mode' : 'Light mode'; editor.refresh(); };
+
+/* resizable panes */
+for (const [id, property, direction, min, max] of [['left-divider', '--left', 1, 120, 340], ['right-divider', '--right', -1, 280, 640]]) {
+  const divider = $(id); let start = 0, width = 0;
+  const get = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(property));
+  const resize = delta => {
+    const other = getComputedStyle(document.documentElement).getPropertyValue(property === '--left' ? '--right' : '--left');
+    const available = document.documentElement.clientWidth - parseFloat(other) - 280;
+    const value = Math.max(min, Math.min(max, available, width + direction * delta));
+    document.documentElement.style.setProperty(property, value + 'px');
+    divider.setAttribute('aria-valuenow', value); editor.refresh();
+  };
+  divider.onpointerdown = e => { start = e.clientX; width = get(); divider.setPointerCapture(e.pointerId); };
+  divider.onpointermove = e => { if (divider.hasPointerCapture(e.pointerId)) resize(e.clientX - start); };
+  divider.onpointerup = e => { if (divider.hasPointerCapture(e.pointerId)) divider.releasePointerCapture(e.pointerId); };
+  divider.onkeydown = e => { if (['ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); width = get(); resize(e.key === 'ArrowRight' ? 15 : -15); } };
+}
+{
+  const divider = $('source-divider'); let start = 0, height = 0;
+  const pane = document.querySelector('.source-pane');
+  const set = px => {
+    const total = document.querySelector('.editor-pane').clientHeight;
+    document.documentElement.style.setProperty('--source', Math.max(60, Math.min(total - 220, px)) + 'px');
+    editor.refresh();
+  };
+  divider.onpointerdown = e => { start = e.clientY; height = pane.clientHeight; divider.setPointerCapture(e.pointerId); };
+  divider.onpointermove = e => { if (divider.hasPointerCapture(e.pointerId)) set(height - (e.clientY - start)); };
+  divider.onpointerup = e => { if (divider.hasPointerCapture(e.pointerId)) divider.releasePointerCapture(e.pointerId); };
+  divider.onkeydown = e => { if (['ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); set(pane.clientHeight + (e.key === 'ArrowUp' ? 20 : -20)); } };
+}
+new ResizeObserver(() => { if (!diagram.userMoved) diagram.fit(); }).observe($('chart'));
+window.addEventListener('pagehide', disposeNode);
+window.addEventListener('beforeunload', e => { if (programs.some(p => p.source != null && (p === programs[current] ? editor.getValue() : p.draft != null ? p.draft : p.source) !== p.source)) { e.preventDefault(); e.returnValue = ''; } });
+
+setView('split');
+const wanted = EXAMPLES.findIndex(n => decodeURIComponent(location.hash.slice(1)).startsWith(n.slice(0, 2)) && location.hash.length > 2);
+selectFile(wanted >= 0 ? wanted : 0);

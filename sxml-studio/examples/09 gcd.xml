@@ -1,0 +1,52 @@
+<!--
+
+    Greatest common divisor by Euclid's subtractive algorithm.
+
+    A computation expressed as a statechart. The <datamodel> declares a
+    dynamic int/1 relation; the event integers(List) seeds it with a set
+    of numbers. In the `run` state, an eventless transition repeatedly
+    finds two stored numbers where one is larger and replaces the larger
+    by their difference. When no such pair remains, a single value is
+    left: the GCD of the whole set, which the last transition prints.
+    Like the closure example, it drives itself forward with guarded
+    eventless transitions over the Prolog database.
+
+    Run the chart and send it events from the Queries menu.
+    Keep the Logger open and SXML trace selected.
+
+-->
+
+<statechart version="0.2" initial="init">
+    <datamodel>
+        :- dynamic int/1.
+    </datamodel>
+    <state id="init">
+        <go on="integers(List)" to="run">
+            forall(member(X, List), asserta(int(X)))
+        </go>
+    </state>
+    <state id="run">
+        <go if="int(X), int(Y), X > Y">
+            Z is X-Y,
+            retract(int(X)),
+            assert(int(Z))
+        </go>
+        <go to="stop" if="int(X)">
+            writeln(X)
+        </go>
+    </state>
+    <final id="stop" />
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! integers([25, 10, 15, 30]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

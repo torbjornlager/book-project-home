@@ -1,0 +1,86 @@
+<!--
+
+    Box shop: a conversational agent parsing input with a DCG.
+
+    A small dialogue agent. Its <datamodel> holds a DCG grammar, and each
+    state uses phrase/2 in a transition guard to parse what the user
+    typed into a colour or a size, storing the result with assert. If the
+    input does not parse, a fall-through transition returns to the
+    history state `h`, which re-enters the question the agent was asking
+    so the user can try again. When both slots are filled the agent
+    reaches its final state and reports the order. It combines guards that
+    run a DCG, a history state for retrying, and onentry actions that
+    prompt.
+
+    Run the chart and send it events from the Queries menu.
+    Keep the Logger open and SXML trace selected.
+
+-->
+
+<statechart version="0.2" initial="start">
+    <datamodel>
+        :- dynamic color/1, size/1.
+            
+        np(Attr) --> adj(Attr).
+        np(Attr) --> [a], adj(Attr), [box].
+    
+        adj(color(red)) --> [red].
+        adj(color(blue)) --> [blue].
+        adj(size(small)) --> [small].
+        adj(size(big)) --> [big].
+        
+    </datamodel>
+    <state id="start" initial="color">
+        <history id="h">
+            <go to="color"/>
+        </history>
+        <state id="color">
+            <onentry> 
+                writeln('What color do you want?')
+            </onentry>
+            <go to="size"
+                on="input(Input)" 
+                if="phrase(np(color(Color)), Input)"> 
+                    assert(color(Color))
+            </go>
+        </state>
+        <state id="size">
+            <onentry> 
+                writeln('What size do you want?')
+            </onentry>
+            <go to="final"
+                on="input(Input)" 
+                if="phrase(np(size(Size)), Input)"> 
+                    assert(size(Size))
+            </go>
+        </state>
+        <go to="h" on="input(Input)">
+            writeln('I did not understand.')
+        </go>
+    </state>
+    <final id="final">
+        <onentry>
+            size(Size), color(Color),
+            format('You want a ~p ~p box!\n', [Size, Color])
+        </onentry>        
+    </final>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! input([a, red, box]).
+
+?- $Pid ! input([blue]).
+
+?- $Pid ! input([a, big, box]).
+
+?- $Pid ! input([a, small, box]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

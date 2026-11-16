@@ -1,0 +1,52 @@
+<!--
+
+    Shared database: reaching node knowledge from a chart.
+
+    A statechart's executable content runs in an actor whose logical
+    environment includes the node's shared database, so a chart can build
+    on knowledge it did not define itself. Here summary/2 and
+    local_label/1 are local to the chart, but summary/2 also calls
+    shared_fact/1, which lives in the node database, and local_label/1
+    shadows a predicate of the same name there, so the local clause wins.
+    An eventless guard likewise consults the shared predicate
+    shared_transition_enabled/0 to decide when to move on. It shows how
+    local and shared knowledge combine, and how a local definition takes
+    precedence over a shared one.
+
+    Run the chart from the Queries menu.
+    Keep the Logger open and SXML trace selected.
+
+-->
+
+<statechart version="0.2" initial="start">
+    <datamodel> 
+        local_label(statechart_datamodel).
+        
+        summary(Node, Local) :-
+            shared_fact(Node),
+            local_label(Local).
+    </datamodel>
+
+    <state id="start">
+        <onentry>
+            summary(Node, Local),
+            output(result(Node, Local))
+        </onentry>
+        <go if="shared_transition_enabled" to="done" />
+    </state>
+
+    <final id="done">
+        <onentry>output('DONE')</onentry>
+    </final>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]),
+   sleep(0.1),
+   flush.
+
+-->

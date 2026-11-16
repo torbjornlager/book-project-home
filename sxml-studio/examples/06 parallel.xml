@@ -1,0 +1,60 @@
+<!--
+
+    Parallel completion: waiting for every region to finish.
+
+    Two orthogonal regions, s1 and s2, each step through a chain of
+    states on the event `e` and end in their own final state. A parallel
+    state counts as done only once all of its regions have reached their
+    finals; at that moment the chart raises the completion event done(p),
+    which the outer transition is waiting for before moving on to the
+    top-level final state. Send `e` repeatedly and watch both regions
+    advance in lock-step until done(p) fires.
+
+    Run the chart and send it events from the Queries menu.
+    Keep the Logger open and SXML trace selected.
+
+-->
+
+<statechart version="0.2" initial="p">
+    <parallel id="p">
+        <state id="s1" initial="s1c1">
+            <state id="s1c1">
+                <go to="s1c2" on="e" />
+            </state>
+            <state id="s1c2">
+                <go to="s1c3" on="e" />
+            </state>
+            <state id="s1c3">
+                <go to="s1c4" on="e" />
+            </state>
+            <final id="s1c4" />
+        </state>
+        <state id="s2" initial="s2c1">
+            <state id="s2c1">
+                <go to="s2c2" on="e" />
+            </state>
+            <state id="s2c2">
+                <go to="s2c3" on="e" />
+            </state>
+            <state id="s2c3">
+                <go to="s2c4" on="e" />
+            </state>
+            <final id="s2c4" />
+        </state>
+        <go to="f" on="done(p)" />
+    </parallel>
+    <final id="f" />
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! e.
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->
