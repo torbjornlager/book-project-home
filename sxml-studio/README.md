@@ -18,7 +18,8 @@ Web Workers need HTTP, so serve this folder with any static server:
   actions, deferrals, spawns and targetless transitions are listed inside
   their state; `<datamodel>` appears as a note.
 - Diagram and source stay in step both ways. Selecting in one highlights the
-  other. Graphical edits rewrite the SXML (comments and CDATA are kept);
+  other. A graphical edit rewrites only the lines it concerns: every
+  untouched element, comment and blank line keeps its source text exactly.
   Undo/Redo covers both.
 - Editing: add state / parallel / final / history inside the selection, drag
   the blue handle (or use the Transition tool, key T) from one state to
@@ -55,7 +56,8 @@ Web Workers need HTTP, so serve this folder with any static server:
 
 - Dragging sets order and layer, not exact coordinates, and a state cannot
   be dragged into another parent (cut and paste in the source).
-- A graphical edit reformats the whole document in a uniform style.
+- Changing an action or datamodel in the Inspector re-indents that one block;
+  changing a state's type re-prints that state's start and end tags.
 - A nested statechart inside `<spawn type="statechart">` is edited as text
   and is not drawn.
 - When a state has several transitions with the same target, the one

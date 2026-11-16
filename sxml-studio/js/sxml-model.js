@@ -268,19 +268,17 @@
     return ' ' + parts.join('\n' + hang);
   }
 
-  function serialize(doc, opts) {
+  const IND = '    ';
+
+  /* Pretty-print one node.  Returns text that starts with `pad`.
+     `open` optionally supplies an already formatted start tag (without '>'). */
+  function pretty(node, pad, SLASH, open) {
     const out = [];
-    const SLASH = opts && opts.spaceSlash ? ' />' : '/>';
-    const IND = '    ';
-    function emit(node, depth) {
-      const pad = IND.repeat(depth);
-      if (node.nodeType === 8) {            // comment
-        out.push(pad + '<!--' + node.data + '-->');
-        return;
-      }
+    (function emit(node, pad, open) {
+      if (node.nodeType === 8) { out.push(pad + '<!--' + node.data + '-->'); return; }
       if (node.nodeType !== 1) return;
       const name = node.localName;
-      const open = '<' + name + attrsOf(node, pad);
+      open = open || '<' + name + attrsOf(node, pad);
       const kids = Array.from(node.childNodes);
       const hasElements = kids.some(k => k.nodeType === 1 || k.nodeType === 8);
       if (!hasElements) {
@@ -314,16 +312,136 @@
         if (k.nodeType === 4) { out.push(pad + IND + '<![CDATA[' + k.data + ']]>'); first = false; continue; }
         if (gap && !first) out.push('');
         gap = false; first = false;
-        emit(k, depth + 1);
+        emit(k, pad + IND);
       }
       out.push(pad + '</' + name + '>');
-    }
+    })(node, pad, open);
+    return out.join('\n');
+  }
+
+  /* Whole-document pretty printer (used when no source snapshot is available). */
+  function serializeAll(doc, SLASH) {
+    const out = [];
     const top = Array.from(doc.childNodes).filter(n => n.nodeType === 1 || n.nodeType === 8);
     top.forEach((n, i) => {
       if (i) out.push('', ...(n.nodeType === 8 && top[i - 1].nodeType === 1 ? [''] : []));
-      emit(n, 0);
+      out.push(pretty(n, '', SLASH));
     });
     return out.join('\n') + '\n';
+  }
+
+  /* ---------- format-preserving serialisation ----------
+   * A snapshot remembers, for every element, the exact source text it was
+   * parsed from.  When the DOM is written back, an element whose subtree is
+   * unchanged is emitted verbatim; only what an edit touched is regenerated. */
+
+  const xs = new XMLSerializer();
+  const attrSig = el => Array.from(el.attributes).map(a => a.name + '\u0001' + a.value).join('\u0002');
+  const ATTR_RE = /(\s+)([\w:.-]+)(\s*=\s*)("[^"]*"|'[^']*')/g;
+
+  function snapshot(text, doc) {
+    const loc = locate(text, doc);
+    if (!loc.ranges.length) return null;
+    const map = new Map();
+    loc.els.forEach((el, i) => {
+      const r = loc.ranges[i];
+      const lineStart = text.lastIndexOf('\n', r.start - 1) + 1;
+      const lead = text.slice(lineStart, r.start);
+      map.set(el, {
+        src: text.slice(r.start, r.end), open: text.slice(r.start, r.openEnd), selfClosed: r.end === r.openEnd,
+        sig: xs.serializeToString(el), attrs: attrSig(el), text: el.textContent, leaf: !el.firstElementChild && !Array.from(el.childNodes).some(k => k.nodeType === 8),
+        indent: /^\s*$/.test(lead) ? lead : lead.match(/^\s*/)[0]
+      });
+    });
+    const root = loc.ranges[0];
+    return { map, prefix: text.slice(0, root.start), suffix: text.slice(root.end) };
+  }
+
+  /* The original start tag with only the changed attributes rewritten.
+     Returns the tag without its closing '>' or '/>'. */
+  function patchOpen(el, o) {
+    const m = /^<[A-Za-z_][\w.-]*/.exec(o.open);
+    let head = m[0], rest = o.open.slice(head.length).replace(/\s*\/?>$/, '');
+    if (o.attrs === attrSig(el)) return head + rest;
+    const seen = new Set();
+    let last = ' ';
+    rest = rest.replace(ATTR_RE, (all, ws, name, eq, quoted) => {
+      if (!el.hasAttribute(name)) return '';
+      seen.add(name); last = ws;
+      const was = quoted.slice(1, -1).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+      const now = el.getAttribute(name);
+      return ws + name + eq + (was === now ? quoted : '"' + escAttr(now) + '"');
+    });
+    const sep = /\n/.test(last) ? last : ' ';
+    for (const a of Array.from(el.attributes)) if (!seen.has(a.name)) rest += sep + a.name + '="' + escAttr(a.value) + '"';
+    return head + rest;
+  }
+
+  const isBlank = n => n.nodeType === 3 && !n.data.trim();
+
+  /* Make the whitespace between the children of an edited element regular:
+     one indentation run before each child element and before the end tag. */
+  function tidy(doc, el, indent, childIndent) {
+    let kids = Array.from(el.childNodes);
+    if (!kids.some(k => !isBlank(k))) { kids.forEach(k => k.remove()); return; }
+    kids.forEach((k, i) => { if (isBlank(k) && kids[i + 1] && isBlank(kids[i + 1])) k.remove(); });
+    kids = Array.from(el.childNodes);
+    kids.forEach((k, i) => {
+      if (k.nodeType !== 1 && k.nodeType !== 8) return;
+      const prev = kids[i - 1];
+      if (!prev || !(prev.nodeType === 3 && /\n\s*$/.test(prev.data))) el.insertBefore(doc.createTextNode('\n' + childIndent), k);
+    });
+    const end = el.lastChild;
+    if (isBlank(end)) end.data = end.data.replace(/[^\n]*$/, '').replace(/^$/, '\n') + indent;
+    else if (end.nodeType === 1 || end.nodeType === 8) el.appendChild(doc.createTextNode('\n' + indent));
+  }
+
+  function childIndentOf(el, indent) {
+    for (const k of Array.from(el.childNodes)) {
+      if ((k.nodeType === 1 || k.nodeType === 8) && k.previousSibling && isBlank(k.previousSibling)) {
+        const m = /\n([ \t]*)$/.exec(k.previousSibling.data);
+        if (m) return m[1];
+      }
+    }
+    return indent + IND;
+  }
+
+  function serializePatched(doc, snap, SLASH) {
+    function emit(el, indent) {
+      const o = snap.map.get(el);
+      if (!o) return pretty(el, indent, SLASH).slice(indent.length);
+      if (o.sig === xs.serializeToString(el)) return o.src;
+      const name = el.localName, open = patchOpen(el, o);
+      const hasElements = Array.from(el.childNodes).some(k => k.nodeType === 1 || k.nodeType === 8);
+      if (!hasElements) {
+        if (o.leaf && el.textContent === o.text && !o.selfClosed) return open + o.src.slice(o.open.length - 1);
+        if (!el.textContent.trim()) return open + (o.selfClosed ? o.open.match(/\s*\/>$/)[0] : SLASH);
+        return pretty(el, indent, SLASH, open).slice(indent.length);
+      }
+      const childIndent = childIndentOf(el, indent);
+      tidy(doc, el, indent, childIndent);
+      let out = open + '>';
+      for (const k of Array.from(el.childNodes)) {
+        if (k.nodeType === 1) out += emit(k, childIndent);
+        else if (k.nodeType === 8) out += '<!--' + k.data + '-->';
+        else if (k.nodeType === 4) out += '<![CDATA[' + k.data + ']]>';
+        else out += escText(k.data);
+      }
+      return out + '</' + name + '>';
+    }
+    const rootInfo = snap.map.get(doc.documentElement);
+    let suffix = snap.suffix.replace(/\s*<!--\s*<layout>[\s\S]*?-->/, '');
+    const lay = layoutComment(doc);
+    if (lay) suffix = suffix.replace(/\s*$/, '') + '\n\n<!--' + lay.data + '-->';
+    return snap.prefix + emit(doc.documentElement, rootInfo ? rootInfo.indent : '') + suffix.replace(/\s*$/, '') + '\n';
+  }
+
+  function serialize(doc, opts) {
+    const SLASH = opts && opts.spaceSlash ? ' />' : '/>';
+    if (opts && opts.snapshot && opts.snapshot.map.has(doc.documentElement)) {
+      try { return serializePatched(doc, opts.snapshot, SLASH); } catch (e) { console.warn('Falling back to full reformat.', e); }
+    }
+    return serializeAll(doc, SLASH);
   }
 
   /* ---------- source positions: map DOM elements to offsets in the text ---------- */
@@ -525,7 +643,7 @@
 
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
-    parse, build, validate, serialize, locate, collapse, dedent, scriptText, isState, label,
+    parse, build, validate, serialize, snapshot, locate, collapse, dedent, scriptText, isState, label,
     getLayout, setLayout, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, move, uniqueId, blank
   };
 })(window);

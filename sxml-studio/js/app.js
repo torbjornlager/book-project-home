@@ -55,6 +55,7 @@ let silent = false;          // suppress editor change handling during programma
 let parseTimer = null;
 let focusItem = null;        // item key to highlight in the inspector
 let selMark = null, errLine = null, locatedText = null;
+let snap = null;             // source text of every element, for format-preserving edits
 
 const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
@@ -100,6 +101,7 @@ function adopt(doc, text, opts) {
   model = SXML.build(doc);
   located = SXML.locate(text, doc);
   locatedText = text;
+  snap = SXML.snapshot(text, doc);
   $('chart').classList.remove('stale');
   let entry = entryFor(selEl) || entryByKey(selKey) || model.root;
   selEl = entry.el; selKey = entry.key;
@@ -117,7 +119,7 @@ function adopt(doc, text, opts) {
 /* Write the (edited) DOM back to the editor and refresh the views. */
 function commit() {
   const spaceSlash = (editor.getValue().match(/" \/>/g) || []).length > (editor.getValue().match(/"\/>/g) || []).length;
-  const text = SXML.serialize(model.doc, { spaceSlash });
+  const text = SXML.serialize(model.doc, { spaceSlash, snapshot: snap });
   silent = true;
   const scroll = editor.getScrollInfo();
   editor.setValue(text);
