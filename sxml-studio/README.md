@@ -35,6 +35,11 @@ Web Workers need HTTP, so serve this folder with any static server:
   pixel position, so edges are always re-routed tidily. Hints are saved in a
   trailing `<!-- <layout> ... -->` comment, which the interpreter ignores;
   the Auto button removes it.
+- Nested charts: the inline chart of a `<spawn type="statechart">` is drawn
+  inside the state that owns it. Double-click it (or use the button in the
+  Inspector) to open it as a document of its own; edits there are stored
+  back into the parent's CDATA section. During a run, a nested chart whose
+  own `trace(true)` option is set shows its active states too.
 - Checks the Appendix C rules that need no Prolog engine (ids, initial,
   targets, on/after, spawn operands, vocabulary). The engine validates again
   when the chart is run.
@@ -54,7 +59,7 @@ Web Workers need HTTP, so serve this folder with any static server:
                        `runtime/wasm/shared_db.pl` holds the facts that
                        example 10 expects in the node's shared database.
 - `vendor/elk.bundled.js` elkjs 0.12.1 (EPL-2.0), CodeMirror 5.65.16 (MIT)
-- `examples/`          examples 01–14 from trinity-demonstrator
+- `examples/`          examples 01–17 from trinity-demonstrator
 
 ## Known limits
 
@@ -62,7 +67,9 @@ Web Workers need HTTP, so serve this folder with any static server:
   be dragged into another parent (cut and paste in the source).
 - Changing an action or datamodel in the Inspector re-indents that one block;
   changing a state's type re-prints that state's start and end tags.
-- A nested statechart inside `<spawn type="statechart">` is edited as text
-  and is not drawn.
+- Inside the parent's diagram a nested chart is read-only; open it to edit.
+  Only one level of nesting is drawn, and a chart loaded with `src_uri` is
+  not. Nested and outer trace events are told apart by their state names, so
+  the two charts should not share state ids.
 - When a state has several transitions with the same target, the one
   highlighted as fired is inferred from the triggering event.

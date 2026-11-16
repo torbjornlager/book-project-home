@@ -57,3 +57,9 @@ svg.chart.moving{cursor:grabbing}
 svg.chart.moving .state{cursor:grabbing}
 svg.chart .end{fill:var(--editor);stroke:var(--blue);stroke-width:2;cursor:grab}
 svg.chart .end:hover{fill:var(--blue)}
+svg.chart .nested>.shape{fill:color-mix(in srgb,var(--blue) 6%,var(--state-compound));stroke:var(--blue);stroke-width:1;stroke-dasharray:6 4;opacity:.9}
+svg.chart .nested{cursor:pointer}
+svg.chart .nested .note-title{fill:var(--blue)}
+svg.chart .nested-icon{fill:none;stroke:var(--blue);stroke-width:1.1}
+svg.chart .nested.selected>.shape{stroke-width:2.2;stroke-dasharray:none}
+svg.chart .transition.inner .edge-hit,svg.chart .tlabel.inner{cursor:pointer}

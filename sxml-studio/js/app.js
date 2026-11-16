@@ -4,7 +4,7 @@ const $ = id => document.getElementById(id);
 const EXAMPLES = [
   '01 pause-and-resume', '02 spaghetti', '03 emotions', '04 clock', '05 pingpong', '06 parallel',
   '07 deferred-events', '08 closure', '09 gcd', '10 shared-database', '11 boxshop-1', '12 boxshop-2',
-  '13 spawn-actor', '14 spawn-toplevel'
+  '13 spawn-actor', '14 spawn-toplevel', '15 spawn-server', '16 spawn-supervisor', '17 spawn-statechart'
 ];
 const programs = EXAMPLES.map(name => ({ name: name + '.xml', url: 'examples/' + encodeURIComponent(name + '.xml'), source: null }));
 
@@ -59,7 +59,7 @@ let snap = null;             // source text of every element, for format-preserv
 
 const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
-  onOpen(key) { select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
+  onOpen(key) { if (model.nested.has(key)) { openNested(key); return; } select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
   onConnect(source, target) { connect(source, target); },
   onMove(key, dx, dy) { moveState(key, dx, dy); },
   onRetarget(key, end, index, stateKey) { retarget(key, end, index, stateKey); },
@@ -109,6 +109,7 @@ function adopt(doc, text, opts) {
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
   showProblems(model.problems);
   diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
+  if (programs[current].parent) writeBack(programs[current], text);
   renderInspector();
   renderSuggestions();
   markSelection(false);
@@ -149,6 +150,7 @@ function updateChrome() {
   const p = programs[current];
   $('filename').textContent = p.name;
   $('dirty').textContent = p.source != null && editor.getValue() !== p.source ? '●' : '';
+  $('filename').textContent = p.parent ? p.name.replace(/^↳ /, '') + '  ·  in ' + p.parent.name : p.name;
   if (model) {
     const states = model.nodes.filter(n => n.kind !== 'statechart').length;
     $('stats').textContent = 'SXML 0.2 · ' + states + ' state' + (states === 1 ? '' : 's') + ' · ' + model.transitions.length + ' transition' + (model.transitions.length === 1 ? '' : 's');
@@ -324,6 +326,36 @@ function setTool(tool) {
   if (tool === 'connect') status('Transition tool · drag from the source state to the target state');
 }
 
+/* ---------- nested charts as documents ---------- */
+
+const chartSpawns = doc => Array.from(doc.querySelectorAll('spawn')).filter(e => e.getAttribute('type') === 'statechart');
+
+/* Open the inline chart of a <spawn type="statechart"> as a document of its own. */
+function openNested(spawnKey) {
+  const s = model.items.get(spawnKey);
+  if (!s || s.kind !== 'spawn') return;
+  if (run.pid) { status('Halt the running chart before opening the nested one'); return; }
+  const parent = programs[current], index = chartSpawns(model.doc).indexOf(s.el), nm = model.nested.get(spawnKey);
+  let i = programs.findIndex(p => p.parent === parent && p.spawnIndex === index);
+  const source = s.body + '\n';
+  if (i < 0) { programs.push({ name: '↳ ' + (nm ? nm.title : 'nested chart') + '.xml', source, parent, spawnIndex: index }); i = programs.length - 1; }
+  else { programs[i].source = source; programs[i].draft = null; }
+  selectFile(i);
+}
+
+/* Store an edited nested chart back into its parent's CDATA section. */
+function writeBack(p, text) {
+  const P = p.parent, ptext = P.draft != null ? P.draft : P.source;
+  if (ptext == null) return;
+  const r = SXML.parse(ptext);
+  const el = r.doc ? chartSpawns(r.doc)[p.spawnIndex] : null;
+  if (!el) { status('The parent no longer has this nested chart · changes stay in this document only'); return; }
+  if (SXML.dedent(el.textContent) === SXML.dedent(text)) return;
+  const sn = SXML.snapshot(ptext, r.doc), o = sn && sn.map.get(el);
+  SXML.setNested(r.doc, el, text, o ? o.indent : '        ');
+  P.draft = SXML.serialize(r.doc, { spaceSlash: (ptext.match(/" \/>/g) || []).length > (ptext.match(/"\/>/g) || []).length, snapshot: sn });
+}
+
 /* ---------- inspector ---------- */
 
 function h(tag, attrs, ...kids) {
@@ -472,6 +504,7 @@ function stateInspector(box, n) {
       }
       card.append(field('Options', input(s.key + '/options', s.el.getAttribute('options'), v => edit(() => SXML.setAttr(s.el, 'options', v)), { placeholder: '[monitor(true)]' })));
       card.append(field(s.type === 'statechart' ? 'Nested SXML (kept in CDATA)' : 'Prolog source', area(s.key, s.body, v => edit(() => SXML.setScript(model.doc, s.el, v)), 3), true));
+      if (s.type === 'statechart' && s.body.trim()) card.append(h('div', { class: 'insp-actions' }, h('button', { onclick: () => openNested(s.key) }, 'Open nested chart ↗')));
       box.append(card);
     }
   }
@@ -479,12 +512,7 @@ function stateInspector(box, n) {
     box.append(h('div', { class: 'section-title' }, 'DATAMODEL', h('button', { onclick: () => edit(() => { selEl = SXML.addItem(model.doc, n.el, 'datamodel'); }) }, '+ Add')));
   }
 
-  const actions = h('div', { class: 'insp-actions' });
-  for (const k of ['state', 'parallel', 'final', 'history']) {
-    if (allow.includes(k)) actions.append(h('button', { onclick: () => { selEl = n.el; addState(k); } }, '+ ' + k));
-  }
-  if (!root) actions.append(h('button', { class: 'danger', onclick: removeSelected }, 'Delete ' + n.kind));
-  if (actions.children.length) { box.append(h('div', { class: 'section-title' }, root ? 'ADD TO THE STATECHART' : 'ADD INSIDE · REMOVE'), actions); }
+  if (!root) box.append(h('div', { class: 'insp-actions', style: 'margin-top:18px' }, h('button', { class: 'danger', onclick: removeSelected }, 'Delete ' + n.kind)));
   if (root && model.description) box.append(h('div', { class: 'section-title' }, 'ABOUT THIS CHART'), h('p', { class: 'about' }, model.description.replace(/\n(?!\n)/g, ' ').replace(/\n /g, '\n\n')));
 }
 
@@ -517,7 +545,7 @@ function transitionInspector(box, t) {
 
 /* ---------- live run ---------- */
 
-const run = { node: null, pid: null, source: null, busy: false, starting: false, generation: 0, active: [], fired: new Set(), lastEvent: null, queue: [], timer: null, done: false };
+const run = { nested: new Map(), node: null, pid: null, source: null, busy: false, starting: false, generation: 0, active: [], fired: new Set(), lastEvent: null, queue: [], timer: null, done: false };
 let inputResolve = null;
 
 function logRow(cls, parts) {
@@ -563,7 +591,7 @@ function disposeNode() {
   if (run.node) { try { run.node.dispose(); } catch (e) { /* already gone */ } }
   run.node = null; run.pid = null; run.busy = false; run.starting = false; run.done = false;
   run.queue = []; clearTimeout(run.timer); run.timer = null;
-  run.active = []; run.fired = new Set(); run.lastEvent = null;
+  run.active = []; run.fired = new Set(); run.lastEvent = null; run.nested = new Map();
   diagram.setRun(false);
 }
 
@@ -643,7 +671,7 @@ async function runGoal(raw) {
       enqueue({ type: 'answer', text: text || 'true' });
       if (spawns && row) {
         run.pid = String(row.Pid || Object.values(row).find(v => /@/.test(String(v))) || '');
-        if (run.pid) { diagram.setRun(true, run.active, run.fired); status('Chart running as ' + run.pid + ' · send it events'); }
+        if (run.pid) { diagram.setRun(true, run.active, run.fired, run.nested); status('Chart running as ' + run.pid + ' · send it events'); }
       } else status('Query complete');
     } else if (answer.type === 'failure') { enqueue({ type: 'answer', text: 'false' }); status('Query failed'); }
     else {
@@ -760,9 +788,19 @@ function play(item) {
   if (item.type === 'error') { logRow('err', item.text); return false; }
   const t = termOf(item.text);
   if (t.name === 'configuration') {
-    run.active = listOf(t.args[0] || '[]');
+    const ids = listOf(t.args[0] || '[]');
+    /* A traced nested chart reports on the same channel; tell the two apart by their state names. */
+    if (model && !ids.every(id => model.byId.has(id))) {
+      for (const [k, nm] of model.nested) if (ids.every(id => nm.byId.has(id))) {
+        run.nested.set(k, ids);
+        logRow('trace conf', ['configuration of ' + nm.title + ' ', bold('{' + ids.join(', ') + '}')]);
+        diagram.setRun(true, run.active, run.fired, run.nested);
+        return true;
+      }
+    }
+    run.active = ids;
     logRow('trace conf', ['configuration ', bold('{' + run.active.join(', ') + '}')]);
-    diagram.setRun(true, run.active, run.fired);
+    diagram.setRun(true, run.active, run.fired, run.nested);
     const only = run.active.length === 1 && model && model.byId.get(run.active[0]);
     run.done = !!(only && only.kind === 'final' && only.parent === model.root);
     if (run.done) status('The chart reached its final state “' + run.active[0] + '”');
@@ -781,7 +819,7 @@ function play(item) {
     const tr = firedTransition(src, targets);
     if (tr) run.fired.add(tr.key);
     logRow('trace', ['  transition ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
-    if (!targets.length) { diagram.setRun(true, run.active, run.fired); return true; }
+    if (!targets.length) { diagram.setRun(true, run.active, run.fired, run.nested); return true; }
     return false;
   }
   if (t.name === 'microstep') return false;
@@ -822,7 +860,8 @@ function renderFiles() {
     const b = document.createElement('button');
     b.textContent = p.name.replace(/\.xml$/, '');
     b.title = p.name;
-    b.className = i === current ? 'active' : '';
+    b.className = (i === current ? 'active' : '') + (p.parent ? ' nested' : '');
+    if (p.parent) b.title = 'Nested chart of ' + p.parent.name + ' · edits are stored back into it';
     b.setAttribute('aria-pressed', String(i === current));
     b.onclick = () => selectFile(i);
     $('files').append(b);
@@ -878,7 +917,7 @@ function download(name, text, type) {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$('save').onclick = () => { download(programs[current].name, editor.getValue(), 'application/xml;charset=utf-8'); programs[current].source = editor.getValue(); updateChrome(); };
+$('save').onclick = () => { download(programs[current].name.replace(/^↳ /, ''), editor.getValue(), 'application/xml;charset=utf-8'); programs[current].source = editor.getValue(); updateChrome(); };
 
 $('export').onclick = async () => {
   if (!diagram.geo) return;

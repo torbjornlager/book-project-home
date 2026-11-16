@@ -64,7 +64,7 @@
 
   /* ---------- view model ---------- */
 
-  function build(doc) {
+  function build(doc, inner) {
     const model = { doc, root: null, byId: new Map(), byKey: new Map(), nodes: [], transitions: [], items: new Map() };
     const usedKeys = new Set();
     let anon = 0;
@@ -117,10 +117,37 @@
     const rootEl = doc.documentElement;
     model.root = mk(rootEl, null);
     model.problems = validate(model);
+    model.nested = new Map();
+    if (!inner) nestedCharts(model);
     model.layout = getLayout(doc);
     model.examples = exampleQueries(doc);
     model.description = description(doc);
     return model;
+  }
+
+  /* A <spawn type="statechart"> with inline XML carries a whole chart.  Build a
+     model for it, with keys prefixed by the spawn's key so that the inner
+     chart can be laid out and drawn inside its owner. */
+  function nestedCharts(model) {
+    for (const n of model.nodes) for (const s of n.spawns) {
+      if (s.type !== 'statechart' || !s.body.trim()) continue;
+      const r = parse(s.body);
+      if (!r.doc || r.doc.documentElement.localName !== 'statechart') {
+        model.problems.push({ severity: 'warning', key: s.key, message: 'The nested statechart in ' + label(n) + ' is not well-formed SXML' + (r.error ? ': ' + r.error.message : '.') });
+        continue;
+      }
+      const m = build(r.doc, true), pre = s.key + '::';
+      m.byKey = new Map(); 
+      for (const x of m.nodes) { x.key = pre + x.key; x.scope = s.key; m.byKey.set(x.key, x); }
+      const items = new Map();
+      for (const it of m.items.values()) { it.key = pre + it.key; it.scope = s.key; items.set(it.key, it); }
+      m.items = items;
+      m.owner = s;
+      const opt = /\bname\(\s*('(?:[^'\\]|\\.)*'|[a-z]\w*)\s*\)/.exec(s.el.getAttribute('options') || '');
+      m.title = opt ? opt[1].replace(/^'|'$/g, '') : 'nested chart';
+      model.nested.set(s.key, m);
+      for (const p of m.problems) model.problems.push({ severity: p.severity, key: s.key, message: 'Nested chart “' + m.title + '”: ' + p.message });
+    }
   }
 
   function isState(n) { return n && STATE_TAGS.includes(n.kind); }
@@ -629,6 +656,13 @@
     else el.appendChild(doc.createTextNode(/\n/.test(text) ? '\n' + text + '\n' : text));
   }
 
+  /* Replace the inline chart of a <spawn type="statechart">, indented to fit. */
+  function setNested(doc, spawnEl, text, indent) {
+    while (spawnEl.firstChild) spawnEl.removeChild(spawnEl.firstChild);
+    const lines = dedent(text).split('\n').map(l => l ? indent + IND + l : '');
+    spawnEl.appendChild(doc.createCDATASection('\n' + lines.join('\n') + '\n' + indent));
+  }
+
   function move(el, delta) {
     const sib = el.parentNode ? Array.from(el.parentNode.children).filter(k => k.localName === el.localName) : [];
     const i = sib.indexOf(el), j = i + delta;
@@ -644,6 +678,6 @@
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
     parse, build, validate, serialize, snapshot, locate, collapse, dedent, scriptText, isState, label,
-    getLayout, setLayout, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, move, uniqueId, blank
+    getLayout, setLayout, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
   };
 })(window);

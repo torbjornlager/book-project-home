@@ -102,6 +102,7 @@
       }
       const realKids = n.children.filter(c => c.kind !== 'history');
       for (const dm of n.datamodels) kids.push(noteNode(dm, n));
+      for (const sp of n.spawns) { const nm = model.nested && model.nested.get(sp.key); if (nm) kids.push(node(nm.root)); }
       if ((n.kind === 'statechart' || n.kind === 'state') && n.initial && realKids.some(c => c.id === n.initial)) {
         const id = n.key + '/init';
         kids.push({ id, width: INIT_R * 2, height: INIT_R * 2 });
@@ -128,6 +129,15 @@
         });
       }
       const inter = {};
+      if (n.kind === 'statechart' && n.scope) {
+        const title = 'statechart · ' + model.nested.get(n.scope).title;
+        const minW = width(title, F_NOTE) + 44;
+        info.get(n.key).type = 'nested'; info.get(n.key).title = title;
+        if (!kids.length) return { id: n.key, width: minW, height: 46 };
+        return { id: n.key, children: kids, layoutOptions: {
+          'elk.padding': '[top=34,left=' + PAD + ',bottom=' + PAD + ',right=' + PAD + ']',
+          'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': '(' + minW + ',46)' } };
+      }
       if (n.kind === 'statechart') return { id: n.key, children: kids, layoutOptions: Object.assign({ 'elk.padding': '[top=24,left=24,bottom=24,right=24]' }, inter) };
       if (!kids.length) {
         return { id: n.key, width: Math.max(72, headW, linesW), height: top + (lines.length ? 4 : 20) };
@@ -142,10 +152,11 @@
       };
     }
     const root = node(model.root);
-    for (const t of model.transitions) {
+    const all = [model, ...(model.nested ? model.nested.values() : [])];
+    for (const m of all) for (const t of m.transitions) {
       if (!t.to.length) continue;
       t.to.forEach((id, i) => {
-        const target = model.byId.get(id);
+        const target = m.byId.get(id);
         if (!target) return;
         const eid = t.key + '>' + i;
         const lab = edgeLabel(t);
@@ -308,20 +319,30 @@
     const { boxes, edges, info } = this.geo, model = this.model, g = this.view;
     while (g.firstChild) g.removeChild(g.firstChild);
     this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map(); this.edgeGeo = new Map();
+    this.nodeOf = new Map(); this.frameEls = new Map();
     const gStates = el('g', {}, g), gEdges = el('g', {}, g), gLabels = el('g', {}, g);
     this.overlay = el('g', {}, g);
 
     const draw = n => {
       const b = boxes.get(n.key), inf = info.get(n.key);
       if (!b) return;
+      if (n.kind === 'statechart' && n.scope) {
+        const f = el('g', { class: 'nested', 'data-key': n.scope, 'data-item': n.scope }, gStates);
+        el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 7 }, f);
+        el('path', { class: 'nested-icon', d: 'M' + (b.x + 10) + ' ' + (b.y + 9) + ' h9 v8 h-9 z M' + (b.x + 13) + ' ' + (b.y + 12) + ' h9 v8 h-9 z' }, f);
+        el('text', { class: 'note-title', x: b.x + 28, y: b.y + 18 }, f, inf.title.toUpperCase());
+        el('title', {}, f, 'Chart spawned by this state · double-click to open it');
+        this.frameEls.set(n.scope, f);
+      }
       if (n.kind === 'statechart') {
         for (const dm of n.datamodels) this._note(gStates, dm, boxes.get(dm.key), info.get(dm.key));
         this._init(gStates, n, boxes);
         n.children.forEach(draw);
         return;
       }
-      const grp = el('g', { class: 'state k-' + n.kind + (n.compound ? ' compound' : ''), 'data-key': n.key, 'data-state': n.key }, gStates);
+      const grp = el('g', { class: 'state k-' + n.kind + (n.compound ? ' compound' : '') + (n.scope ? ' inner' : ''), 'data-key': n.scope || n.key, 'data-state': n.scope ? null : n.key }, gStates);
       this.nodeEls.set(n.key, grp);
+      this.nodeOf.set(n.key, n);
       if (n.kind === 'history') {
         el('circle', { class: 'shape', cx: b.x + HIST_R, cy: b.y + HIST_R, r: HIST_R }, grp);
         el('text', { class: 'hist', x: b.x + HIST_R, y: b.y + HIST_R + 4.5, 'text-anchor': 'middle' }, grp, n.htype === 'deep' ? 'H*' : 'H');
@@ -345,14 +366,14 @@
       el('line', { class: 'rule', x1: b.x, y1: b.y + HEAD_H, x2: b.x + b.w, y2: b.y + HEAD_H }, grp);
       inf.lines.forEach((l, i) => {
         const y = b.y + HEAD_H + 6 + i * LINE_H;
-        const lg = el('g', { class: 'item', 'data-key': l.item.key, 'data-item': l.item.key }, grp);
+        const lg = el('g', { class: 'item', 'data-key': n.scope || l.item.key, 'data-item': n.scope || l.item.key }, grp);
         el('rect', { class: 'item-bg', x: b.x + 5, y, width: b.w - 10, height: LINE_H, rx: 3 }, lg);
         const t = el('text', { class: 'line', x: b.x + PAD - 2, y: y + 11.5 }, lg);
         const kw = l.kw && l.shown.startsWith(l.kw) ? l.kw : '';
         if (kw) el('tspan', { class: 'kw' }, t, kw + ' ');
         el('tspan', {}, t, kw ? l.shown.slice(kw.length + 1) : l.shown);
         el('title', {}, lg, l.full);
-        this.itemEls.set(l.item.key, lg);
+        if (!n.scope) this.itemEls.set(l.item.key, lg);
       });
       if (inf.lines.length && n.compound) {
         el('line', { class: 'rule soft', x1: b.x, y1: b.y + inf.top, x2: b.x + b.w, y2: b.y + inf.top }, grp);
@@ -360,6 +381,7 @@
       for (const dm of n.datamodels) this._note(gStates, dm, boxes.get(dm.key), info.get(dm.key));
       this._init(gStates, n, boxes);
       if (n.kind === 'parallel') this._regions(grp, n, boxes);
+      for (const sp of n.spawns) { const nm = model.nested.get(sp.key); if (nm) draw(nm.root); }
       n.children.forEach(draw);
     };
     draw(model.root);
@@ -371,19 +393,20 @@
         el('path', { class: 'edge init', d: roundedPath(e.points, 7), 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
-      const key = inf.item.key;
-      const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : ''), 'data-key': key, 'data-item': key }, gEdges);
+      const scope = inf.item.scope || null;
+      const key = scope || inf.item.key;
+      const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gEdges);
       const d = roundedPath(e.points, 7);
       el('path', { class: 'edge-hit', d }, grp);
       el('path', { class: 'edge', d, 'marker-end': 'url(#arrow)' }, grp);
-      let entry = this.edgeEls.get(key);
+      let entry = scope ? [] : this.edgeEls.get(key);
       if (!entry) this.edgeEls.set(key, entry = []);
-      if (!this.edgeGeo.has(key)) this.edgeGeo.set(key, []);
-      this.edgeGeo.get(key).push({ points: e.points, index: +e.id.slice(e.id.lastIndexOf('>') + 1), fixedTail: inf.historyDefault });
+      if (!scope && !this.edgeGeo.has(key)) this.edgeGeo.set(key, []);
+      if (!scope) this.edgeGeo.get(key).push({ points: e.points, index: +e.id.slice(e.id.lastIndexOf('>') + 1), fixedTail: inf.historyDefault });
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
-        const lg = el('g', { class: 'tlabel', 'data-key': key, 'data-item': key }, gLabels);
+        const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + 12.5 + i * 14 }, lg, t));
         el('title', {}, lg, inf.label.full);
@@ -396,14 +419,14 @@
 
   Diagram.prototype._note = function (parent, dm, b, inf) {
     if (!b) return;
-    const grp = el('g', { class: 'note', 'data-key': dm.key, 'data-item': dm.key }, parent);
+    const grp = el('g', { class: 'note', 'data-key': dm.scope || dm.key, 'data-item': dm.scope || dm.key }, parent);
     const f = 9;
     el('path', { class: 'shape', d: 'M' + b.x + ' ' + b.y + ' h' + (b.w - f) + ' l' + f + ' ' + f + ' v' + (b.h - f) + ' h' + (-b.w) + ' z' }, grp);
     el('path', { class: 'fold', d: 'M' + (b.x + b.w - f) + ' ' + b.y + ' v' + f + ' h' + f }, grp);
     el('text', { class: 'note-title', x: b.x + 10, y: b.y + 15 }, grp, 'DATAMODEL');
     inf.lines.forEach((t, i) => el('text', { class: 'note-line', x: b.x + 10, y: b.y + 32 + i * 14, 'xml:space': 'preserve' }, grp, t));
     el('title', {}, grp, dm.body);
-    this.itemEls.set(dm.key, grp);
+    if (!dm.scope) this.itemEls.set(dm.key, grp);
   };
 
   Diagram.prototype._init = function (parent, n, boxes) {
@@ -434,10 +457,12 @@
     if (!this.nodeEls) return;
     const sel = this.selected;
     for (const [k, g] of this.nodeEls) {
-      const n = this.model.byKey.get(k);
+      const n = this.nodeOf.get(k);
+      const act = n && n.scope ? (this.activeNested && this.activeNested.get(n.scope)) : this.active;
       g.classList.toggle('selected', k === sel);
-      g.classList.toggle('active', !!(n && n.id && this.active.has(n.id)));
+      g.classList.toggle('active', !!(n && n.id && act && act.has(n.id)));
     }
+    for (const [k, g] of this.frameEls) g.classList.toggle('selected', k === sel);
     for (const [k, g] of this.itemEls) {
       g.classList.toggle('selected', k === sel);
       g.classList.toggle('fired', this.fired.has(k));
@@ -454,10 +479,12 @@
   };
 
   Diagram.prototype.select = function (key) { this.selected = key; this._paint(); };
-  Diagram.prototype.setRun = function (running, activeIds, firedKeys) {
+  Diagram.prototype.setRun = function (running, activeIds, firedKeys, nested) {
     this.running = running;
     this.active = new Set(activeIds || []);
     this.fired = new Set(firedKeys || []);
+    this.activeNested = new Map();
+    if (running && nested) for (const [k, ids] of nested) this.activeNested.set(k, new Set(ids));
     this._paint();
   };
 
@@ -491,6 +518,7 @@
   Diagram.prototype._bind = function () {
     const svg = this.svg;
     let drag = null;
+    const last = { key: null, time: 0 };
     svg.addEventListener('wheel', ev => {
       ev.preventDefault();
       const r = this.host.getBoundingClientRect();
@@ -596,14 +624,14 @@
       if (d.moved || ev.type !== 'pointerup') return;
       const t = d.target.closest ? d.target.closest('[data-key]') : null;
       const key = t ? t.getAttribute('data-key') : '#root';
-      if (this.h.onSelect) this.h.onSelect(key, ev);
+      /* Pointer capture retargets native dblclick to the svg, so detect it here. */
+      const now = Date.now(), twice = last.key === key && now - last.time < 450;
+      last.key = key; last.time = twice ? 0 : now;
+      if (twice && key !== '#root' && this.h.onOpen) this.h.onOpen(key);
+      else if (this.h.onSelect) this.h.onSelect(key, ev);
     };
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
-    svg.addEventListener('dblclick', ev => {
-      const t = ev.target.closest('[data-key]');
-      if (t && this.h.onOpen) this.h.onOpen(t.getAttribute('data-key'));
-    });
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
   };
 

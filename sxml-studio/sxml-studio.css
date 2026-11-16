@@ -110,3 +110,5 @@ body[data-view=source] .source-pane{flex:1 1 0}
 @media(max-width:1050px){:root{--right:330px}}
 @media(max-width:700px){.chart-pane{height:420px;flex:none}.source-pane{flex:none;height:300px}}
 .chart-toolbar button.primary{background:var(--accent-bg);color:var(--accent)}
+#files button.nested{padding-left:34px}
+#files button.nested::before{content:''}
