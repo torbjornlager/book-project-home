@@ -62,6 +62,7 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onOpen(key) { select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
   onConnect(source, target) { connect(source, target); },
   onMove(key, dx, dy) { moveState(key, dx, dy); },
+  onRetarget(key, end, index, stateKey) { retarget(key, end, index, stateKey); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -272,6 +273,28 @@ function moveState(key, dx, dy) {
   selEl = n.el;
   commit();
   status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
+}
+
+/* Dragging an end of a transition onto a state: the arrowhead end changes
+   the target, the tail end moves the <go> element to another source state. */
+function retarget(key, end, index, stateKey) {
+  if (!guard()) return;
+  const t = model.items.get(key), n = model.byKey.get(stateKey);
+  if (!t || t.kind !== 'go' || !n) return;
+  if (end === 'head') {
+    if (!n.id) return;
+    if (t.to[index] === n.id) return;
+    const to = t.to.slice(); to[index] = n.id;
+    t.el.setAttribute('to', to.join(' '));
+    status('Transition now goes to ' + n.id);
+  } else {
+    if (n === t.source) return;
+    if (!['state', 'parallel'].includes(n.kind)) { status('A transition can only start from a state or a parallel state'); return; }
+    SXML.insertChild(n.el, t.el);
+    status('Transition moved to ' + n.id + ' · it is now last in that state\'s priority order');
+  }
+  selEl = t.el;
+  commit();
 }
 
 function removeSelected() {

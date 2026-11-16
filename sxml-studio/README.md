@@ -26,6 +26,10 @@ Web Workers need HTTP, so serve this folder with any static server:
   another, edit everything in the Inspector, reorder transitions (document
   order is priority), rename a state (references follow), Delete removes a
   state together with transitions that target it.
+- Retargeting: drag the arrowhead end of a transition onto another state to
+  change its target, or the tail end to move it to another source state
+  (select the transition to see the two end handles). A drag on the middle
+  of a line does nothing.
 - Arrangement: drag a state to move it among its siblings. The drop position
   is a hint (which layer, which order) for the layout engine, not an exact
   pixel position, so edges are always re-routed tidily. Hints are saved in a

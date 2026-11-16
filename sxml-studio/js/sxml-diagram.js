@@ -307,7 +307,7 @@
   Diagram.prototype._render = function () {
     const { boxes, edges, info } = this.geo, model = this.model, g = this.view;
     while (g.firstChild) g.removeChild(g.firstChild);
-    this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map();
+    this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map(); this.edgeGeo = new Map();
     const gStates = el('g', {}, g), gEdges = el('g', {}, g), gLabels = el('g', {}, g);
     this.overlay = el('g', {}, g);
 
@@ -378,6 +378,8 @@
       el('path', { class: 'edge', d, 'marker-end': 'url(#arrow)' }, grp);
       let entry = this.edgeEls.get(key);
       if (!entry) this.edgeEls.set(key, entry = []);
+      if (!this.edgeGeo.has(key)) this.edgeGeo.set(key, []);
+      this.edgeGeo.get(key).push({ points: e.points, index: +e.id.slice(e.id.lastIndexOf('>') + 1), fixedTail: inf.historyDefault });
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
@@ -465,6 +467,11 @@
     if (!o) return;
     while (o.firstChild) o.removeChild(o.firstChild);
     if (this.running || this.readOnly) return;
+    for (const g of this.edgeGeo.get(this.selected) || []) {
+      const a = g.points[0], z = g.points[g.points.length - 1];
+      if (!g.fixedTail) el('title', {}, el('circle', { class: 'end', cx: a.x, cy: a.y, r: 5.5, 'data-end': 'tail', 'data-eidx': g.index }, o), 'Drag onto another state to move this transition there');
+      el('title', {}, el('circle', { class: 'end', cx: z.x, cy: z.y, r: 5.5, 'data-end': 'head', 'data-eidx': g.index }, o), 'Drag onto another state to change the target');
+    }
     const n = this.model.byKey.get(this.selected);
     if (!n || n.kind === 'statechart' || n.kind === 'final') return;
     const b = this.geo.boxes.get(n.key);
@@ -499,6 +506,17 @@
       svg.focus({ preventScroll: true });
       const handle = ev.target.closest('[data-handle]');
       const stateEl = ev.target.closest('[data-state]');
+      const endEl = ev.target.closest('[data-end]');
+      const lineEl = ev.target.closest('.transition, .tlabel');
+      if (endEl) {
+        drag = this._retarget(this.selected, endEl.getAttribute('data-end'), +endEl.getAttribute('data-eidx'));
+        if (drag) { svg.setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
+      }
+      if (lineEl && this.tool !== 'connect') {
+        drag = { type: 'edge', key: lineEl.getAttribute('data-key'), onLine: lineEl.classList.contains('transition'), x: ev.clientX, y: ev.clientY, at: this._point(ev), moved: false, target: ev.target };
+        svg.setPointerCapture(ev.pointerId);
+        return;
+      }
       if (handle || (this.tool === 'connect' && stateEl && !this.running)) {
         const key = handle ? handle.getAttribute('data-handle') : stateEl.getAttribute('data-state');
         const b = this.geo.boxes.get(key);
@@ -514,6 +532,22 @@
     });
     svg.addEventListener('pointermove', ev => {
       if (!drag) return;
+      if (drag.type === 'edge') {
+        if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 5) return;
+        /* A drag that starts near one end of a line retargets that end; elsewhere it does nothing. */
+        let next = null;
+        if (drag.onLine && !this.running && !this.readOnly) {
+          let best = 26 / this.k;
+          for (const g of this.edgeGeo.get(drag.key) || []) {
+            const a = g.points[0], z = g.points[g.points.length - 1];
+            const da = Math.hypot(a.x - drag.at.x, a.y - drag.at.y), dz = Math.hypot(z.x - drag.at.x, z.y - drag.at.y);
+            if (dz < best) { best = dz; next = this._retarget(drag.key, 'head', g.index); }
+            if (da < best && !g.fixedTail) { best = da; next = this._retarget(drag.key, 'tail', g.index); }
+          }
+        }
+        drag = next || { type: 'inert', moved: true };
+      }
+      if (drag.type === 'inert') return;
       if (drag.type === 'move') {
         const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
         if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
@@ -528,7 +562,9 @@
         this.tx = drag.tx + dx; this.ty = drag.ty + dy; this.userMoved = true; this._apply();
       } else {
         const p = this._point(ev);
-        drag.line.setAttribute('d', 'M' + drag.start.x + ' ' + drag.start.y + ' L' + p.x + ' ' + p.y);
+        if (!drag.line) drag.line = el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay);
+        const from = drag.end === 'tail' ? p : drag.start, to = drag.end === 'tail' ? drag.start : p;
+        drag.line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
         const over = this._stateAt(ev);
         if (drag.over !== over) {
           if (drag.over && this.nodeEls.get(drag.over)) this.nodeEls.get(drag.over).classList.remove('drop');
@@ -542,11 +578,13 @@
       const d = drag; drag = null;
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
-      if (d.type === 'connect') {
-        d.line.remove();
+      if (d.type === 'inert') return;
+      if (d.type === 'connect' || d.type === 'retarget') {
+        if (d.line) d.line.remove();
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
-        const over = ev.type === 'pointerup' ? this._stateAt(ev) : null;
-        if (over && this.h.onConnect) this.h.onConnect(d.source, over);
+        const over = ev.type === 'pointerup' && d.line ? this._stateAt(ev) : null;
+        if (over && d.type === 'connect' && this.h.onConnect) this.h.onConnect(d.source, over);
+        if (over && d.type === 'retarget' && this.h.onRetarget) this.h.onRetarget(d.key, d.end, d.index, over);
         return;
       }
       if (d.type === 'move' && d.moved) {
@@ -567,6 +605,13 @@
       if (t && this.h.onOpen) this.h.onOpen(t.getAttribute('data-key'));
     });
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
+  };
+
+  /* Start dragging one end of a transition; the other end stays put. */
+  Diagram.prototype._retarget = function (key, end, index) {
+    const g = (this.edgeGeo.get(key) || []).find(x => x.index === index);
+    if (!g || (end === 'tail' && g.fixedTail) || !this.h.onRetarget) return null;
+    return { type: 'retarget', key, end, index, moved: true, start: end === 'head' ? g.points[0] : g.points[g.points.length - 1] };
   };
 
   Diagram.prototype._stateAt = function (ev) {
@@ -598,7 +643,7 @@
     clone.setAttribute('height', Math.ceil(this.geo.height));
     clone.removeAttribute('tabindex');
     clone.lastChild.removeAttribute('transform');
-    for (const o of clone.querySelectorAll('.handle,.rubber,.ghost')) o.remove();
+    for (const o of clone.querySelectorAll('.handle,.rubber,.ghost,.end')) o.remove();
     const style = document.createElementNS(SVGNS, 'style');
     style.textContent = cssText;
     clone.insertBefore(style, clone.firstChild);

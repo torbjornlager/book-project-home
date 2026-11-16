@@ -644,6 +644,6 @@
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
     parse, build, validate, serialize, snapshot, locate, collapse, dedent, scriptText, isState, label,
-    getLayout, setLayout, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, move, uniqueId, blank
+    getLayout, setLayout, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, move, uniqueId, blank
   };
 })(window);

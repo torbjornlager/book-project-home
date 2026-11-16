@@ -55,3 +55,5 @@ svg.chart .rubber{fill:none;stroke:var(--blue);stroke-width:1.6;stroke-dasharray
 svg.chart .ghost{fill:color-mix(in srgb,var(--blue) 12%,transparent);stroke:var(--blue);stroke-width:1.6;stroke-dasharray:5 4;pointer-events:none}
 svg.chart.moving{cursor:grabbing}
 svg.chart.moving .state{cursor:grabbing}
+svg.chart .end{fill:var(--editor);stroke:var(--blue);stroke-width:2;cursor:grab}
+svg.chart .end:hover{fill:var(--blue)}
