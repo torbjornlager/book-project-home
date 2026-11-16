@@ -594,7 +594,10 @@
     if (layout) {
       const re = k => k === old ? newId : k.startsWith(old + '/') ? newId + k.slice(old.length) : k;
       const next = {};
-      for (const pk in layout) { next[re(pk)] = {}; for (const ck in layout[pk]) next[re(pk)][re(ck)] = layout[pk][ck]; }
+      for (const pk in layout) {
+        if (pk[0] === '@') { next[pk] = layout[pk]; continue; }
+        next[re(pk)] = {}; for (const ck in layout[pk]) next[re(pk)][re(ck)] = layout[pk][ck];
+      }
       setLayout(doc, next);
     }
   }

@@ -34,7 +34,10 @@ Web Workers need HTTP, so serve this folder with any static server:
   is a hint (which layer, which order) for the layout engine, not an exact
   pixel position, so edges are always re-routed tidily. Hints are saved in a
   trailing `<!-- <layout> ... -->` comment, which the interpreter ignores;
-  the Auto button removes it.
+  the Auto button removes it. A `<datamodel>` note of the root sits beside
+  the chart by default and can be dragged anywhere; it stays exactly where it
+  is dropped. The layout direction is saved in the same comment; switching
+  direction drops the arrangement, which does not carry over.
 - Nested charts: the inline chart of a `<spawn type="statechart">` is drawn
   inside the state that owns it. Double-click it (or use the button in the
   Inspector) to open it as a document of its own; edits there are stored

@@ -107,6 +107,8 @@ function adopt(doc, text, opts) {
   let entry = entryFor(selEl) || entryByKey(selKey) || model.root;
   selEl = entry.el; selKey = entry.key;
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
+  diagram.direction = model.layout && model.layout['@direction'] === 'DOWN' ? 'DOWN' : 'RIGHT';
+  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout →' : 'Layout ↓';
   showProblems(model.problems);
   diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
   if (programs[current].parent) writeBack(programs[current], text);
@@ -157,7 +159,7 @@ function updateChrome() {
   }
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
-  $('auto-layout').disabled = !model || !model.layout || !!run.pid;
+  $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid;
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -261,18 +263,31 @@ function connect(sourceKey, targetKey) {
    set of position hints for the layout engine, kept in a <layout> comment. */
 function moveState(key, dx, dy) {
   if (!guard()) return;
-  const n = model.byKey.get(key);
-  if (!n || !n.parent) return;
-  const parent = n.parent, boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
-  const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
-  const hint = {};
-  for (const k of siblings) { const b = boxes.get(k); if (b) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
-  if (!hint[key]) return;
-  hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
+  const n = model.byKey.get(key) || model.items.get(key);
+  const parent = n ? (n.parent || n.owner) : null;
+  if (!parent) return;
+  const boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
   const layout = Object.assign({}, model.layout || {});
+  const rootNote = parent === model.root && n.kind === 'datamodel';
+  let hint = {};
+  if (rootNote) {
+    /* A datamodel note of the root has no edges, so it simply stays where it is dropped. */
+    const b = boxes.get(key);
+    hint = Object.assign({}, layout['#root'] || {});
+    hint[key] = [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))];
+  } else {
+    const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
+    for (const k of siblings) { const b = boxes.get(k); if (b && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
+    for (const k in layout[parent.key] || {}) if (parent === model.root && k.includes('/datamodel')) hint[k] = layout[parent.key][k];
+    if (!hint[key]) return;
+    hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
+  }
   layout[parent.key] = hint;
   SXML.setLayout(model.doc, layout);
   selEl = n.el;
+  /* Rearranging states changes the chart's size, so refit.  A note is placed
+     freely: keep the view still, or the note seems not to have moved. */
+  diagram.userMoved = rootNote;
   commit();
   status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
 }
@@ -934,13 +949,19 @@ $('delete').onclick = removeSelected;
 $('undo').onclick = () => editor.undo();
 $('redo').onclick = () => editor.redo();
 $('fit').onclick = () => diagram.fit();
-$('auto-layout').onclick = () => { if (!guard()) return; SXML.setLayout(model.doc, null); commit(); status('Automatic layout restored'); };
+$('auto-layout').onclick = () => { if (!guard()) return; SXML.setLayout(model.doc, diagram.direction === 'DOWN' ? { '@direction': 'DOWN' } : null); diagram.userMoved = false; commit(); status('Automatic layout restored'); };
 $('zoom-in').onclick = () => diagram.zoomBy(1.2);
 $('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
+/* The layout direction is part of the saved arrangement.  Position hints
+   mean different things in the two directions, so switching starts afresh. */
+const arranged = () => !!model && !!model.layout && Object.keys(model.layout).some(k => k[0] !== '@');
 $('direction').onclick = () => {
-  diagram.direction = diagram.direction === 'RIGHT' ? 'DOWN' : 'RIGHT';
-  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout →' : 'Layout ↓';
-  if (model) diagram.setModel(model, { fit: true }).then(() => diagram.select(selKey));
+  if (!guard()) return;
+  const next = diagram.direction === 'RIGHT' ? 'DOWN' : 'RIGHT', had = arranged();
+  SXML.setLayout(model.doc, next === 'DOWN' ? { '@direction': 'DOWN' } : null);
+  diagram.userMoved = false;
+  commit();
+  status((next === 'DOWN' ? 'Top-down layout' : 'Left-to-right layout') + (had ? ' · the manual arrangement was dropped, because it does not carry over (Undo restores it)' : ''));
 };
 
 function setView(view) {

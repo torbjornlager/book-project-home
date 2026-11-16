@@ -27,7 +27,7 @@ svg.chart .tlabel-bg{fill:var(--editor);opacity:.88}
 svg.chart .item{cursor:pointer}
 svg.chart .item-bg{fill:transparent}
 svg.chart .item:hover .item-bg,svg.chart .tlabel:hover .tlabel-bg{fill:var(--raised);opacity:1}
-svg.chart .note .shape{fill:var(--note);stroke:var(--stroke);stroke-width:1;stroke-dasharray:3 3}
+svg.chart .note .shape{fill:var(--note);fill-opacity:.96;stroke:var(--stroke);stroke-width:1;stroke-dasharray:3 3}
 svg.chart .note .fold{fill:none;stroke:var(--stroke);stroke-width:1}
 svg.chart .note-title{font:9px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:1.2px;fill:var(--muted)}
 svg.chart .note-line{font:10.5px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;fill:var(--muted)}

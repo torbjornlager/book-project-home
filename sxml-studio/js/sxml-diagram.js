@@ -72,6 +72,7 @@
   function toElk(model, direction, base) {
     const edges = [];
     const hints = base ? model.layout : null;
+    const rootNotes = [];
     const info = new Map();      // elk id -> description
     function noteNode(dm, owner) {
       const all = dm.body.split('\n');
@@ -101,7 +102,8 @@
         };
       }
       const realKids = n.children.filter(c => c.kind !== 'history');
-      for (const dm of n.datamodels) kids.push(noteNode(dm, n));
+      /* Notes of the root are placed outside the layout engine (see run). */
+      for (const dm of n.datamodels) { const note = noteNode(dm, n); if (n.kind === 'statechart' && !n.scope) rootNotes.push(note); else kids.push(note); }
       for (const sp of n.spawns) { const nm = model.nested && model.nested.get(sp.key); if (nm) kids.push(node(nm.root)); }
       if ((n.kind === 'statechart' || n.kind === 'state') && n.initial && realKids.some(c => c.id === n.initial)) {
         const id = n.key + '/init';
@@ -167,7 +169,7 @@
       });
     }
     root.edges = edges;
-    return { graph: root, info };
+    return { graph: root, info, rootNotes };
   }
 
   function globalOptions(direction) {
@@ -195,7 +197,8 @@
   let elk = null;
   async function layout(model, direction, extra) {
     if (!elk) elk = new global.ELK();
-    const hinted = model.layout && Object.keys(model.layout).length > 0;
+    const noteKeys = new Set(model.root.datamodels.map(d => d.key));
+    const hinted = !!model.layout && Object.keys(model.layout).some(pk => pk[0] !== '@' && Object.keys(model.layout[pk]).some(k => !(pk === '#root' && noteKeys.has(k))));
     let geo = await run(model, direction, extra, null);
     if (hinted) {
       try { geo = await run(model, direction, Object.assign({}, INTERACTIVE, extra), geo.boxes); }
@@ -205,7 +208,7 @@
   }
 
   async function run(model, direction, extra, base) {
-    const { graph, info } = toElk(model, direction, base);
+    const { graph, info, rootNotes } = toElk(model, direction, base);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), extra || {}) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -228,7 +231,22 @@
       }
       for (const c of n.children || []) collect(c);
     })(res);
-    return { boxes, edges, info, width: res.width, height: res.height };
+    /* Root datamodel notes: where the user dropped them, else in a row under the
+       chart (or, in a top-down layout, in a column to its right). */
+    let width = res.width, height = res.height, x = 24, y = 24;
+    const down = direction === 'DOWN';
+    const placed = (model.layout && model.layout['#root']) || {};
+    const bottom = res.height;
+    for (const note of rootNotes) {
+      const h = placed[note.id];
+      const b = h ? { x: Math.max(4, h[0]), y: Math.max(4, h[1]), w: note.width, h: note.height, labels: [] }
+                  : down ? { x: res.width, y, w: note.width, h: note.height, labels: [] }
+                  : { x, y: bottom, w: note.width, h: note.height, labels: [] };
+      if (!h) { x += note.width + 20; y += note.height + 20; }
+      boxes.set(note.id, b);
+      width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24);
+    }
+    return { boxes, edges, info, width, height };
   }
 
   /* ---------- SVG helpers ---------- */
@@ -321,6 +339,7 @@
     this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map(); this.edgeGeo = new Map();
     this.nodeOf = new Map(); this.frameEls = new Map();
     const gStates = el('g', {}, g), gEdges = el('g', {}, g), gLabels = el('g', {}, g);
+    const gNotes = el('g', {}, g);       // root notes go on top, so a note dropped onto the chart stays visible
     this.overlay = el('g', {}, g);
 
     const draw = n => {
@@ -335,7 +354,7 @@
         this.frameEls.set(n.scope, f);
       }
       if (n.kind === 'statechart') {
-        for (const dm of n.datamodels) this._note(gStates, dm, boxes.get(dm.key), info.get(dm.key));
+        for (const dm of n.datamodels) this._note(n.scope ? gStates : gNotes, dm, boxes.get(dm.key), info.get(dm.key));
         this._init(gStates, n, boxes);
         n.children.forEach(draw);
         return;
@@ -419,7 +438,7 @@
 
   Diagram.prototype._note = function (parent, dm, b, inf) {
     if (!b) return;
-    const grp = el('g', { class: 'note', 'data-key': dm.scope || dm.key, 'data-item': dm.scope || dm.key }, parent);
+    const grp = el('g', { class: 'note', 'data-key': dm.scope || dm.key, 'data-item': dm.scope || dm.key, 'data-note': dm.scope ? null : dm.key }, parent);
     const f = 9;
     el('path', { class: 'shape', d: 'M' + b.x + ' ' + b.y + ' h' + (b.w - f) + ' l' + f + ' ' + f + ' v' + (b.h - f) + ' h' + (-b.w) + ' z' }, grp);
     el('path', { class: 'fold', d: 'M' + (b.x + b.w - f) + ' ' + b.y + ' v' + f + ' h' + f }, grp);
@@ -554,8 +573,9 @@
         ev.preventDefault();
         return;
       }
-      const movable = stateEl && !this.running && !this.readOnly && this.h.onMove;
-      drag = { type: movable ? 'move' : 'pan', key: movable ? stateEl.getAttribute('data-state') : null, x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
+      const noteEl = ev.target.closest('[data-note]');
+      const movable = (stateEl || noteEl) && !this.running && !this.readOnly && this.h.onMove;
+      drag = { type: movable ? 'move' : 'pan', key: movable ? (noteEl ? noteEl.getAttribute('data-note') : stateEl.getAttribute('data-state')) : null, x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
       svg.setPointerCapture(ev.pointerId);
     });
     svg.addEventListener('pointermove', ev => {
