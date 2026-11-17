@@ -317,7 +317,7 @@ function onDiagramClick(key) {
   const entry = entryByKey(key);
   if (run.pid && entry && entry.kind === 'go' && entry.on != null) { sendTransition(entry); return; }
   select(key, { reveal: false });
-  if (!run.pid) showSide('inspector');
+  if (!run.pid && $('settings').hidden) showSide('inspector');
 }
 
 /* ---------- editing ---------- */
@@ -975,7 +975,11 @@ function renderSuggestions() {
 /* ---------- side panel, files, chrome ---------- */
 
 function showSide(name) {
-  for (const v of ['inspector', 'run']) {
+  if (name === 'settings') {
+    syncSpacingControls();
+    showSpacingSize();
+  }
+  for (const v of ['inspector', 'run', 'settings']) {
     $(v).hidden = v !== name;
     $('tab-' + v).setAttribute('aria-selected', String(v === name));
     $('tab-' + v).tabIndex = v === name ? 0 : -1;
@@ -983,6 +987,7 @@ function showSide(name) {
 }
 $('tab-inspector').onclick = () => showSide('inspector');
 $('tab-run').onclick = () => showSide('run');
+$('tab-settings').onclick = () => showSide('settings');
 
 function renderFiles() {
   $('files').replaceChildren();
@@ -1126,10 +1131,8 @@ async function selectFile(index) {
 }
 
 $('settings-open').onclick = () => {
-  $('restore-examples-status').textContent = '';
-  syncSpacingControls();
-  showSpacingSize();
-  $('settings-dialog').showModal();
+  showSide('settings');
+  $('tab-settings').focus();
 };
 $('restore-examples').onclick = () => {
   const present = new Set(programs.filter(p => !p.parent).map(p => p.url));
