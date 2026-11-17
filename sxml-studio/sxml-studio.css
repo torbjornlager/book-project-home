@@ -11,7 +11,8 @@ body{overflow:hidden}
 #files button::before{content:'SX'}
 .file-row{display:flex;align-items:stretch}
 #files .file-row>button:first-child{flex:1;min-width:0;width:auto;padding-right:4px}
-#files .file-remove{flex:none;width:30px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+#files .file-remove{flex:none;width:30px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--muted);opacity:0;pointer-events:none}
+#files .file-row:hover .file-remove,#files .file-row:focus-within .file-remove{opacity:1;pointer-events:auto}
 #files .file-remove::before{content:none}
 #files .file-remove:hover{color:var(--error);background:var(--raised)}
 #files .file-row.active{background:var(--accent-bg)}
