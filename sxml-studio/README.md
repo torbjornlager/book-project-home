@@ -25,6 +25,16 @@ Enter saves and Escape cancels. The trash icon removes a file from the Explorer.
 These changes apply to this browser and site address. “Save source” still downloads
 an XML file for keeping a separate copy. Unchanged bundled examples are loaded
 afresh so updates to them remain available.
+Use **Settings → Restore missing examples** to bring removed bundled examples back.
+Existing files, renamed examples and edits are preserved.
+
+**Settings → Chart spacing** provides experimental horizontal and vertical spacing
+sliders (25–150%, with 100% restoring the original gaps). They recompute the ELK
+layout without scaling text, label boxes or leaf states, and keep the current zoom
+for comparison. Close Settings and use **Fit** if needed. Preferences are stored
+in this browser; spacing controls are disabled while a chart is running. Nested
+states, routing and label clearance can limit compaction or change the arrangement,
+so a smaller spacing value does not guarantee a proportionally smaller chart.
 
 ## What it does
 

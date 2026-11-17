@@ -172,6 +172,22 @@
     return { graph: root, info, rootNotes };
   }
 
+  // Physical axes stay the same when the chart's flow direction changes.
+  function spacingOptions(direction, horizontal = 100, vertical = 100) {
+    const h = Math.max(25, Math.min(150, horizontal)) / 100;
+    const v = Math.max(25, Math.min(150, vertical)) / 100;
+    const along = direction === 'DOWN' ? v : h;
+    const across = direction === 'DOWN' ? h : v;
+    return {
+      'elk.layered.spacing.nodeNodeBetweenLayers': String(48 * along),
+      'elk.spacing.nodeNode': String(30 * across),
+      'elk.spacing.edgeNode': String(20 * across),
+      'elk.spacing.edgeEdge': String(14 * across),
+      'elk.layered.spacing.edgeNodeBetweenLayers': String(20 * along),
+      'elk.layered.spacing.edgeEdgeBetweenLayers': String(14 * along)
+    };
+  }
+
   function globalOptions(direction) {
     return {
       'elk.algorithm': 'layered',
@@ -291,6 +307,7 @@
     this.model = null; this.geo = null;
     this.selected = null; this.active = new Set(); this.fired = new Set();
     this.direction = 'RIGHT';
+    this.horizontalSpacing = 100; this.verticalSpacing = 100;
     this.seq = 0;
     this.userMoved = false;
     this._bind();
@@ -325,12 +342,12 @@
 
   Diagram.prototype.setModel = async function (model, opts) {
     const seq = ++this.seq;
-    const geo = await layout(model, this.direction);
+    const geo = await layout(model, this.direction, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing));
     if (seq !== this.seq) return;
     const first = !this.geo;
     this.model = model; this.geo = geo;
     this._render();
-    if (first || (opts && opts.fit) || !this.userMoved) this.fit();
+    if (!(opts && opts.preserveViewport) && (first || (opts && opts.fit) || !this.userMoved)) this.fit();
   };
 
   Diagram.prototype._render = function () {
@@ -698,5 +715,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger };
+  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions };
 })(window);

@@ -124,3 +124,16 @@ body[data-view=source] .source-pane{flex:1 1 0}
 #files button.nested::before{content:''}
 
 #files .file-name-input{flex:1;min-width:0;width:0;margin:3px 4px 3px 12px;padding:3px 6px;font-size:12px;line-height:1.5;color:var(--fg);background:var(--editor);border:1px solid var(--accent);border-radius:3px}
+
+#settings-dialog{width:min(460px,calc(100vw - 32px));max-height:80vh;overflow:auto;padding:24px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px}
+#settings-dialog::backdrop{background:rgb(0 0 0 / .55)}
+.settings-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.settings-heading h2{margin:0}
+#settings-dialog h3{margin:22px 0 8px;font-size:14px}
+#settings-dialog p{line-height:1.6;color:var(--muted)}
+
+.spacing-control{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:16px 0}
+.spacing-control output{color:var(--accent);font-variant-numeric:tabular-nums}
+.spacing-control input{grid-column:1 / -1;width:100%;accent-color:var(--accent)}
+.spacing-control:has(input:disabled){opacity:.4}
+#settings-dialog .hint{font-size:12px}

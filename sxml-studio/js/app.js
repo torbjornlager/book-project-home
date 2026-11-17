@@ -114,6 +114,56 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
 });
 
 function status(text) { $('status').textContent = '● ' + text; }
+const SPACING_STORAGE = 'trinity-sxml-studio.spacing.v1';
+try {
+  const saved = JSON.parse(localStorage.getItem(SPACING_STORAGE));
+  for (const axis of ['horizontal', 'vertical']) {
+    const value = saved && saved[axis];
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 25 && value <= 150 && value % 5 === 0) diagram[axis + 'Spacing'] = value;
+  }
+} catch (e) { console.warn('Could not restore spacing preferences:', e); }
+
+function syncSpacingControls() {
+  for (const axis of ['horizontal', 'vertical']) {
+    const value = diagram[axis + 'Spacing'];
+    $('spacing-' + axis).value = value;
+    $('spacing-' + axis + '-value').textContent = value + '%';
+  }
+}
+function showSpacingSize() {
+  if (diagram.geo) $('spacing-status').textContent = 'Diagram size: ' + Math.round(diagram.geo.width) + ' × ' + Math.round(diagram.geo.height) + ' px';
+}
+let spacingTimer = null, spacingGeneration = 0;
+function changeSpacing() {
+  syncSpacingControls();
+  try { localStorage.setItem(SPACING_STORAGE, JSON.stringify({ horizontal: diagram.horizontalSpacing, vertical: diagram.verticalSpacing })); }
+  catch (e) { console.warn('Could not save spacing preferences:', e); }
+  clearTimeout(spacingTimer);
+  const generation = ++spacingGeneration;
+  spacingTimer = setTimeout(async () => {
+    if (run.pid || run.starting || !model || $('chart').classList.contains('stale')) return;
+    $('spacing-status').textContent = 'Laying out…';
+    try {
+      await diagram.setModel(model, { preserveViewport: true });
+      if (generation === spacingGeneration) showSpacingSize();
+    } catch (e) {
+      if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply spacing. Try a larger gap or reset spacing.';
+      console.warn('Spacing layout failed:', e);
+    }
+  }, 120);
+}
+for (const axis of ['horizontal', 'vertical']) $('spacing-' + axis).oninput = e => {
+  if (run.pid || run.starting) return;
+  diagram[axis + 'Spacing'] = Number(e.target.value);
+  changeSpacing();
+};
+$('spacing-reset').onclick = () => {
+  if (run.pid || run.starting) return;
+  diagram.horizontalSpacing = diagram.verticalSpacing = 100;
+  changeSpacing();
+};
+syncSpacingControls();
+
 
 /* ---------- model lifecycle ---------- */
 
@@ -209,6 +259,7 @@ function updateChrome() {
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid;
   $('direction').disabled = !!run.pid;
+  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset']) $(id).disabled = !!run.pid || run.starting;
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -1073,6 +1124,29 @@ async function selectFile(index) {
   runControls();
   saveExplorer();
 }
+
+$('settings-open').onclick = () => {
+  $('restore-examples-status').textContent = '';
+  syncSpacingControls();
+  showSpacingSize();
+  $('settings-dialog').showModal();
+};
+$('restore-examples').onclick = () => {
+  const present = new Set(programs.filter(p => !p.parent).map(p => p.url));
+  const missing = examplePrograms().filter(p => !present.has(p.url));
+  for (const p of missing) {
+    // Keep user-created or renamed files even if they use an example's original name.
+    const original = p.name.replace(/\.xml$/, '');
+    let suffix = 1;
+    while (programs.some(other => other.name === p.name)) p.name = original + ' (restored ' + suffix++ + ').xml';
+    programs.push(p);
+  }
+  renderFiles();
+  const saved = saveExplorer();
+  $('restore-examples-status').textContent = missing.length
+    ? 'Restored ' + missing.length + ' example' + (missing.length === 1 ? '.' : 's.') + (saved ? '' : ' Browser storage is unavailable; this change may not survive reload.')
+    : 'All original examples are already in the Explorer.';
+};
 
 $('new').onclick = () => {
   let i = 1; while (programs.some(p => p.name === 'untitled-' + i + '.xml')) i++;
