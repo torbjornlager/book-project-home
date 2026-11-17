@@ -472,7 +472,7 @@ function summary(t) {
 
 function stateInspector(box, n) {
   const root = n.kind === 'statechart';
-  box.append(h('div', { class: 'insp-head' }, h('span', { class: 'insp-kind' }, n.kind), h('span', { class: 'insp-title' }, root ? (n.id || 'statechart') : n.id || '(no id)')));
+  box.append(h('div', { class: 'insp-head' }, h('span', { class: 'insp-kind' }, n.kind), h('span', { class: 'insp-title' }, root ? n.id : n.id || '(no id)')));
   if (!root) box.append(pathOf(n));
   if (!root) {
     box.append(field('Type', selectBox('kind', [['state', 'state'], ['parallel', 'parallel'], ['final', 'final'], ['history', 'history']], n.kind,
@@ -890,11 +890,13 @@ function renderFiles() {
   programs.forEach((p, i) => {
     const b = document.createElement('button');
     b.textContent = p.name.replace(/\.xml$/, '');
-    b.title = p.name;
+    b.title = p.name + ' · double-click to rename';
     b.className = (i === current ? 'active' : '') + (p.parent ? ' nested' : '');
     if (p.parent) b.title = 'Nested chart of ' + p.parent.name + ' · edits are stored back into it';
     b.setAttribute('aria-pressed', String(i === current));
-    b.onclick = () => selectFile(i);
+    b.onclick = () => { if (programs[current] !== p) selectFile(programs.indexOf(p)); };
+    b.ondblclick = () => renameFile(p, b);
+    b.onkeydown = e => { if (e.key === 'F2') { e.preventDefault(); renameFile(p, b); } };
     const remove = h('button', {
       class: 'file-remove', title: 'Remove ' + p.name + ' from the Explorer',
       'aria-label': 'Remove ' + p.name + ' from the Explorer',
@@ -902,6 +904,63 @@ function renderFiles() {
     });
     remove.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';
     $('files').append(h('div', { class: 'file-row' + (i === current ? ' active' : '') }, b, remove));
+  });
+}
+
+function renameFile(file, button) {
+  const prefix = file.parent ? '↳ ' : '';
+  const control = h('input', {
+    class: 'file-name-input', 'aria-label': 'Rename SXML file',
+    value: file.name.replace(/^↳ /, ''), spellcheck: 'false'
+  });
+  let finished = false;
+  function finish(cancel) {
+    if (finished) return;
+    if (!cancel) {
+      let name = control.value.trim();
+      if (!name || /[\\/\x00-\x1f]/.test(name)) {
+        control.setCustomValidity('Enter a filename without slashes.');
+        control.reportValidity();
+        control.focus();
+        return;
+      }
+      if (!/\.xml$/i.test(name)) name += '.xml';
+      if (programs.some(p => p !== file && p.name === prefix + name)) {
+        control.setCustomValidity('A file with this name is already in the Explorer.');
+        control.reportValidity();
+        control.focus();
+        return;
+      }
+      file.name = prefix + name;
+    }
+    finished = true;
+    renderFiles();
+    updateChrome();
+    const row = $('files').children[programs.indexOf(file)];
+    if (row) row.firstElementChild.focus();
+  }
+  control.oninput = () => control.setCustomValidity('');
+  control.onkeydown = e => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      finish(e.key === 'Escape');
+    }
+  };
+  control.onblur = () => finish(false);
+  button.replaceWith(control);
+  control.focus();
+  control.setSelectionRange(0, control.value.replace(/\.xml$/i, '').length);
+}
+
+function updateFileSelection() {
+  if ($('files').children.length !== programs.length) { renderFiles(); return; }
+  [...$('files').children].forEach((row, i) => {
+    row.classList.toggle('active', i === current);
+    const button = row.querySelector('button:first-child');
+    if (button) {
+      button.classList.toggle('active', i === current);
+      button.setAttribute('aria-pressed', String(i === current));
+    }
   });
 }
 
@@ -938,7 +997,7 @@ async function selectFile(index) {
   if (run.node) stopRun('Engine stopped.');
   current = index;
   const p = programs[index];
-  renderFiles();
+  updateFileSelection();
   if (p.source == null) {
     status('Loading ' + p.name + '…');
     try {

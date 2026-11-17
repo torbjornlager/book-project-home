@@ -122,3 +122,5 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .chart-toolbar button.primary{background:var(--accent-bg);color:var(--accent)}
 #files button.nested{padding-left:34px}
 #files button.nested::before{content:''}
+
+#files .file-name-input{flex:1;min-width:0;width:0;margin:3px 4px 3px 12px;padding:3px 6px;font-size:12px;line-height:1.5;color:var(--fg);background:var(--editor);border:1px solid var(--accent);border-radius:3px}
