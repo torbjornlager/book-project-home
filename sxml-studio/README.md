@@ -104,4 +104,6 @@ so a smaller spacing value does not guarantee a proportionally smaller chart.
 
 In Split view, **Layout** also changes the pane arrangement: vertical diagrams
 place the source beside the chart; horizontal diagrams place it below. Drag the
-divider to resize either arrangement. Settings is available in the side-panel tab.
+divider to resize either arrangement. Each arrangement’s split size is remembered
+separately across reloads in this browser, as a proportion of the available space.
+Settings is available in the side-panel tab.

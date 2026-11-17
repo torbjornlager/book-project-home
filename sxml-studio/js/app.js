@@ -165,6 +165,26 @@ $('spacing-reset').onclick = () => {
 syncSpacingControls();
 
 
+const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
+const splitSizes = { horizontal: 36, vertical: 45 };
+try {
+  const saved = JSON.parse(localStorage.getItem(SPLIT_STORAGE));
+  for (const orientation of ['horizontal', 'vertical']) {
+    const value = saved && saved[orientation];
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0 && value < 100) splitSizes[orientation] = value;
+  }
+} catch (e) { console.warn('Could not restore split sizes:', e); }
+document.documentElement.style.setProperty('--source-height', splitSizes.horizontal + '%');
+document.documentElement.style.setProperty('--source-width', splitSizes.vertical + '%');
+
+function saveSplitSize(vertical, percent) {
+  if (!Number.isFinite(percent) || percent <= 0 || percent >= 100) return;
+  splitSizes[vertical ? 'vertical' : 'horizontal'] = percent;
+  document.documentElement.style.setProperty(vertical ? '--source-width' : '--source-height', percent + '%');
+  try { localStorage.setItem(SPLIT_STORAGE, JSON.stringify(splitSizes)); }
+  catch (e) { console.warn('Could not save split sizes:', e); }
+}
+
 /* ---------- model lifecycle ---------- */
 
 function entryFor(el) {
@@ -1260,10 +1280,11 @@ for (const [id, property, direction, min, max] of [['left-divider', '--left', 1,
   const set = px => {
     const content = document.querySelector('.editor-content');
     const total = vertical() ? content.clientWidth : content.clientHeight;
+    if (!total) return;
     const minimum = Math.min(vertical() ? 120 : 60, total * .3);
     const chartMinimum = Math.min(vertical() ? 200 : document.querySelector('.chart-toolbar').offsetHeight + 100, total * .5);
     const value = Math.max(minimum, Math.min(total - chartMinimum - 5, px));
-    document.documentElement.style.setProperty(vertical() ? '--source-width' : '--source-height', value / total * 100 + '%');
+    saveSplitSize(vertical(), value / total * 100);
     updateSourceDividerValue();
     editor.refresh();
   };
