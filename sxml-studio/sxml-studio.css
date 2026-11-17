@@ -9,6 +9,13 @@ body{overflow:hidden}
 .file-actions,.workspace-title{flex:none}
 #files button{padding:7px 20px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #files button::before{content:'SX'}
+.file-row{display:flex;align-items:stretch}
+#files .file-row>button:first-child{flex:1;min-width:0;width:auto;padding-right:4px}
+#files .file-remove{flex:none;width:30px;padding:0;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+#files .file-remove::before{content:none}
+#files .file-remove:hover{color:var(--error);background:var(--raised)}
+#files .file-row.active{background:var(--accent-bg)}
+
 .workspace-note{margin-top:auto;flex:0 1 auto;min-height:0;overflow:hidden}
 .file-icon{letter-spacing:.5px}
 .view-switch{margin-left:auto;display:flex}
@@ -54,14 +61,14 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .side-view{flex:1;min-height:0;overflow:auto}
 #inspector{padding:14px 16px 24px}
 .insp-head{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
-.insp-kind{font-size:9px;letter-spacing:1.4px;color:var(--accent);text-transform:uppercase}
-.insp-title{font:600 14px ui-monospace,monospace;overflow-wrap:anywhere}
-.insp-path{font-size:10px;color:var(--muted);margin:-8px 0 12px;overflow-wrap:anywhere}
+.insp-kind{font-size:11px;letter-spacing:1.4px;color:var(--accent);text-transform:uppercase}
+.insp-title{font:600 16px ui-monospace,monospace;overflow-wrap:anywhere}
+.insp-path{font-size:12px;color:var(--muted);margin:-8px 0 12px;overflow-wrap:anywhere}
 .insp-path a{cursor:pointer}
-.field{display:grid;grid-template-columns:64px 1fr;gap:8px;align-items:center;margin-bottom:7px}
-.field>label{font-size:11px;color:var(--muted)}
+.field{display:grid;grid-template-columns:76px 1fr;gap:8px;align-items:center;margin-bottom:7px}
+.field>label{font-size:13px;color:var(--muted)}
 .field.block{grid-template-columns:1fr;gap:4px}
-#inspector input,#inspector select,#inspector textarea{width:100%;background:var(--editor);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font:12px/1.5 ui-monospace,"SFMono-Regular",Consolas,monospace;outline:0}
+#inspector input,#inspector select,#inspector textarea{width:100%;background:var(--editor);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font:14px/1.5 ui-monospace,"SFMono-Regular",Consolas,monospace;outline:0}
 #inspector textarea{resize:vertical;min-height:34px;white-space:pre;overflow:auto;tab-size:4}
 #inspector input:focus,#inspector select:focus,#inspector textarea:focus{border-color:var(--accent)}
 #inspector input[readonly]{color:var(--muted)}
@@ -69,17 +76,19 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .section-title button{margin-left:auto;font-size:10px;padding:2px 7px;background:transparent;letter-spacing:0}
 .card{border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:8px;background:color-mix(in srgb,var(--editor) 55%,transparent)}
 .card.focus{border-color:var(--blue)}
-.card-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:10px;color:var(--muted)}
+.card-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;color:var(--muted)}
 .card-top span{flex:1}
-.mini{font-size:10px;padding:1px 6px;background:transparent;line-height:1.5}
+.mini{font-size:12px;padding:1px 6px;background:transparent;line-height:1.5}
 .trow{display:flex;align-items:center;gap:4px;margin-bottom:4px}
-.trow .tsum{flex:1;text-align:left;font:11px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;background:var(--editor);padding:5px 8px}
+.trow .tsum{flex:1;text-align:left;font:13px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;background:var(--editor);padding:5px 8px}
 .trow .tsum b{color:var(--accent);font-weight:400}
 .insp-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.insp-actions button{font-size:11px;background:transparent}
+.insp-actions button{font-size:13px;background:transparent}
 .danger{color:var(--error)}
-.hint{font-size:10.5px;color:var(--muted);line-height:1.6;margin:6px 0}
-.about{font:11px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--muted);white-space:pre-wrap;margin:0}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.6;margin:6px 0}
+.about{font:13px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--muted);white-space:pre-wrap;margin:0}
+#inspector .section-title{font-size:11px}
+#inspector .section-title button{font-size:12px}
 /* run */
 .run-view{display:flex;flex-direction:column;overflow:hidden}
 .run-view[hidden]{display:none}

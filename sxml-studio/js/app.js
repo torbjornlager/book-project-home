@@ -108,7 +108,8 @@ function adopt(doc, text, opts) {
   selEl = entry.el; selKey = entry.key;
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
   diagram.direction = model.layout && model.layout['@direction'] === 'DOWN' ? 'DOWN' : 'RIGHT';
-  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout →' : 'Layout ↓';
+  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout ↓' : 'Layout →';
+  $('direction').title = diagram.direction === 'RIGHT' ? 'Arrange the diagram vertically' : 'Arrange the diagram horizontally';
   showProblems(model.problems);
   diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
   if (programs[current].parent) writeBack(programs[current], text);
@@ -160,6 +161,7 @@ function updateChrome() {
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid;
+  $('direction').disabled = !!run.pid;
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -446,6 +448,23 @@ function scriptCards(box, n, list, name, title) {
   });
 }
 
+function datamodelField(box, n) {
+  box.append(h('div', { class: 'section-title' }, 'DATAMODEL · PROLOG SOURCE'));
+  const control = area(n.key + '/datamodel', n.datamodels.map(it => it.body).join('\n\n'), v => edit(() => {
+    if (v.trim()) {
+      const el = n.datamodels.length ? n.datamodels[0].el : SXML.addItem(model.doc, n.el, 'datamodel');
+      SXML.setScript(model.doc, el, v);
+      n.datamodels.slice(1).forEach(it => it.el.remove());
+    } else {
+      n.datamodels.forEach(it => it.el.remove());
+    }
+    selEl = n.el;
+  }), 3);
+  control.setAttribute('aria-label', 'Datamodel Prolog source');
+  control.placeholder = 'No datamodel';
+  box.append(control);
+}
+
 function summary(t) {
   const trig = SXMLDiagram.trigger(t) || 'always';
   return [h('b', {}, trig), t.to.length ? ' → ' + t.to.join(' ') : ' (stay)'];
@@ -480,7 +499,7 @@ function stateInspector(box, n) {
     box.append(h('p', { class: 'hint' }, 'A transition to “' + n.id + '” restores what was active in “' + (n.parent.id || 'the root') + '” when it was last exited. The default target is used before any history exists.'));
   }
   const allow = SXML.CHILDREN[n.kind];
-  if (allow.includes('datamodel') && (root || n.datamodels.length)) scriptCards(box, n, n.datamodels, 'datamodel', 'DATAMODEL · PROLOG SOURCE');
+  if (allow.includes('datamodel')) datamodelField(box, n);
   if (allow.includes('onentry')) scriptCards(box, n, n.onentry, 'onentry', 'ENTRY ACTIONS');
   if (allow.includes('onexit')) scriptCards(box, n, n.onexit, 'onexit', 'EXIT ACTIONS');
 
@@ -522,9 +541,6 @@ function stateInspector(box, n) {
       if (s.type === 'statechart' && s.body.trim()) card.append(h('div', { class: 'insp-actions' }, h('button', { onclick: () => openNested(s.key) }, 'Open nested chart ↗')));
       box.append(card);
     }
-  }
-  if (allow.includes('datamodel') && !root && !n.datamodels.length) {
-    box.append(h('div', { class: 'section-title' }, 'DATAMODEL', h('button', { onclick: () => edit(() => { selEl = SXML.addItem(model.doc, n.el, 'datamodel'); }) }, '+ Add')));
   }
 
   if (!root) box.append(h('div', { class: 'insp-actions', style: 'margin-top:18px' }, h('button', { class: 'danger', onclick: removeSelected }, 'Delete ' + n.kind)));
@@ -879,8 +895,42 @@ function renderFiles() {
     if (p.parent) b.title = 'Nested chart of ' + p.parent.name + ' · edits are stored back into it';
     b.setAttribute('aria-pressed', String(i === current));
     b.onclick = () => selectFile(i);
-    $('files').append(b);
+    const remove = h('button', {
+      class: 'file-remove', title: 'Remove ' + p.name + ' from the Explorer',
+      'aria-label': 'Remove ' + p.name + ' from the Explorer',
+      onclick: () => removeFile(p)
+    });
+    remove.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';
+    $('files').append(h('div', { class: 'file-row' + (i === current ? ' active' : '') }, b, remove));
   });
+}
+
+function removeFile(file) {
+  const active = programs[current];
+  const removed = new Set([file]);
+  // Nested documents are views into their parent, so close those views too.
+  for (const p of programs) if (removed.has(p.parent)) removed.add(p);
+  const unsaved = [...removed].some(p => p.source != null &&
+    (p === active && loadedIndex === current ? editor.getValue() : p.draft != null ? p.draft : p.source) !== p.source);
+  if (unsaved && !confirm('Remove “' + file.name + '” from the Explorer and discard unsaved edits' + (removed.size > 1 ? ' in it and its nested charts' : '') + '?')) return;
+  const oldIndex = current;
+  const activeRemoved = removed.has(active);
+  if (activeRemoved) {
+    clearTimeout(parseTimer);
+    if (run.node) stopRun('Engine stopped.');
+    loadedIndex = -1;
+  }
+  for (let i = programs.length - 1; i >= 0; i--) if (removed.has(programs[i])) programs.splice(i, 1);
+  if (!programs.length) programs.push({ name: 'untitled-1.xml', source: SXML.blank() });
+  if (activeRemoved) {
+    current = -1;
+    selectFile(Math.min(oldIndex, programs.length - 1));
+  } else {
+    const wasLoaded = loadedIndex === oldIndex;
+    current = programs.indexOf(active);
+    if (wasLoaded) loadedIndex = current;
+    renderFiles();
+  }
 }
 
 async function selectFile(index) {
@@ -896,7 +946,8 @@ async function selectFile(index) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       p.source = (await res.text()).replace(/\r\n?/g, '\n');
     } catch (e) { p.source = SXML.blank(); status('Could not load ' + p.name + ' (' + e.message + ')'); }
-    if (current !== index) return;
+    if (programs[current] !== p) return;
+    index = current;
   }
   clearTimeout(parseTimer);
   loadedIndex = index;

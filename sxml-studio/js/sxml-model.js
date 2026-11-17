@@ -183,6 +183,7 @@
         else if (seen.has(n.id)) add('error', 'Duplicate id "' + n.id + '".', n.key);
         else seen.set(n.id, n);
       }
+      if (n.datamodels.length > 1) add('error', label(n) + ' may have at most one <datamodel>.', n.key);
       const realChildren = n.children.filter(c => c.kind !== 'history');
       if (n.kind === 'statechart' || n.kind === 'state') {
         if (realChildren.length) {
