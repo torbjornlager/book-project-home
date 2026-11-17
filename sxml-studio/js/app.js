@@ -6,7 +6,53 @@ const EXAMPLES = [
   '07 deferred-events', '08 closure', '09 gcd', '10 shared-database', '11 boxshop-1', '12 boxshop-2',
   '13 spawn-actor', '14 spawn-toplevel', '15 spawn-server', '16 spawn-supervisor', '17 spawn-statechart'
 ];
-const programs = EXAMPLES.map(name => ({ name: name + '.xml', url: 'examples/' + encodeURIComponent(name + '.xml'), source: null }));
+const EXPLORER_STORAGE = 'trinity-sxml-studio.explorer.v1';
+const examplePrograms = () => EXAMPLES.map(name => ({ name: name + '.xml', url: 'examples/' + encodeURIComponent(name + '.xml'), source: null }));
+
+function restoreExplorer() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(EXPLORER_STORAGE));
+    if (!saved || !Array.isArray(saved.files) || !saved.files.length) return null;
+    const urls = new Set(examplePrograms().map(p => p.url));
+    const files = saved.files.map(p => {
+      if (!p || typeof p.name !== 'string' || (p.url != null && !urls.has(p.url)) ||
+          (p.source != null && typeof p.source !== 'string') ||
+          (p.draft != null && typeof p.draft !== 'string') || (!p.url && p.source == null)) throw new Error('Invalid Explorer data');
+      return { name: p.name, url: p.url, source: p.source ?? null, draft: p.draft ?? null, spawnIndex: p.spawnIndex };
+    });
+    saved.files.forEach((p, i) => {
+      if (p.parentIndex == null) return;
+      if (!Number.isInteger(p.parentIndex) || p.parentIndex < 0 || p.parentIndex >= i || !Number.isInteger(p.spawnIndex)) throw new Error('Invalid nested document');
+      files[i].parent = files[p.parentIndex];
+    });
+    return { files, selected: Number.isInteger(saved.selected) && files[saved.selected] ? saved.selected : 0 };
+  } catch (e) {
+    console.warn('Could not restore the Explorer:', e);
+    return null;
+  }
+}
+
+const restoredExplorer = restoreExplorer();
+const programs = restoredExplorer ? restoredExplorer.files : examplePrograms();
+
+function saveExplorer() {
+  try {
+    const files = programs.map((p, i) => {
+      const draft = i === current && loadedIndex === current ? editor.getValue() : p.draft;
+      // Reload unchanged bundled sources from the server so example updates stay visible.
+      const modified = draft != null && draft !== p.source;
+      return { name: p.name, url: p.url, source: p.url && !modified ? null : p.source,
+        draft: modified ? draft : null, parentIndex: p.parent ? programs.indexOf(p.parent) : null,
+        spawnIndex: p.spawnIndex };
+    });
+    localStorage.setItem(EXPLORER_STORAGE, JSON.stringify({ files, selected: Math.max(0, current) }));
+    return true;
+  } catch (e) {
+    console.warn('Could not save the Explorer:', e);
+    status('Browser storage unavailable · Explorer changes will not survive reload');
+    return false;
+  }
+}
 
 /* ---------- source editor ---------- */
 
@@ -119,6 +165,7 @@ function adopt(doc, text, opts) {
   updateChrome();
   if (wasRunning) stopRun('Source changed · run the chart again to apply');
   else if (!run.pid) status(model.problems.some(p => p.severity === 'error') ? 'Problems found · see the list under the diagram' : 'Ready · ' + programs[current].name);
+  saveExplorer();
 }
 
 /* Write the (edited) DOM back to the editor and refresh the views. */
@@ -173,6 +220,7 @@ editor.on('change', () => {
   clearTimeout(parseTimer);
   parseTimer = setTimeout(() => reparse(), 280);
   updateChrome();
+  saveExplorer();
 });
 
 /* ---------- selection ---------- */
@@ -934,6 +982,7 @@ function renameFile(file, button) {
       file.name = prefix + name;
     }
     finished = true;
+    saveExplorer();
     renderFiles();
     updateChrome();
     const row = $('files').children[programs.indexOf(file)];
@@ -988,6 +1037,7 @@ function removeFile(file) {
     const wasLoaded = loadedIndex === oldIndex;
     current = programs.indexOf(active);
     if (wasLoaded) loadedIndex = current;
+    saveExplorer();
     renderFiles();
   }
 }
@@ -1021,6 +1071,7 @@ async function selectFile(index) {
   reparse({ fit: true });
   showSide('inspector');
   runControls();
+  saveExplorer();
 }
 
 $('new').onclick = () => {
@@ -1042,7 +1093,7 @@ function download(name, text, type) {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$('save').onclick = () => { download(programs[current].name.replace(/^↳ /, ''), editor.getValue(), 'application/xml;charset=utf-8'); programs[current].source = editor.getValue(); updateChrome(); };
+$('save').onclick = () => { download(programs[current].name.replace(/^↳ /, ''), editor.getValue(), 'application/xml;charset=utf-8'); programs[current].source = editor.getValue(); updateChrome(); saveExplorer(); };
 
 $('export').onclick = async () => {
   if (!diagram.geo) return;
@@ -1125,5 +1176,6 @@ window.addEventListener('pagehide', disposeNode);
 window.addEventListener('beforeunload', e => { if (programs.some(p => p.source != null && (p === programs[current] ? editor.getValue() : p.draft != null ? p.draft : p.source) !== p.source)) { e.preventDefault(); e.returnValue = ''; } });
 
 setView('split');
-const wanted = EXAMPLES.findIndex(n => decodeURIComponent(location.hash.slice(1)).startsWith(n.slice(0, 2)) && location.hash.length > 2);
-selectFile(wanted >= 0 ? wanted : 0);
+const wanted = examplePrograms().find(p => decodeURIComponent(location.hash.slice(1)).startsWith(p.name.slice(0, 2)) && location.hash.length > 2);
+const wantedIndex = wanted ? programs.findIndex(p => p.url === wanted.url) : -1;
+selectFile(wantedIndex >= 0 ? wantedIndex : restoredExplorer ? restoredExplorer.selected : 0);

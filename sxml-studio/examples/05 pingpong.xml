@@ -8,9 +8,6 @@
     between volleys, so startup returns and halt remains available in a
     browser worker as well as on a native node. No outside input is needed.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="Start">

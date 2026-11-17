@@ -13,9 +13,6 @@
     ServerOwner, so the server is cleaned up together with the state that
     owns it.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="ServerOwner">

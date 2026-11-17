@@ -13,9 +13,6 @@
     the supervisor and its still-running worker as ordinary state-exit
     cleanup.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="SupervisorOwner">

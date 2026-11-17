@@ -11,9 +11,6 @@
     statechart on one side and a bare receive-loop actor on the other,
     talking by message.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="Pingpong">

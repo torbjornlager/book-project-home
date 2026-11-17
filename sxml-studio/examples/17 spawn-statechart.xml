@@ -14,9 +14,6 @@
     event, and waits for the monitored notification down(Pid, Ref, Reason)
     before entering Final.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="NestedOwner">

@@ -9,9 +9,6 @@
     Internal events still broadcast to every parallel region, not just the
     region that raised them.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="Start">

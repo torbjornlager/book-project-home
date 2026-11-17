@@ -12,8 +12,6 @@
     the form pattern: a dispatcher of eventless transitions together with
     timed `after` transitions.
 
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="form">

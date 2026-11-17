@@ -19,6 +19,13 @@ Web Workers need HTTP, so serve this folder with any static server:
 
 `index.html#03` opens example 03 directly.
 
+The Explorer remembers filenames, removed entries and local source edits across
+reloads using this browser’s local storage. Double-click a filename to rename it;
+Enter saves and Escape cancels. The trash icon removes a file from the Explorer.
+These changes apply to this browser and site address. “Save source” still downloads
+an XML file for keeping a separate copy. Unchanged bundled examples are loaded
+afresh so updates to them remain available.
+
 ## What it does
 
 - Draws the chart in the book's notation: nested states, dashed lines between

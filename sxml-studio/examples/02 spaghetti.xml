@@ -11,9 +11,6 @@
     configuration moves through the tree; event h reaches the final
     state f.
 
-    Run the chart and send it events from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="s0">

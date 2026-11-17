@@ -11,9 +11,6 @@
     finishes. It is the statechart-level view of getting answers one at a
     time from a running goal.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="spawn-ask-collect">

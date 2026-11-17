@@ -13,9 +13,6 @@
     local and shared knowledge combine, and how a local definition takes
     precedence over a shared one.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
-
 -->
 
 <statechart version="0.2" initial="start">

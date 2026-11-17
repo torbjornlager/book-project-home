@@ -13,8 +13,6 @@
     guards that run real Prolog queries, and the chart's own logical
     database used as working memory.
 
-    Run the chart from the Queries menu.
-    Keep the Logger open and SXML trace selected.
     
 -->
 
