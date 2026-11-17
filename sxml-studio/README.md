@@ -101,3 +101,7 @@ so a smaller spacing value does not guarantee a proportionally smaller chart.
   the two charts should not share state ids.
 - When a state has several transitions with the same target, the one
   highlighted as fired is inferred from the triggering event.
+
+In Split view, **Layout** also changes the pane arrangement: vertical diagrams
+place the source beside the chart; horizontal diagrams place it below. Drag the
+divider to resize either arrangement. Settings is available in the side-panel tab.

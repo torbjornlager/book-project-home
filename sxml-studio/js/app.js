@@ -204,6 +204,7 @@ function adopt(doc, text, opts) {
   selEl = entry.el; selKey = entry.key;
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
   diagram.direction = model.layout && model.layout['@direction'] === 'DOWN' ? 'DOWN' : 'RIGHT';
+  syncSplitOrientation();
   $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout ↓' : 'Layout →';
   $('direction').title = diagram.direction === 'RIGHT' ? 'Arrange the diagram vertically' : 'Arrange the diagram horizontally';
   showProblems(model.problems);
@@ -1130,10 +1131,6 @@ async function selectFile(index) {
   saveExplorer();
 }
 
-$('settings-open').onclick = () => {
-  showSide('settings');
-  $('tab-settings').focus();
-};
 $('restore-examples').onclick = () => {
   const present = new Set(programs.filter(p => !p.parent).map(p => p.url));
   const missing = examplePrograms().filter(p => !present.has(p.url));
@@ -1202,6 +1199,25 @@ $('direction').onclick = () => {
   status((next === 'DOWN' ? 'Top-down layout' : 'Left-to-right layout') + (had ? ' · the manual arrangement was dropped, because it does not carry over (Undo restores it)' : ''));
 };
 
+function syncSplitOrientation() {
+  const vertical = diagram.direction === 'DOWN';
+  const layout = vertical ? 'vertical' : 'horizontal';
+  if (document.body.dataset.layout !== layout) {
+    document.body.dataset.layout = layout;
+    requestAnimationFrame(() => editor.refresh());
+  }
+  $('source-divider').setAttribute('aria-orientation', vertical ? 'vertical' : 'horizontal');
+  requestAnimationFrame(updateSourceDividerValue);
+}
+function updateSourceDividerValue() {
+  const vertical = diagram.direction === 'DOWN';
+  const content = document.querySelector('.editor-content');
+  const pane = document.querySelector('.source-pane');
+  const total = vertical ? content.clientWidth : content.clientHeight;
+  const size = vertical ? pane.clientWidth : pane.clientHeight;
+  if (total && document.body.dataset.view === 'split') $('source-divider').setAttribute('aria-valuenow', Math.round(size / total * 100));
+}
+
 function setView(view) {
   document.body.dataset.view = view;
   for (const b of document.querySelectorAll('.view-switch button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
@@ -1236,18 +1252,30 @@ for (const [id, property, direction, min, max] of [['left-divider', '--left', 1,
   divider.onkeydown = e => { if (['ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); width = get(); resize(e.key === 'ArrowRight' ? 15 : -15); } };
 }
 {
-  const divider = $('source-divider'); let start = 0, height = 0;
+  const divider = $('source-divider'); let start = 0, size = 0;
   const pane = document.querySelector('.source-pane');
+  const vertical = () => diagram.direction === 'DOWN';
+  const currentSize = () => vertical() ? pane.clientWidth : pane.clientHeight;
+  const coordinate = e => vertical() ? e.clientX : e.clientY;
   const set = px => {
-    const total = document.querySelector('.editor-pane').clientHeight;
-    document.documentElement.style.setProperty('--source', Math.max(60, Math.min(total - 220, px)) + 'px');
+    const content = document.querySelector('.editor-content');
+    const total = vertical() ? content.clientWidth : content.clientHeight;
+    const minimum = Math.min(vertical() ? 120 : 60, total * .3);
+    const chartMinimum = Math.min(vertical() ? 200 : document.querySelector('.chart-toolbar').offsetHeight + 100, total * .5);
+    const value = Math.max(minimum, Math.min(total - chartMinimum - 5, px));
+    document.documentElement.style.setProperty(vertical() ? '--source-width' : '--source-height', value / total * 100 + '%');
+    updateSourceDividerValue();
     editor.refresh();
   };
-  divider.onpointerdown = e => { start = e.clientY; height = pane.clientHeight; divider.setPointerCapture(e.pointerId); };
-  divider.onpointermove = e => { if (divider.hasPointerCapture(e.pointerId)) set(height - (e.clientY - start)); };
+  divider.onpointerdown = e => { start = coordinate(e); size = currentSize(); divider.setPointerCapture(e.pointerId); };
+  divider.onpointermove = e => { if (divider.hasPointerCapture(e.pointerId)) set(size - (coordinate(e) - start)); };
   divider.onpointerup = e => { if (divider.hasPointerCapture(e.pointerId)) divider.releasePointerCapture(e.pointerId); };
-  divider.onkeydown = e => { if (['ArrowUp', 'ArrowDown'].includes(e.key)) { e.preventDefault(); set(pane.clientHeight + (e.key === 'ArrowUp' ? 20 : -20)); } };
+  divider.onkeydown = e => {
+    const keys = vertical() ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown'];
+    if (keys.includes(e.key)) { e.preventDefault(); set(currentSize() + (e.key === keys[1] ? -20 : 20)); }
+  };
 }
+
 new ResizeObserver(() => { if (!diagram.userMoved) diagram.fit(); }).observe($('chart'));
 window.addEventListener('pagehide', disposeNode);
 window.addEventListener('beforeunload', e => { if (programs.some(p => p.source != null && (p === programs[current] ? editor.getValue() : p.draft != null ? p.draft : p.source) !== p.source)) { e.preventDefault(); e.returnValue = ''; } });

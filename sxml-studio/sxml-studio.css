@@ -1,5 +1,5 @@
 /* SXML Studio additions on top of the Trinity Studio stylesheet. */
-:root{--right:380px;--source:36%;--state:#222a2e;--state-compound:#1b2225;--stroke:#62757a;--edge:#9fb1b4;--note:#1e2528}
+:root{--right:380px;--source-height:36%;--source-width:45%;--state:#222a2e;--state-compound:#1b2225;--stroke:#62757a;--edge:#9fb1b4;--note:#1e2528}
 body.light{--state:#fff;--state-compound:#f6f9f7;--stroke:#6f8379;--edge:#4c6258;--note:#fbfcf7}
 body{overflow:hidden}
 .studio{overflow:hidden;grid-template-rows:minmax(0,1fr)}
@@ -25,7 +25,8 @@ body{overflow:hidden}
 .view-switch button:first-child{border-radius:5px 0 0 5px}
 .view-switch button:last-child{border-radius:0 5px 5px 0}
 .view-switch button[aria-pressed=true]{background:var(--accent-bg);color:var(--accent)}
-.chart-pane{flex:1 1 0;min-height:120px;display:flex;flex-direction:column;background:var(--editor)}
+.editor-content{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;overflow:hidden}
+.chart-pane{flex:1 1 0;min-width:0;min-height:120px;display:flex;flex-direction:column;background:var(--editor)}
 .chart-toolbar{display:flex;align-items:center;gap:5px;padding:8px 10px;flex:none;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .chart-toolbar button{font-size:11px;padding:4px 7px;background:transparent}
 .chart-toolbar button[aria-pressed=true]{background:var(--accent-bg);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
@@ -43,8 +44,12 @@ body{overflow:hidden}
 .problems button.warning::before{color:#d6b98d}
 .hdivider{height:5px;flex:none;background:var(--bg);border-top:1px solid var(--line);cursor:row-resize;touch-action:none}
 .hdivider:hover,.hdivider:focus{background:var(--accent)}
-.source-pane{flex:0 0 var(--source);min-height:60px;display:flex;flex-direction:column;overflow:hidden}
+.source-pane{flex:0 0 var(--source-height);min-width:0;min-height:60px;display:flex;flex-direction:column;overflow:hidden}
 .source-pane .code-wrap{min-height:0}
+body[data-layout=vertical] .editor-content{flex-direction:row}
+body[data-layout=vertical][data-view=split] .source-pane{flex-basis:var(--source-width);min-height:0}
+body[data-layout=vertical] .hdivider{width:5px;height:auto;border-top:0;border-left:1px solid var(--line);cursor:col-resize}
+
 .CodeMirror{font-size:12px;line-height:1.6}
 .CodeMirror-lines{padding:8px 0}
 .cm-s-default .cm-tag{color:var(--accent)}
@@ -118,7 +123,6 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .log .note{color:var(--muted);font-style:italic}
 .log.no-trace .trace{display:none}
 @media(max-width:1050px){:root{--right:330px}}
-@media(max-width:700px){.chart-pane{height:420px;flex:none}.source-pane{flex:none;height:300px}}
 .chart-toolbar button.primary{background:var(--accent-bg);color:var(--accent)}
 #files button.nested{padding-left:34px}
 #files button.nested::before{content:''}
