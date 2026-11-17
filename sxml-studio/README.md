@@ -5,6 +5,14 @@ statecharts (book chapter "The statechart behavior", Appendix C).
 
 ## Run it
 
+Open the [hosted SXML Studio](https://trinity.elfenbenstornet.se/sxml-studio/),
+or [start with example 03](https://trinity.elfenbenstornet.se/sxml-studio/#03).
+It is served by this repository’s existing GitHub Pages site. The app is entirely
+static: its editor, Web Worker, bundled WebAssembly engine and Prolog sources
+are loaded from this directory. No build step or Prolog server is needed.
+
+For local use:
+
 Web Workers need HTTP, so serve this folder with any static server:
 
     python3 -m http.server 8080      # then open http://localhost:8080/
