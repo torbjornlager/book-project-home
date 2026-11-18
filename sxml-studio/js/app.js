@@ -107,8 +107,6 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
   onOpen(key) { if (model.nested.has(key)) { openNested(key); return; } select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
   onConnect(source, target) { connect(source, target); },
-  onMove(key, dx, dy) { moveState(key, dx, dy); },
-  onRetarget(key, end, index, stateKey) { retarget(key, end, index, stateKey); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -187,14 +185,16 @@ $('layout-experiments-reset').onclick = () => {
 };
 syncSpacingControls();
 
-function positionSpacingPopover() {
-  const popover = $('spacing-popover');
+function positionControlPopover(popoverId, buttonId) {
+  const popover = $(popoverId);
   if (!popover.matches(':popover-open')) return;
-  const button = $('spacing-toggle').getBoundingClientRect();
+  const button = $(buttonId).getBoundingClientRect();
   const panel = popover.getBoundingClientRect();
   popover.style.left = Math.max(12, Math.min(button.left, window.innerWidth - panel.width - 12)) + 'px';
   popover.style.top = Math.max(12, Math.min(button.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
 }
+function positionSpacingPopover() { positionControlPopover('spacing-popover', 'spacing-toggle'); }
+function positionAppearancePopover() { positionControlPopover('appearance-popover', 'appearance-toggle'); }
 $('spacing-popover').addEventListener('toggle', event => {
   if (event.newState === 'open') {
     syncSpacingControls();
@@ -204,6 +204,68 @@ $('spacing-popover').addEventListener('toggle', event => {
 });
 window.addEventListener('resize', positionSpacingPopover);
 $('spacing-popover').querySelector('details').addEventListener('toggle', positionSpacingPopover);
+
+const APPEARANCE_STORAGE = 'trinity-sxml-studio.appearance.v1';
+const APPEARANCE_RANGES = ['lineWidth', 'arrowSize', 'borderWidth', 'labelSize', 'labelOpacity'];
+try { diagram.applyAppearance(JSON.parse(localStorage.getItem(APPEARANCE_STORAGE))); }
+catch (e) { console.warn('Could not restore diagram appearance:', e); }
+function syncAppearanceControls() {
+  const a = diagram.appearance;
+  for (const key of APPEARANCE_RANGES) {
+    $('appearance-' + key).value = a[key];
+    $('appearance-' + key + '-value').textContent = key === 'labelOpacity' ? Math.round(a[key] * 100) + '%' : a[key] + ' px';
+  }
+  $('appearance-theme-color').checked = !a.lineColor;
+  $('appearance-color').disabled = !a.lineColor;
+  const themeColor = getComputedStyle(diagram.svg).getPropertyValue('--edge').trim();
+  $('appearance-color').value = a.lineColor || (/^#[0-9a-f]{6}$/i.test(themeColor) ? themeColor : '#9fb1b4');
+}
+function saveAppearance() {
+  try { localStorage.setItem(APPEARANCE_STORAGE, JSON.stringify(diagram.appearance)); }
+  catch (e) { console.warn('Could not save diagram appearance:', e); }
+}
+let appearanceTimer = null, appearanceGeneration = 0;
+function changeAppearance(settings) {
+  const old = diagram.appearance;
+  diagram.applyAppearance(settings);
+  syncAppearanceControls(); saveAppearance();
+  if (old.labelSize !== diagram.appearance.labelSize || old.lineWidth !== diagram.appearance.lineWidth) {
+    clearTimeout(appearanceTimer);
+    const generation = ++appearanceGeneration;
+    appearanceTimer = setTimeout(async () => {
+      appearanceTimer = null;
+      if (!model || $('chart').classList.contains('stale')) return;
+      $('appearance-status').textContent = 'Updating diagram…';
+      try {
+        await diagram.setModel(model, { preserveViewport: true });
+        if (generation === appearanceGeneration) {
+          $('appearance-status').textContent = 'Updated. Use Fit if needed.';
+          showSpacingSize();
+        }
+      } catch (e) {
+        if (generation === appearanceGeneration) {
+          const previous = diagram.geo && diagram.geo.appearance;
+          if (previous) {
+            diagram.applyAppearance(Object.assign({}, diagram.appearance, { lineWidth: previous.lineWidth, labelSize: previous.labelSize }));
+            syncAppearanceControls(); saveAppearance();
+          }
+          $('appearance-status').textContent = 'Could not update layout; previous text size and line thickness restored.';
+        }
+        console.warn('Appearance layout failed:', e);
+      }
+      requestAnimationFrame(positionAppearancePopover);
+    }, 120);
+  } else if (!appearanceTimer) $('appearance-status').textContent = '';
+}
+for (const key of APPEARANCE_RANGES) $('appearance-' + key).oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { [key]: Number(e.target.value) }));
+$('appearance-color').oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.value }));
+$('appearance-theme-color').onchange = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.checked ? null : $('appearance-color').value }));
+$('appearance-reset').onclick = () => changeAppearance(SXMLDiagram.APPEARANCE_DEFAULTS);
+$('appearance-popover').addEventListener('toggle', event => {
+  if (event.newState === 'open') { syncAppearanceControls(); positionAppearancePopover(); }
+});
+window.addEventListener('resize', positionAppearancePopover);
+syncAppearanceControls();
 
 const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
 const splitSizes = { horizontal: 36, vertical: 45 };
@@ -455,61 +517,6 @@ function connect(sourceKey, targetKey) {
   status('Transition ' + s.id + ' → ' + t.id + ' added · give it an event, guard or delay');
 }
 
-/* Dragging a state rearranges it among its siblings.  The arrangement is a
-   set of position hints for the layout engine, kept in a <layout> comment. */
-function moveState(key, dx, dy) {
-  if (!guard()) return;
-  const n = model.byKey.get(key) || model.items.get(key);
-  const parent = n ? (n.parent || n.owner) : null;
-  if (!parent) return;
-  const boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
-  const layout = Object.assign({}, model.layout || {});
-  const rootNote = parent === model.root && n.kind === 'datamodel';
-  let hint = {};
-  if (rootNote) {
-    /* A datamodel note of the root has no edges, so it simply stays where it is dropped. */
-    const b = boxes.get(key);
-    hint = Object.assign({}, layout['#root'] || {});
-    hint[key] = [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))];
-  } else {
-    const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
-    for (const k of siblings) { const b = boxes.get(k); if (b && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
-    for (const k in layout[parent.key] || {}) if (parent === model.root && k.includes('/datamodel')) hint[k] = layout[parent.key][k];
-    if (!hint[key]) return;
-    hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
-  }
-  layout[parent.key] = hint;
-  SXML.setLayout(model.doc, layout);
-  selEl = n.el;
-  /* Rearranging states changes the chart's size, so refit.  A note is placed
-     freely: keep the view still, or the note seems not to have moved. */
-  diagram.userMoved = rootNote;
-  commit();
-  status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
-}
-
-/* Dragging an end of a transition onto a state: the arrowhead end changes
-   the target, the tail end moves the <go> element to another source state. */
-function retarget(key, end, index, stateKey) {
-  if (!guard()) return;
-  const t = model.items.get(key), n = model.byKey.get(stateKey);
-  if (!t || t.kind !== 'go' || !n) return;
-  if (end === 'head') {
-    if (!n.id) return;
-    if (t.to[index] === n.id) return;
-    const to = t.to.slice(); to[index] = n.id;
-    t.el.setAttribute('to', to.join(' '));
-    status('Transition now goes to ' + n.id);
-  } else {
-    if (n === t.source) return;
-    if (!['state', 'parallel'].includes(n.kind)) { status('A transition can only start from a state or a parallel state'); return; }
-    SXML.insertChild(n.el, t.el);
-    status('Transition moved to ' + n.id + ' · it is now last in that state\'s priority order');
-  }
-  selEl = t.el;
-  commit();
-}
-
 function removeSelected() {
   if (!guard()) return;
   const entry = entryFor(selEl);
@@ -705,7 +712,7 @@ function stateInspector(box, n) {
         h('button', { class: 'mini', title: 'Higher priority', disabled: i === 0, onclick: () => edit(() => SXML.move(t.el, -1)) }, '↑'),
         h('button', { class: 'mini', title: 'Lower priority', disabled: i === n.transitions.length - 1, onclick: () => edit(() => SXML.move(t.el, 1)) }, '↓')));
     });
-    if (!n.transitions.length) box.append(h('p', { class: 'hint' }, 'None. Drag from the blue handle on the selected state to another state, or use + Add for a reaction that stays in this state.'));
+    if (!n.transitions.length) box.append(h('p', { class: 'hint' }, 'None. Use the Transition tool to connect states, or use + Add for a reaction that stays in this state.'));
   }
 
   if (allow.includes('defer')) {
@@ -1256,8 +1263,8 @@ $('save').onclick = () => { download(programs[current].name.replace(/^↳ /, '')
 
 $('export').onclick = async () => {
   if (!diagram.geo) return;
-  const cs = getComputedStyle(document.body);
-  const vars = ['--fg', '--muted', '--line', '--accent', '--accent-bg', '--blue', '--editor', '--raised', '--state', '--state-compound', '--stroke', '--edge', '--note'];
+  const cs = getComputedStyle(diagram.svg);
+  const vars = ['--fg', '--muted', '--line', '--accent', '--accent-bg', '--blue', '--editor', '--raised', '--state', '--state-compound', '--stroke', '--edge', '--note', '--transition-width', '--state-border-width', '--transition-label-size', '--transition-label-opacity', '--edge-hit-width'];
   let css = 'svg{' + vars.map(v => v + ':' + cs.getPropertyValue(v).trim()).join(';') + ';background:' + cs.getPropertyValue('--editor').trim() + '}\n';
   try { css += (await (await fetch('chart.css')).text()).replace(/svg\.chart/g, 'svg'); } catch (e) { /* unstyled export */ }
   download(programs[current].name.replace(/\.\w+$/, '') + '.svg', diagram.exportSVG(css), 'image/svg+xml');
@@ -1316,7 +1323,20 @@ $('run-top').onclick = startChart;
 $('run-halt').onclick = haltChart;
 $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
-$('theme').onclick = () => { const light = document.body.classList.toggle('light'); $('theme').textContent = light ? 'Dark mode' : 'Light mode'; editor.refresh(); };
+function updateUI(settings) {
+  const preferences = SXMLUI.apply(settings);
+  $('ui-font-size').value = preferences.fontSize;
+  $('ui-font-size-value').textContent = preferences.fontSize + '%';
+  $('ui-font-weight').value = preferences.fontWeight;
+  syncAppearanceControls();
+  editor.refresh();
+  requestAnimationFrame(() => { positionSpacingPopover(); positionAppearancePopover(); });
+}
+$('ui-font-size').oninput = event => updateUI(Object.assign({}, SXMLUI.preferences, { fontSize: Number(event.target.value) }));
+$('ui-font-weight').onchange = event => updateUI(Object.assign({}, SXMLUI.preferences, { fontWeight: Number(event.target.value) }));
+$('ui-font-reset').onclick = () => updateUI(Object.assign({}, SXMLUI.preferences, { fontSize: 100, fontWeight: 500 }));
+$('theme').onclick = () => updateUI(Object.assign({}, SXMLUI.preferences, { theme: SXMLUI.preferences.theme === 'light' ? 'dark' : 'light' }));
+updateUI(SXMLUI.preferences);
 
 /* resizable panes */
 for (const [id, property, direction, min, max] of [['left-divider', '--left', 1, 120, 340], ['right-divider', '--right', -1, 280, 640]]) {

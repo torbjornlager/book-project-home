@@ -28,6 +28,24 @@ afresh so updates to them remain available.
 Use **Settings → Restore missing examples** to bring removed bundled examples back.
 Existing files, renamed examples and edits are preserved.
 
+Light mode is the default. The top-bar theme button switches between light and
+dark, and remembers the choice. **Settings → UI typography** adjusts interface
+font size (90–150%) and weight (Light through Bold), including the source editor
+and trace output. **Reset fonts** restores 100% and Medium (the default). These preferences
+are remembered across reloads; diagram text has its own Appearance controls.
+
+The toolbar’s **Appearance ▾** dropdown adjusts transition thickness and colour,
+arrowhead size, state border thickness, transition label size, and label background
+opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
+restores the original styling. These preferences are remembered in this browser
+and included in **Save diagram** SVG downloads. Appearance remains available while
+a chart runs, with selection and execution highlights kept distinct. Label size
+and transition thickness recalculate the layout; use **Fit** if needed.
+**Label background** defaults to transparent (0%) and controls the backing behind transition text, from fully
+transparent to solid, including highlighted labels; the text itself stays opaque.
+Active compound and parallel states highlight their headers with the same green
+background as active atomic states, while keeping their child areas neutral.
+
 The diagram toolbar’s **Spacing ▾** dropdown provides experimental horizontal and vertical spacing
 sliders (0–100%, defaulting to 50% on both axes). **Reset spacing** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable
@@ -64,23 +82,15 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   other. A graphical edit rewrites only the lines it concerns: every
   untouched element, comment and blank line keeps its source text exactly.
   Undo/Redo covers both.
-- Editing: add state / parallel / final / history inside the selection, drag
-  the blue handle (or use the Transition tool, key T) from one state to
-  another, edit everything in the Inspector, reorder transitions (document
-  order is priority), rename a state (references follow), Delete removes a
-  state together with transitions that target it.
-- Retargeting: drag the arrowhead end of a transition onto another state to
-  change its target, or the tail end to move it to another source state
-  (select the transition to see the two end handles). A drag on the middle
-  of a line does nothing.
-- Arrangement: drag a state to move it among its siblings. The drop position
-  is a hint (which layer, which order) for the layout engine, not an exact
-  pixel position, so edges are always re-routed tidily. Hints are saved in a
-  trailing `<!-- <layout> ... -->` comment, which the interpreter ignores;
-  the Auto button removes it. A `<datamodel>` note of the root sits beside
-  the chart by default and can be dragged anywhere; it stays exactly where it
-  is dropped. The layout direction is saved in the same comment; switching
-  direction drops the arrangement, which does not carry over.
+- Editing: add state / parallel / final / history inside the selection, use the
+  Transition tool (key T) to connect states, and edit in the Inspector. Transition
+  order determines priority. Renaming a state updates references; Delete removes
+  it together with transitions that target it.
+- Dragging existing states, transitions or notes has no effect. To create a new
+  transition, explicitly select the Transition tool and drag between states.
+  Drag empty canvas to pan; scrolling and zooming remain available.
+- Existing arrangement hints in a trailing `<layout>` comment are still read.
+  **Auto** removes those hints. Layout direction is saved in the same comment.
 - Nested charts: the inline chart of a `<spawn type="statechart">` is drawn
   inside the state that owns it. Double-click it (or use the button in the
   Inspector) to open it as a document of its own; edits there are stored
@@ -109,8 +119,6 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 
 ## Known limits
 
-- Dragging sets order and layer, not exact coordinates, and a state cannot
-  be dragged into another parent (cut and paste in the source).
 - Changing an action or datamodel in the Inspector re-indents that one block;
   changing a state's type re-prints that state's start and end tags.
 - Inside the parent's diagram a nested chart is read-only; open it to edit.

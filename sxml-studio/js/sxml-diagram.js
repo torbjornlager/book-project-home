@@ -15,6 +15,18 @@
   const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 5;
   const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 8;
 
+  const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0 });
+  function normalizeAppearance(settings = {}) {
+    settings = settings || {};
+    const number = (key, min, max) => typeof settings[key] === 'number' && Number.isFinite(settings[key]) && settings[key] >= min && settings[key] <= max ? settings[key] : APPEARANCE_DEFAULTS[key];
+    return {
+      lineWidth: number('lineWidth', 0.5, 4),
+      lineColor: typeof settings.lineColor === 'string' && /^#[0-9a-f]{6}$/i.test(settings.lineColor) ? settings.lineColor.toLowerCase() : null,
+      arrowSize: number('arrowSize', 5, 16), borderWidth: number('borderWidth', 0.5, 3.5),
+      labelSize: number('labelSize', 8, 18), labelOpacity: number('labelOpacity', 0, 1)
+    };
+  }
+
   const ctx = document.createElement('canvas').getContext('2d');
   function width(text, font) { ctx.font = font; return Math.ceil(ctx.measureText(text).width); }
   const one = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
@@ -52,13 +64,15 @@
     return lines;
   }
 
-  function edgeLabel(t) {
+  function edgeLabel(t, appearance) {
+    const size = appearance.labelSize, lineHeight = size + 3;
+    const font = F_MONO.replace('11px', size + 'px');
     const trig = trigger(t), body = one(t.body);
     let lines = [];
     if (trig && body && (trig + ' / ' + body).length <= MAX_LABEL) lines = [trig + ' / ' + body];
     else { if (trig) lines.push(trig); if (body) lines.push('/ ' + body); }
     lines = lines.map(l => cut(l, MAX_LABEL));
-    return { lines, full: trig + (body ? ' / ' + body : ''), w: Math.max(0, ...lines.map(l => width(l, F_MONO))) + 10, h: lines.length * 14 + 4 };
+    return { lines, full: trig + (body ? ' / ' + body : ''), w: Math.max(0, ...lines.map(l => width(l, font))) + 10, h: lines.length * lineHeight + 4, lineHeight, baseline: size + 1.5 };
   }
 
   /* ---------- ELK graph ---------- */
@@ -69,7 +83,7 @@
     'elk.layered.crossingMinimization.strategy': 'INTERACTIVE'
   };
 
-  function toElk(model, direction, base, paddingPercent = 100) {
+  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS) {
     const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
     const hints = base ? model.layout : null;
@@ -162,12 +176,15 @@
         const target = m.byId.get(id);
         if (!target) return;
         const eid = t.key + '>' + i;
-        const lab = edgeLabel(t);
+        const lab = edgeLabel(t, appearance);
         const e = { id: eid, sources: [t.source.key], targets: [target.key] };
         if (lab.lines.length) e.labels = [{ id: eid + '/label', text: lab.full, width: lab.w, height: lab.h }];
         edges.push(e);
         info.set(eid, { type: 'edge', item: t, label: lab, historyDefault: t.source.kind === 'history' });
       });
+    }
+    for (const edge of edges) {
+      if (info.get(edge.id).type !== 'chain') edge.layoutOptions = Object.assign({}, edge.layoutOptions, { 'elk.edge.thickness': String(appearance.lineWidth) });
     }
     root.edges = edges;
     return { graph: root, info, rootNotes };
@@ -280,8 +297,9 @@
   }
 
   async function run(model, direction, extra, base) {
-    const { 'studio.nestedPadding': paddingPercent = 100, ...elkOptions } = extra || {};
-    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent);
+    const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, ...elkOptions } = extra || {};
+    const appearance = normalizeAppearance(appearanceSettings);
+    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), elkOptions) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -319,7 +337,7 @@
       boxes.set(note.id, b);
       width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24);
     }
-    return { boxes, edges, info, width, height };
+    return { boxes, edges, info, width, height, appearance };
   }
 
   /* ---------- SVG helpers ---------- */
@@ -366,10 +384,28 @@
     this.direction = 'RIGHT';
     this.horizontalSpacing = 50; this.verticalSpacing = 50;
     this.layoutExperiments = normalizeExperiments();
+    this.appearance = normalizeAppearance();
+    this.applyAppearance(this.appearance);
     this.seq = 0;
     this.userMoved = false;
     this._bind();
   }
+
+  Diagram.prototype.applyAppearance = function (settings) {
+    this.appearance = normalizeAppearance(settings);
+    const a = this.appearance, style = this.svg.style;
+    style.setProperty('--transition-width', a.lineWidth);
+    style.setProperty('--state-border-width', a.borderWidth);
+    style.setProperty('--transition-label-size', a.labelSize + 'px');
+    style.setProperty('--transition-label-opacity', a.labelOpacity);
+    style.setProperty('--edge-hit-width', Math.max(12, a.lineWidth + 8));
+    if (a.lineColor) style.setProperty('--edge', a.lineColor);
+    else style.removeProperty('--edge');
+    for (const marker of this.svg.querySelectorAll('marker')) {
+      marker.setAttribute('markerWidth', a.arrowSize);
+      marker.setAttribute('markerHeight', a.arrowSize);
+    }
+  };
 
   Diagram.prototype._apply = function () {
     this.view.setAttribute('transform', 'translate(' + this.tx + ',' + this.ty + ') scale(' + this.k + ')');
@@ -400,7 +436,7 @@
 
   Diagram.prototype.setModel = async function (model, opts) {
     const seq = ++this.seq;
-    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments)));
+    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance }));
     if (seq !== this.seq) return;
     const first = !this.geo;
     this.model = model; this.geo = geo;
@@ -456,6 +492,9 @@
         return;
       }
       el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
+      if (n.compound || n.kind === 'parallel') {
+        el('path', { class: 'state-header', d: 'M' + b.x + ' ' + (b.y + HEAD_H) + 'V' + (b.y + 13) + 'Q' + b.x + ' ' + b.y + ' ' + (b.x + 13) + ' ' + b.y + 'H' + (b.x + b.w - 13) + 'Q' + (b.x + b.w) + ' ' + b.y + ' ' + (b.x + b.w) + ' ' + (b.y + 13) + 'V' + (b.y + HEAD_H) + 'Z' }, grp);
+      }
       el('text', { class: 'name', x: b.x + b.w / 2, y: b.y + 17.5, 'text-anchor': 'middle' }, grp, n.id || '(no id)');
       el('line', { class: 'rule', x1: b.x, y1: b.y + HEAD_H, x2: b.x + b.w, y2: b.y + HEAD_H }, grp);
       inf.lines.forEach((l, i) => {
@@ -502,7 +541,7 @@
       if (lb && inf.label.lines.length) {
         const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
-        inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + 12.5 + i * 14 }, lg, t));
+        inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
         el('title', {}, lg, inf.label.full);
         entry.push(lg);
       }
@@ -569,7 +608,6 @@
       if (p) p.setAttribute('marker-end', 'url(#' + (f ? 'arrow-fired' : s ? 'arrow-sel' : 'arrow') + ')');
     }
     this.svg.classList.toggle('running', this.running === true);
-    this._handle();
   };
 
   Diagram.prototype.select = function (key) { this.selected = key; this._paint(); };
@@ -580,28 +618,6 @@
     this.activeNested = new Map();
     if (running && nested) for (const [k, ids] of nested) this.activeNested.set(k, new Set(ids));
     this._paint();
-  };
-
-  /* Connection handle on the selected state. */
-  Diagram.prototype._handle = function () {
-    const o = this.overlay;
-    if (!o) return;
-    while (o.firstChild) o.removeChild(o.firstChild);
-    if (this.running || this.readOnly) return;
-    for (const g of this.edgeGeo.get(this.selected) || []) {
-      const a = g.points[0], z = g.points[g.points.length - 1];
-      if (!g.fixedTail) el('title', {}, el('circle', { class: 'end', cx: a.x, cy: a.y, r: 5.5, 'data-end': 'tail', 'data-eidx': g.index }, o), 'Drag onto another state to move this transition there');
-      el('title', {}, el('circle', { class: 'end', cx: z.x, cy: z.y, r: 5.5, 'data-end': 'head', 'data-eidx': g.index }, o), 'Drag onto another state to change the target');
-    }
-    const n = this.model.byKey.get(this.selected);
-    if (!n || n.kind === 'statechart' || n.kind === 'final') return;
-    const b = this.geo.boxes.get(n.key);
-    if (!b) return;
-    const cx = b.x + b.w, cy = n.kind === 'history' ? b.y + HIST_R : b.y + Math.min(b.h / 2, 13);
-    const h = el('g', { class: 'handle', 'data-handle': n.key }, o);
-    el('circle', { cx, cy, r: 8 }, h);
-    el('path', { d: 'M' + (cx - 3.5) + ' ' + cy + ' h7 M' + (cx + 1) + ' ' + (cy - 3) + ' l3 3 l-3 3' }, h);
-    el('title', {}, h, 'Drag to another state to add a transition');
   };
 
   Diagram.prototype._point = function (ev) {
@@ -626,59 +642,27 @@
     svg.addEventListener('pointerdown', ev => {
       if (ev.button !== 0) return;
       svg.focus({ preventScroll: true });
-      const handle = ev.target.closest('[data-handle]');
       const stateEl = ev.target.closest('[data-state]');
-      const endEl = ev.target.closest('[data-end]');
-      const lineEl = ev.target.closest('.transition, .tlabel');
-      if (endEl) {
-        drag = this._retarget(this.selected, endEl.getAttribute('data-end'), +endEl.getAttribute('data-eidx'));
-        if (drag) { svg.setPointerCapture(ev.pointerId); ev.preventDefault(); return; }
-      }
-      if (lineEl && this.tool !== 'connect') {
-        drag = { type: 'edge', key: lineEl.getAttribute('data-key'), onLine: lineEl.classList.contains('transition'), x: ev.clientX, y: ev.clientY, at: this._point(ev), moved: false, target: ev.target };
-        svg.setPointerCapture(ev.pointerId);
-        return;
-      }
-      if (handle || (this.tool === 'connect' && stateEl && !this.running)) {
-        const key = handle ? handle.getAttribute('data-handle') : stateEl.getAttribute('data-state');
-        const b = this.geo.boxes.get(key);
-        const start = handle ? { x: b.x + b.w, y: b.y + Math.min(b.h / 2, 13) } : this._point(ev);
+      if (this.tool === 'connect' && stateEl && !this.running && !this.readOnly) {
+        const key = stateEl.getAttribute('data-state');
+        const start = this._point(ev);
         drag = { type: 'connect', source: key, start, line: el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay) };
         svg.setPointerCapture(ev.pointerId);
         ev.preventDefault();
         return;
       }
-      const noteEl = ev.target.closest('[data-note]');
-      const movable = (stateEl || noteEl) && !this.running && !this.readOnly && this.h.onMove;
-      drag = { type: movable ? 'move' : 'pan', key: movable ? (noteEl ? noteEl.getAttribute('data-note') : stateEl.getAttribute('data-state')) : null, x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
+      const object = ev.target.closest('[data-key]') || ev.target.closest('.edge');
+      // Dragging an existing object neither edits it nor pans the chart.
+      drag = { type: object ? 'object' : 'pan', x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
       svg.setPointerCapture(ev.pointerId);
     });
     svg.addEventListener('pointermove', ev => {
       if (!drag) return;
-      if (drag.type === 'edge') {
-        if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 5) return;
-        /* A drag that starts near one end of a line retargets that end; elsewhere it does nothing. */
-        let next = null;
-        if (drag.onLine && !this.running && !this.readOnly) {
-          let best = 26 / this.k;
-          for (const g of this.edgeGeo.get(drag.key) || []) {
-            const a = g.points[0], z = g.points[g.points.length - 1];
-            const da = Math.hypot(a.x - drag.at.x, a.y - drag.at.y), dz = Math.hypot(z.x - drag.at.x, z.y - drag.at.y);
-            if (dz < best) { best = dz; next = this._retarget(drag.key, 'head', g.index); }
-            if (da < best && !g.fixedTail) { best = da; next = this._retarget(drag.key, 'tail', g.index); }
-          }
-        }
-        drag = next || { type: 'inert', moved: true };
+      if (drag.type === 'object') {
+        if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) >= 5) drag.moved = true;
+        return;
       }
-      if (drag.type === 'inert') return;
-      if (drag.type === 'move') {
-        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
-        if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
-        const b = this.geo.boxes.get(drag.key);
-        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
-        drag.dx = dx; drag.dy = dy;
-        drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy);
-      } else if (drag.type === 'pan') {
+      if (drag.type === 'pan') {
         const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
         drag.moved = true; svg.classList.add('panning');
@@ -686,7 +670,7 @@
       } else {
         const p = this._point(ev);
         if (!drag.line) drag.line = el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay);
-        const from = drag.end === 'tail' ? p : drag.start, to = drag.end === 'tail' ? drag.start : p;
+        const from = drag.start, to = p;
         drag.line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
         const over = this._stateAt(ev);
         if (drag.over !== over) {
@@ -701,19 +685,11 @@
       const d = drag; drag = null;
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
-      if (d.type === 'inert') return;
-      if (d.type === 'connect' || d.type === 'retarget') {
+      if (d.type === 'connect') {
         if (d.line) d.line.remove();
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
         const over = ev.type === 'pointerup' && d.line ? this._stateAt(ev) : null;
         if (over && d.type === 'connect' && this.h.onConnect) this.h.onConnect(d.source, over);
-        if (over && d.type === 'retarget' && this.h.onRetarget) this.h.onRetarget(d.key, d.end, d.index, over);
-        return;
-      }
-      if (d.type === 'move' && d.moved) {
-        svg.classList.remove('moving');
-        d.ghost.remove();
-        if (ev.type === 'pointerup') this.h.onMove(d.key, d.dx, d.dy);
         return;
       }
       if (d.moved || ev.type !== 'pointerup') return;
@@ -728,13 +704,6 @@
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
-  };
-
-  /* Start dragging one end of a transition; the other end stays put. */
-  Diagram.prototype._retarget = function (key, end, index) {
-    const g = (this.edgeGeo.get(key) || []).find(x => x.index === index);
-    if (!g || (end === 'tail' && g.fixedTail) || !this.h.onRetarget) return null;
-    return { type: 'retarget', key, end, index, moved: true, start: end === 'head' ? g.points[0] : g.points[g.points.length - 1] };
   };
 
   Diagram.prototype._stateAt = function (ev) {
@@ -773,5 +742,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions };
+  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS };
 })(window);
