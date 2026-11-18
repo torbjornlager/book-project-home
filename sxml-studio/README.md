@@ -107,3 +107,7 @@ place the source beside the chart; horizontal diagrams place it below. Drag the
 divider to resize either arrangement. Each arrangement’s split size is remembered
 separately across reloads in this browser, as a proportion of the available space.
 Settings is available in the side-panel tab.
+
+The Explorer and right-hand panel widths are also remembered across reloads in
+this browser. Smaller windows temporarily constrain the panels to leave room for
+the chart; their preferred widths return when the window is enlarged.

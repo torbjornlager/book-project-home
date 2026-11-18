@@ -185,6 +185,39 @@ function saveSplitSize(vertical, percent) {
   catch (e) { console.warn('Could not save split sizes:', e); }
 }
 
+const PANEL_STORAGE = 'trinity-sxml-studio.panels.v1';
+const panelWidths = {};
+try {
+  const saved = JSON.parse(localStorage.getItem(PANEL_STORAGE));
+  for (const [name, min, max] of [['left', 120, 340], ['right', 280, 640]]) {
+    const value = saved && saved[name];
+    if (typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max) panelWidths[name] = value;
+  }
+} catch (e) { console.warn('Could not restore panel widths:', e); }
+
+function applyPanelWidths() {
+  const root = document.documentElement;
+  root.style.removeProperty('--left'); root.style.removeProperty('--right');
+  const styles = getComputedStyle(root);
+  let left = panelWidths.left ?? parseFloat(styles.getPropertyValue('--left'));
+  let right = panelWidths.right ?? parseFloat(styles.getPropertyValue('--right'));
+  // Fit a smaller window without overwriting the user's preferred widths.
+  const available = root.clientWidth - 280;
+  right = Math.max(280, Math.min(right, available - left));
+  left = Math.max(120, Math.min(left, available - right));
+  if (panelWidths.left != null || left !== parseFloat(styles.getPropertyValue('--left'))) root.style.setProperty('--left', left + 'px');
+  if (panelWidths.right != null || right !== parseFloat(styles.getPropertyValue('--right'))) root.style.setProperty('--right', right + 'px');
+  $('left-divider').setAttribute('aria-valuenow', left);
+  $('right-divider').setAttribute('aria-valuenow', right);
+}
+function savePanelWidth(property, value) {
+  panelWidths[property === '--left' ? 'left' : 'right'] = value;
+  try { localStorage.setItem(PANEL_STORAGE, JSON.stringify(panelWidths)); }
+  catch (e) { console.warn('Could not save panel widths:', e); }
+}
+applyPanelWidths();
+window.addEventListener('resize', () => { applyPanelWidths(); editor.refresh(); });
+
 /* ---------- model lifecycle ---------- */
 
 function entryFor(el) {
@@ -1257,6 +1290,7 @@ for (const [id, property, direction, min, max] of [['left-divider', '--left', 1,
     const available = document.documentElement.clientWidth - parseFloat(other) - 280;
     const value = Math.max(min, Math.min(max, available, width + direction * delta));
     document.documentElement.style.setProperty(property, value + 'px');
+    savePanelWidth(property, value);
     divider.setAttribute('aria-valuenow', value); editor.refresh();
   };
   divider.onpointerdown = e => { start = e.clientX; width = get(); divider.setPointerCapture(e.pointerId); };

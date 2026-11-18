@@ -21,7 +21,7 @@
 <header class="topbar"><a class="brand" href="#"><span class="brand-mark">∴</span> Trinity <strong>SXML Studio</strong></a><span class="experiment">STATECHART EDITOR</span><div class="top-actions"><span class="engine"><i></i> SWI-Prolog · WASM</span><button id="theme" title="Switch colour theme">Light mode</button></div></header>
 <main class="studio">
 <aside class="workspace"><div class="panel-heading">EXPLORER <span>LOCAL WORKSPACE</span></div><div class="workspace-title">⌄ &nbsp; SXML CODE</div><div id="files" role="group" aria-label="Example statecharts"></div><div class="file-actions"><button id="new">New statechart</button><button id="open">Open .xml file</button><input id="file-input" type="file" accept=".xml,.sxml,.statechart,.txt" hidden><button id="save">Save source</button><button id="export" title="Save the drawing as an SVG file">Save diagram</button></div><div class="workspace-note"><span class="note-mark">↗</span><p>Draw, edit and run SXML statecharts.</p><p>The interpreter runs here, in your browser. No native node is needed.</p><a href="https://github.com/torbjornlager/swi-wasm-node" target="_blank" rel="noreferrer">About the runtime ↗</a></div></aside>
-<div class="divider" id="left-divider" role="separator" aria-label="Resize workspace" aria-orientation="vertical" tabindex="0"></div>
+<div class="divider" id="left-divider" role="separator" aria-label="Resize workspace" aria-orientation="vertical" aria-valuemin="120" aria-valuemax="340" tabindex="0"></div>
 <section class="editor-pane" aria-label="Statechart editor">
 <div class="editor-tabs"><span class="file-icon">SXML</span><span id="filename">untitled.xml</span><span id="dirty" aria-label="Unsaved changes"></span><div class="view-switch" role="group" aria-label="View"><button data-view="diagram">Diagram</button><button data-view="split">Split</button><button data-view="source">Source</button></div></div>
 <div class="editor-content">
@@ -35,7 +35,7 @@
 </div>
 <div class="editor-foot"><span id="stats">SXML 0.2</span><span>UTF-8 &nbsp; · &nbsp; Browser-local source</span></div>
 </section>
-<div class="divider" id="right-divider" role="separator" aria-label="Resize side panel" aria-orientation="vertical" tabindex="0"></div>
+<div class="divider" id="right-divider" role="separator" aria-label="Resize side panel" aria-orientation="vertical" aria-valuemin="280" aria-valuemax="640" tabindex="0"></div>
 <section class="query-pane" aria-label="Inspector, run and settings">
 <div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-settings" aria-selected="false" aria-controls="settings" tabindex="-1">Settings</button></div>
 <div id="inspector" class="side-view" role="tabpanel" aria-labelledby="tab-inspector"></div>
