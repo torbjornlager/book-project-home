@@ -55,7 +55,7 @@ body[data-layout=vertical] .hdivider{width:5px;height:auto;border-top:0;border-l
 .cm-s-default .cm-tag{color:var(--accent)}
 .cm-s-default .cm-attribute{color:var(--blue)}
 .cm-s-default .cm-atom{color:var(--muted)}
-.CodeMirror .sel-range{background:color-mix(in srgb,var(--blue) 16%,transparent)}
+.CodeMirror-gutter-background.source-selection-gutter{box-shadow:inset 3px 0 0 var(--accent)}
 .CodeMirror .err-line{background:color-mix(in srgb,var(--error) 22%,transparent)}
 body[data-view=diagram] .source-pane,body[data-view=diagram] .hdivider{display:none}
 body[data-view=source] .chart-pane,body[data-view=source] .hdivider{display:none}

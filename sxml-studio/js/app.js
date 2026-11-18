@@ -100,7 +100,7 @@ let selKey = '#root';
 let silent = false;          // suppress editor change handling during programmatic updates
 let parseTimer = null;
 let focusItem = null;        // item key to highlight in the inspector
-let selMark = null, errLine = null, locatedText = null;
+let selectionLines = [], errLine = null, locatedText = null;
 let snap = null;             // source text of every element, for format-preserving edits
 
 const diagram = new SXMLDiagram.Diagram($('chart'), {
@@ -425,6 +425,7 @@ function updateChrome() {
 
 editor.on('change', () => {
   if (silent) return;
+  clearSelectionMarker();
   clearTimeout(parseTimer);
   parseTimer = setTimeout(() => reparse(), 280);
   updateChrome();
@@ -444,13 +445,34 @@ function select(key, opts) {
   updateChrome();
 }
 
+function clearSelectionMarker() {
+  editor.operation(() => {
+    for (const line of selectionLines) editor.removeLineClass(line, 'gutter', 'source-selection-gutter');
+    selectionLines = [];
+  });
+}
+
 function markSelection(scroll) {
-  if (selMark) { selMark.clear(); selMark = null; }
+  clearSelectionMarker();
   const r = located && located.map.get(selEl);
   if (!r || selEl === model.doc.documentElement) return;
   const from = editor.posFromIndex(r.start), to = editor.posFromIndex(r.end);
-  selMark = editor.markText(from, to, { className: 'sel-range' });
-  if (scroll && !editor.hasFocus()) editor.scrollIntoView({ from, to: editor.posFromIndex(r.openEnd) }, 60);
+  const lastLine = to.line > from.line && to.ch === 0 ? to.line - 1 : to.line;
+  editor.operation(() => {
+    for (let line = from.line; line <= lastLine; line++) {
+      selectionLines.push(editor.addLineClass(line, 'gutter', 'source-selection-gutter'));
+    }
+  });
+  if (scroll && !editor.hasFocus()) {
+    const view = editor.getScrollInfo();
+    if (!view.clientHeight) return; // The source pane may be hidden.
+    const top = editor.charCoords(from, 'local').top;
+    const bottom = editor.charCoords({ line: lastLine, ch: 0 }, 'local').bottom;
+    // Keep the view still whenever any part of the selected element is visible.
+    if (bottom <= view.top || top >= view.top + view.clientHeight) {
+      editor.scrollTo(null, Math.max(0, top - Math.min(60, view.clientHeight / 4)));
+    }
+  }
 }
 
 /* Cursor in the source selects the enclosing element in the diagram. */

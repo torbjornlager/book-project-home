@@ -79,7 +79,9 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   actions, deferrals, spawns and targetless transitions are listed inside
   their state; `<datamodel>` appears as a note.
 - Diagram and source stay in step both ways. Selecting in one highlights the
-  other. A graphical edit rewrites only the lines it concerns: every
+  other. Diagram selections mark the source with a green gutter bar; the source
+  scrolls only when the entire selected element is outside the visible area.
+  A graphical edit rewrites only the lines it concerns: every
   untouched element, comment and blank line keeps its source text exactly.
   Undo/Redo covers both.
 - Editing: add state / parallel / final / history inside the selection, use the
