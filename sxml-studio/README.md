@@ -28,10 +28,12 @@ afresh so updates to them remain available.
 Use **Settings → Restore missing examples** to bring removed bundled examples back.
 Existing files, renamed examples and edits are preserved.
 
-**Settings → Chart spacing** provides experimental horizontal and vertical spacing
-sliders (25–150%, with 100% restoring the original gaps). They recompute the ELK
+The diagram toolbar’s **Spacing ▾** dropdown provides experimental horizontal and vertical spacing
+sliders (0–100%, defaulting to 50% on both axes). **Reset spacing** returns to
+50%; 100% uses the original gaps. At 0%, the adjustable
+gaps are removed; node sizes, label sizes, padding and label clearance still apply. They recompute the ELK
 layout without scaling text, label boxes or leaf states, and keep the current zoom
-for comparison. Use **Fit** if needed; Settings stays in the right-hand side panel alongside the chart. Preferences are stored
+for comparison. Use **Fit** if needed. The dropdown closes with Escape or a click outside it. Preferences are stored
 in this browser; spacing controls are disabled while a chart is running. Nested
 states, routing and label clearance can limit compaction or change the arrangement,
 so a smaller spacing value does not guarantee a proportionally smaller chart.

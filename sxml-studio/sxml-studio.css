@@ -134,3 +134,10 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .spacing-control input{grid-column:1 / -1;width:100%;accent-color:var(--accent)}
 .spacing-control:has(input:disabled){opacity:.4}
 .settings-view .hint{font-size:12px}
+
+.spacing-popover{position:fixed;inset:auto;margin:0;width:min(280px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:14px 16px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:7px;box-shadow:0 8px 24px rgb(0 0 0 / .25);font-size:12px}
+.spacing-popover::backdrop{background:transparent;pointer-events:none}
+.spacing-popover h3{margin:0 0 10px;font-size:13px}
+.spacing-popover .spacing-control{margin:12px 0}
+.spacing-popover button{font-size:11px;padding:4px 8px}
+.spacing-popover .hint,#spacing-status{font-size:11px;color:var(--muted);line-height:1.5;margin:10px 0 0}

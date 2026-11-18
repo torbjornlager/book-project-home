@@ -119,7 +119,7 @@ try {
   const saved = JSON.parse(localStorage.getItem(SPACING_STORAGE));
   for (const axis of ['horizontal', 'vertical']) {
     const value = saved && saved[axis];
-    if (typeof value === 'number' && Number.isFinite(value) && value >= 25 && value <= 150 && value % 5 === 0) diagram[axis + 'Spacing'] = value;
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100 && value % 5 === 0) diagram[axis + 'Spacing'] = value;
   }
 } catch (e) { console.warn('Could not restore spacing preferences:', e); }
 
@@ -159,11 +159,27 @@ for (const axis of ['horizontal', 'vertical']) $('spacing-' + axis).oninput = e 
 };
 $('spacing-reset').onclick = () => {
   if (run.pid || run.starting) return;
-  diagram.horizontalSpacing = diagram.verticalSpacing = 100;
+  diagram.horizontalSpacing = diagram.verticalSpacing = 50;
   changeSpacing();
 };
 syncSpacingControls();
 
+function positionSpacingPopover() {
+  const popover = $('spacing-popover');
+  if (!popover.matches(':popover-open')) return;
+  const button = $('spacing-toggle').getBoundingClientRect();
+  const panel = popover.getBoundingClientRect();
+  popover.style.left = Math.max(12, Math.min(button.left, window.innerWidth - panel.width - 12)) + 'px';
+  popover.style.top = Math.max(12, Math.min(button.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
+}
+$('spacing-popover').addEventListener('toggle', event => {
+  if (event.newState === 'open') {
+    syncSpacingControls();
+    showSpacingSize();
+    positionSpacingPopover();
+  }
+});
+window.addEventListener('resize', positionSpacingPopover);
 
 const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
 const splitSizes = { horizontal: 36, vertical: 45 };
@@ -313,7 +329,8 @@ function updateChrome() {
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid;
   $('direction').disabled = !!run.pid;
-  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset']) $(id).disabled = !!run.pid || run.starting;
+  for (const id of ['spacing-toggle', 'spacing-horizontal', 'spacing-vertical', 'spacing-reset']) $(id).disabled = !!run.pid || run.starting;
+  if ((run.pid || run.starting) && $('spacing-popover').matches(':popover-open')) $('spacing-popover').hidePopover();
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -1025,10 +1042,6 @@ function renderSuggestions() {
 /* ---------- side panel, files, chrome ---------- */
 
 function showSide(name) {
-  if (name === 'settings') {
-    syncSpacingControls();
-    showSpacingSize();
-  }
   for (const v of ['inspector', 'run', 'settings']) {
     $(v).hidden = v !== name;
     $('tab-' + v).setAttribute('aria-selected', String(v === name));

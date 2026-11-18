@@ -173,9 +173,9 @@
   }
 
   // Physical axes stay the same when the chart's flow direction changes.
-  function spacingOptions(direction, horizontal = 100, vertical = 100) {
-    const h = Math.max(25, Math.min(150, horizontal)) / 100;
-    const v = Math.max(25, Math.min(150, vertical)) / 100;
+  function spacingOptions(direction, horizontal = 50, vertical = 50) {
+    const h = Math.max(0, Math.min(100, horizontal)) / 100;
+    const v = Math.max(0, Math.min(100, vertical)) / 100;
     const along = direction === 'DOWN' ? v : h;
     const across = direction === 'DOWN' ? h : v;
     return {
@@ -307,7 +307,7 @@
     this.model = null; this.geo = null;
     this.selected = null; this.active = new Set(); this.fired = new Set();
     this.direction = 'RIGHT';
-    this.horizontalSpacing = 100; this.verticalSpacing = 100;
+    this.horizontalSpacing = 50; this.verticalSpacing = 50;
     this.seq = 0;
     this.userMoved = false;
     this._bind();
