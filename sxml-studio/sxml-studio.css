@@ -31,9 +31,9 @@ body{overflow:hidden}
 .chart-toolbar button{font-size:calc(11px * var(--ui-font-scale,1));padding:4px 7px;background:transparent}
 .chart-toolbar button[aria-pressed=true]{background:var(--accent-bg);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
 .tool-label{font-size:calc(9px * var(--ui-font-scale,1));letter-spacing:1.3px;color:var(--muted);margin-right:2px}
-.tool-sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.tool-sep{flex-shrink:0;width:1px;height:18px;background:var(--line);margin:0 4px}
 .tool-space{flex:1}
-#zoom{font:var(--ui-font-weight,500) calc(10px * var(--ui-font-scale,1)) ui-monospace,monospace;color:var(--muted);min-width:36px;text-align:center}
+#zoom{font:var(--ui-font-weight,500) calc(10px * var(--ui-font-scale,1)) ui-monospace,monospace;color:var(--muted);width:4ch;text-align:center}
 .chart-host{flex:1;min-height:0;position:relative;overflow:hidden;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px}
 .chart-host.stale svg{opacity:.4}
 .chart-host.connect svg{cursor:crosshair}
@@ -140,6 +140,10 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .spacing-popover h3{margin:0 0 10px;font-size:calc(13px * var(--ui-font-scale,1))}
 .spacing-popover .spacing-control{margin:12px 0}
 .spacing-popover button{font-size:calc(11px * var(--ui-font-scale,1));padding:4px 8px}
+.layout-tabs{display:flex;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.layout-tabs button{flex:1;border:0;border-radius:0;background:transparent;color:var(--muted);padding:8px 12px}
+.layout-tabs button[aria-selected=true]{color:var(--accent);box-shadow:inset 0 -2px var(--accent)}
+.layout-actions{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .spacing-popover .hint,#spacing-status{font-size:calc(11px * var(--ui-font-scale,1));color:var(--muted);line-height:1.5;margin:10px 0 0}
 
 .layout-experiments{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
@@ -163,3 +167,9 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .panel-heading{gap:8px;flex-wrap:wrap;padding-block:6px}
 .editor-tabs #filename{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .view-switch{flex-shrink:0}
+
+.chart-toolbar .icon-button{display:inline-flex;align-items:center;justify-content:center;min-width:30px}
+.chart-toolbar .icon-button svg{width:1.4em;height:1.4em;pointer-events:none}
+
+.side-tabs #tab-settings{margin-left:auto;display:flex;align-items:center;justify-content:center;padding-inline:14px}
+#tab-settings svg{width:1.4em;height:1.4em;pointer-events:none}

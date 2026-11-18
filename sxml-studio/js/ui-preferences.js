@@ -20,8 +20,8 @@
     document.documentElement.style.setProperty('--ui-font-weight', preferences.fontWeight);
     document.body.style.fontWeight = 'var(--ui-font-weight,500)';
     document.body.classList.toggle('light', preferences.theme === 'light');
-    const button = document.getElementById('theme');
-    if (button) button.textContent = preferences.theme === 'light' ? 'Dark mode' : 'Light mode';
+    const selector = document.getElementById('theme');
+    if (selector) selector.value = preferences.theme;
     if (save) {
       try { localStorage.setItem(STORAGE, JSON.stringify(preferences)); }
       catch (error) { console.warn('Could not save UI preferences:', error); }

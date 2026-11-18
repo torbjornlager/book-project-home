@@ -136,7 +136,7 @@ function syncSpacingControls() {
 }
 function showSpacingSize() {
   if (diagram.geo) $('spacing-status').textContent = 'Diagram size: ' + Math.round(diagram.geo.width) + ' × ' + Math.round(diagram.geo.height) + ' px' + (diagram.geo.fallbackNotes ? '\n' + diagram.geo.fallbackNotes.join(' ') : '');
-  requestAnimationFrame(positionSpacingPopover);
+  requestAnimationFrame(positionLayoutPopover);
 }
 let spacingTimer = null, spacingGeneration = 0;
 function changeSpacing() {
@@ -154,7 +154,7 @@ function changeSpacing() {
     } catch (e) {
       if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply layout. Try resetting the experiments or spacing.';
       console.warn('Spacing layout failed:', e);
-      requestAnimationFrame(positionSpacingPopover);
+      requestAnimationFrame(positionLayoutPopover);
     }
   }, 120);
 }
@@ -185,25 +185,45 @@ $('layout-experiments-reset').onclick = () => {
 };
 syncSpacingControls();
 
-function positionControlPopover(popoverId, buttonId) {
-  const popover = $(popoverId);
+function positionLayoutPopover() {
+  const popover = $('layout-popover');
   if (!popover.matches(':popover-open')) return;
-  const button = $(buttonId).getBoundingClientRect();
+  const button = $('layout-toggle').getBoundingClientRect();
   const panel = popover.getBoundingClientRect();
   popover.style.left = Math.max(12, Math.min(button.left, window.innerWidth - panel.width - 12)) + 'px';
   popover.style.top = Math.max(12, Math.min(button.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
 }
-function positionSpacingPopover() { positionControlPopover('spacing-popover', 'spacing-toggle'); }
-function positionAppearancePopover() { positionControlPopover('appearance-popover', 'appearance-toggle'); }
-$('spacing-popover').addEventListener('toggle', event => {
+function showLayoutTab(name, focus = false) {
+  for (const tab of ['spacing', 'styling']) {
+    const selected = tab === name;
+    $('layout-' + tab).hidden = !selected;
+    $('layout-tab-' + tab).setAttribute('aria-selected', String(selected));
+    $('layout-tab-' + tab).tabIndex = selected ? 0 : -1;
+  }
+  $('layout-popover').scrollTop = 0;
+  if (focus) $('layout-tab-' + name).focus();
+  requestAnimationFrame(positionLayoutPopover);
+}
+for (const name of ['spacing', 'styling']) {
+  const tab = $('layout-tab-' + name);
+  tab.onclick = () => showLayoutTab(name);
+  tab.onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 'spacing' : event.key === 'End' ? 'styling' : name === 'spacing' ? 'styling' : 'spacing';
+    showLayoutTab(next, true);
+  };
+}
+$('layout-popover').addEventListener('toggle', event => {
   if (event.newState === 'open') {
     syncSpacingControls();
+    syncAppearanceControls();
     showSpacingSize();
-    positionSpacingPopover();
+    showLayoutTab('spacing');
   }
 });
-window.addEventListener('resize', positionSpacingPopover);
-$('spacing-popover').querySelector('details').addEventListener('toggle', positionSpacingPopover);
+window.addEventListener('resize', positionLayoutPopover);
+$('layout-spacing').querySelector('details').addEventListener('toggle', positionLayoutPopover);
 
 const APPEARANCE_STORAGE = 'trinity-sxml-studio.appearance.v1';
 const APPEARANCE_RANGES = ['lineWidth', 'arrowSize', 'borderWidth', 'labelSize', 'labelOpacity'];
@@ -253,7 +273,7 @@ function changeAppearance(settings) {
         }
         console.warn('Appearance layout failed:', e);
       }
-      requestAnimationFrame(positionAppearancePopover);
+      requestAnimationFrame(positionLayoutPopover);
     }, 120);
   } else if (!appearanceTimer) $('appearance-status').textContent = '';
 }
@@ -261,10 +281,6 @@ for (const key of APPEARANCE_RANGES) $('appearance-' + key).oninput = e => chang
 $('appearance-color').oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.value }));
 $('appearance-theme-color').onchange = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.checked ? null : $('appearance-color').value }));
 $('appearance-reset').onclick = () => changeAppearance(SXMLDiagram.APPEARANCE_DEFAULTS);
-$('appearance-popover').addEventListener('toggle', event => {
-  if (event.newState === 'open') { syncAppearanceControls(); positionAppearancePopover(); }
-});
-window.addEventListener('resize', positionAppearancePopover);
 syncAppearanceControls();
 
 const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
@@ -360,7 +376,7 @@ function adopt(doc, text, opts) {
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
   diagram.direction = model.layout && model.layout['@direction'] === 'DOWN' ? 'DOWN' : 'RIGHT';
   syncSplitOrientation();
-  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Layout ↓' : 'Layout →';
+  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Direction ↓' : 'Direction →';
   $('direction').title = diagram.direction === 'RIGHT' ? 'Arrange the diagram vertically' : 'Arrange the diagram horizontally';
   showProblems(model.problems);
   diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
@@ -413,10 +429,10 @@ function updateChrome() {
   }
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
-  $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid;
-  $('direction').disabled = !!run.pid;
-  for (const id of ['spacing-toggle', 'spacing-horizontal', 'spacing-vertical', 'spacing-reset', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
-  if ((run.pid || run.starting) && $('spacing-popover').matches(':popover-open')) $('spacing-popover').hidePopover();
+  $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid || run.starting;
+  $('direction').disabled = !!run.pid || run.starting;
+  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
+  $('layout-run-hint').hidden = !(run.pid || run.starting);
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -817,8 +833,6 @@ const bold = t => { const b = document.createElement('b'); b.textContent = t; re
 function runControls() {
   $('run-start').disabled = run.starting || run.busy;
   $('run-start').textContent = run.pid ? '↻ Restart chart' : '▷ Run chart';
-  $('run-top').textContent = $('run-start').textContent;
-  $('run-top').disabled = $('run-start').disabled;
   $('run-halt').disabled = !run.node || run.starting;
   const badge = $('run-badge');
   badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
@@ -1341,7 +1355,6 @@ function setView(view) {
 for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => setView(b.dataset.view);
 
 $('run-start').onclick = startChart;
-$('run-top').onclick = startChart;
 $('run-halt').onclick = haltChart;
 $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
@@ -1352,12 +1365,12 @@ function updateUI(settings) {
   $('ui-font-weight').value = preferences.fontWeight;
   syncAppearanceControls();
   editor.refresh();
-  requestAnimationFrame(() => { positionSpacingPopover(); positionAppearancePopover(); });
+  requestAnimationFrame(() => { positionLayoutPopover(); });
 }
 $('ui-font-size').oninput = event => updateUI(Object.assign({}, SXMLUI.preferences, { fontSize: Number(event.target.value) }));
 $('ui-font-weight').onchange = event => updateUI(Object.assign({}, SXMLUI.preferences, { fontWeight: Number(event.target.value) }));
 $('ui-font-reset').onclick = () => updateUI(Object.assign({}, SXMLUI.preferences, { fontSize: 100, fontWeight: 500 }));
-$('theme').onclick = () => updateUI(Object.assign({}, SXMLUI.preferences, { theme: SXMLUI.preferences.theme === 'light' ? 'dark' : 'light' }));
+$('theme').onchange = event => updateUI(Object.assign({}, SXMLUI.preferences, { theme: event.target.value }));
 updateUI(SXMLUI.preferences);
 
 /* resizable panes */

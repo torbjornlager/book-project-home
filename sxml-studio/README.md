@@ -28,17 +28,18 @@ afresh so updates to them remain available.
 Use **Settings → Restore missing examples** to bring removed bundled examples back.
 Existing files, renamed examples and edits are preserved.
 
-Light mode is the default. The top-bar theme button switches between light and
+Light mode is the default. **Settings → Colour mode** switches between light and
 dark, and remembers the choice. **Settings → UI typography** adjusts interface
 font size (90–150%) and weight (Light through Bold), including the source editor
 and trace output. **Reset fonts** restores 100% and Medium (the default). These preferences
-are remembered across reloads; diagram text has its own Appearance controls.
+are remembered across reloads; diagram text has its own **Appearance → Style** controls.
 
-The toolbar’s **Appearance ▾** dropdown adjusts transition thickness and colour,
+The toolbar’s **Appearance ▾** button opens a panel with **Layout** and **Style** tabs.
+It opens on Layout each time, with **Auto** and **Direction** at the top. **Style** adjusts transition thickness and colour,
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser
-and included in **Save diagram** SVG downloads. Appearance remains available while
+and included in **Save diagram** SVG downloads. Style remains available while
 a chart runs, with selection and execution highlights kept distinct. Label size
 and transition thickness recalculate the layout; use **Fit** if needed.
 **Label background** defaults to transparent (0%) and controls the backing behind transition text, from fully
@@ -46,7 +47,7 @@ transparent to solid, including highlighted labels; the text itself stays opaque
 Active compound and parallel states highlight their headers with the same green
 background as active atomic states, while keeping their child areas neutral.
 
-The diagram toolbar’s **Spacing ▾** dropdown provides experimental horizontal and vertical spacing
+The **Appearance → Layout** tab provides experimental horizontal and vertical spacing
 sliders (0–100%, defaulting to 50% on both axes). **Reset spacing** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable
 gaps are removed; node sizes, label sizes, padding and label clearance still apply. They recompute the ELK
@@ -56,7 +57,7 @@ in this browser; spacing controls are disabled while a chart is running. Nested
 states, routing and label clearance can limit compaction or change the arrangement,
 so a smaller spacing value does not guarantee a proportionally smaller chart.
 
-The dropdown also contains **Layout experiments**: post-compaction to shorten
+The Layout tab also contains **Layout experiments**: post-compaction to shorten
 edges, space-efficient transition-label placement, and a preference for SXML
 state/transition order. Additional controls adjust self-loop clearance (0–40 px),
 straight versus balanced state placement, and layout effort (1, 7 or 20). Higher
@@ -130,7 +131,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - When a state has several transitions with the same target, the one
   highlighted as fired is inferred from the triggering event.
 
-In Split view, **Layout** also changes the pane arrangement: vertical diagrams
+In Split view, **Direction ↓ / →** also changes the pane arrangement: vertical diagrams
 place the source beside the chart; horizontal diagrams place it below. Drag the
 divider to resize either arrangement. Each arrangement’s split size is remembered
 separately across reloads in this browser, as a proportion of the available space.
