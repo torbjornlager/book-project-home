@@ -123,15 +123,22 @@ try {
   }
 } catch (e) { console.warn('Could not restore spacing preferences:', e); }
 
+const EXPERIMENTS_STORAGE = 'trinity-sxml-studio.layout-experiments.v1';
+try {
+  diagram.layoutExperiments = SXMLDiagram.normalizeExperiments(JSON.parse(localStorage.getItem(EXPERIMENTS_STORAGE)));
+} catch (e) { console.warn('Could not restore layout experiments:', e); }
+
 function syncSpacingControls() {
   for (const axis of ['horizontal', 'vertical']) {
     const value = diagram[axis + 'Spacing'];
     $('spacing-' + axis).value = value;
     $('spacing-' + axis + '-value').textContent = value + '%';
   }
+  for (const key of ['compaction', 'labels', 'order', 'loops', 'alignment', 'effort', 'padding', 'sides']) $('layout-' + key).value = diagram.layoutExperiments[key];
 }
 function showSpacingSize() {
-  if (diagram.geo) $('spacing-status').textContent = 'Diagram size: ' + Math.round(diagram.geo.width) + ' × ' + Math.round(diagram.geo.height) + ' px';
+  if (diagram.geo) $('spacing-status').textContent = 'Diagram size: ' + Math.round(diagram.geo.width) + ' × ' + Math.round(diagram.geo.height) + ' px' + (diagram.geo.fallbackNotes ? '\n' + diagram.geo.fallbackNotes.join(' ') : '');
+  requestAnimationFrame(positionSpacingPopover);
 }
 let spacingTimer = null, spacingGeneration = 0;
 function changeSpacing() {
@@ -147,8 +154,9 @@ function changeSpacing() {
       await diagram.setModel(model, { preserveViewport: true });
       if (generation === spacingGeneration) showSpacingSize();
     } catch (e) {
-      if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply spacing. Try a larger gap or reset spacing.';
+      if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply layout. Try resetting the experiments or spacing.';
       console.warn('Spacing layout failed:', e);
+      requestAnimationFrame(positionSpacingPopover);
     }
   }, 120);
 }
@@ -161,6 +169,21 @@ $('spacing-reset').onclick = () => {
   if (run.pid || run.starting) return;
   diagram.horizontalSpacing = diagram.verticalSpacing = 50;
   changeSpacing();
+};
+function saveLayoutExperiments() {
+  try { localStorage.setItem(EXPERIMENTS_STORAGE, JSON.stringify(diagram.layoutExperiments)); }
+  catch (e) { console.warn('Could not save layout experiments:', e); }
+  changeSpacing();
+}
+for (const key of ['compaction', 'labels', 'order', 'loops', 'alignment', 'effort', 'padding', 'sides']) $('layout-' + key).onchange = e => {
+  if (run.pid || run.starting) return;
+  diagram.layoutExperiments = SXMLDiagram.normalizeExperiments(Object.assign({}, diagram.layoutExperiments, { [key]: e.target.value }));
+  saveLayoutExperiments();
+};
+$('layout-experiments-reset').onclick = () => {
+  if (run.pid || run.starting) return;
+  diagram.layoutExperiments = SXMLDiagram.normalizeExperiments();
+  saveLayoutExperiments();
 };
 syncSpacingControls();
 
@@ -180,6 +203,7 @@ $('spacing-popover').addEventListener('toggle', event => {
   }
 });
 window.addEventListener('resize', positionSpacingPopover);
+$('spacing-popover').querySelector('details').addEventListener('toggle', positionSpacingPopover);
 
 const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
 const splitSizes = { horizontal: 36, vertical: 45 };
@@ -329,7 +353,7 @@ function updateChrome() {
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid;
   $('direction').disabled = !!run.pid;
-  for (const id of ['spacing-toggle', 'spacing-horizontal', 'spacing-vertical', 'spacing-reset']) $(id).disabled = !!run.pid || run.starting;
+  for (const id of ['spacing-toggle', 'spacing-horizontal', 'spacing-vertical', 'spacing-reset', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
   if ((run.pid || run.starting) && $('spacing-popover').matches(':popover-open')) $('spacing-popover').hidePopover();
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;

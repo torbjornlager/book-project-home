@@ -141,3 +141,11 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .spacing-popover .spacing-control{margin:12px 0}
 .spacing-popover button{font-size:11px;padding:4px 8px}
 .spacing-popover .hint,#spacing-status{font-size:11px;color:var(--muted);line-height:1.5;margin:10px 0 0}
+
+.layout-experiments{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+.layout-experiments summary{cursor:pointer;color:var(--muted)}
+.layout-experiments label{display:block;margin:12px 0 4px}
+.layout-experiments select{width:100%;padding:5px 6px;background:var(--editor);border:1px solid var(--line);border-radius:4px;font:inherit}
+.layout-experiments button{margin-top:10px}
+
+#spacing-status{white-space:pre-line}

@@ -69,7 +69,8 @@
     'elk.layered.crossingMinimization.strategy': 'INTERACTIVE'
   };
 
-  function toElk(model, direction, base) {
+  function toElk(model, direction, base, paddingPercent = 100) {
+    const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
     const hints = base ? model.layout : null;
     const rootNotes = [];
@@ -137,7 +138,7 @@
         info.get(n.key).type = 'nested'; info.get(n.key).title = title;
         if (!kids.length) return { id: n.key, width: minW, height: 46 };
         return { id: n.key, children: kids, layoutOptions: {
-          'elk.padding': '[top=34,left=' + PAD + ',bottom=' + PAD + ',right=' + PAD + ']',
+          'elk.padding': '[top=' + (20 + nestedPad) + ',left=' + nestedPad + ',bottom=' + nestedPad + ',right=' + nestedPad + ']',
           'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': '(' + minW + ',46)' } };
       }
       if (n.kind === 'statechart') return { id: n.key, children: kids, layoutOptions: Object.assign({ 'elk.padding': '[top=24,left=24,bottom=24,right=24]' }, inter) };
@@ -147,7 +148,7 @@
       return {
         id: n.key, children: kids,
         layoutOptions: Object.assign({}, inter, {
-          'elk.padding': '[top=' + (top + 14) + ',left=' + PAD + ',bottom=' + PAD + ',right=' + PAD + ']',
+          'elk.padding': '[top=' + (top + nestedPad) + ',left=' + nestedPad + ',bottom=' + nestedPad + ',right=' + nestedPad + ']',
           'elk.nodeSize.constraints': 'MINIMUM_SIZE',
           'elk.nodeSize.minimum': '(' + Math.max(72, headW, linesW) + ',' + (top + 20) + ')'
         })
@@ -188,6 +189,33 @@
     };
   }
 
+  function normalizeExperiments(settings = {}) {
+    return {
+      compaction: settings && settings.compaction === 'EDGE_LENGTH' ? 'EDGE_LENGTH' : 'NONE',
+      labels: settings && settings.labels === 'SPACE_EFFICIENT_LAYER' ? 'SPACE_EFFICIENT_LAYER' : 'MEDIAN_LAYER',
+      order: settings && settings.order === 'NODES_AND_EDGES' ? 'NODES_AND_EDGES' : 'NONE',
+      loops: settings && ['0', '5', '10', '20', '40'].includes(settings.loops) ? settings.loops : '10',
+      alignment: settings && settings.alignment === 'balanced' ? 'balanced' : 'straight',
+      effort: settings && ['1', '7', '20'].includes(settings.effort) ? settings.effort : '7',
+      padding: settings && ['50', '100', '150'].includes(settings.padding) ? settings.padding : '100',
+      sides: settings && ['SMART_DOWN', 'SMART_UP', 'ALWAYS_UP', 'ALWAYS_DOWN'].includes(settings.sides) ? settings.sides : 'SMART_DOWN'
+    };
+  }
+
+  function experimentOptions(settings) {
+    const value = normalizeExperiments(settings);
+    return {
+      'elk.layered.compaction.postCompaction.strategy': value.compaction,
+      'elk.layered.edgeLabels.centerLabelPlacementStrategy': value.labels,
+      'elk.layered.considerModelOrder.strategy': value.order,
+      'elk.spacing.nodeSelfLoop': value.loops,
+      'elk.layered.nodePlacement.favorStraightEdges': value.alignment === 'straight' ? 'true' : 'false',
+      'elk.layered.thoroughness': value.effort,
+      'elk.layered.edgeLabels.sideSelection': value.sides,
+      'studio.nestedPadding': value.padding
+    };
+  }
+
   function globalOptions(direction) {
     return {
       'elk.algorithm': 'layered',
@@ -212,6 +240,34 @@
 
   let elk = null;
   async function layout(model, direction, extra) {
+    try { return await layoutOnce(model, direction, extra); }
+    catch (originalError) {
+      const controls = [
+        ['elk.layered.considerModelOrder.strategy', ['NODES_AND_EDGES'], 'NONE', 'Source ordering unavailable at these settings; using automatic order.'],
+        ['elk.layered.compaction.postCompaction.strategy', ['EDGE_LENGTH'], 'NONE', 'Post-compaction unavailable at these settings; using normal routing.'],
+      ].filter(([key, active]) => extra && active.includes(extra[key]));
+      if (!controls.length) throw originalError;
+      // ELK 0.12.1 rejects some nested-chart and zero-gap combinations.
+      // Disable the fewest experimental controls that recover a valid drawing.
+      for (let count = 1; count <= controls.length; count++) {
+        for (let mask = 1; mask < (1 << controls.length); mask++) {
+          const disabled = controls.filter((_, i) => mask & (1 << i));
+          if (disabled.length !== count) continue;
+          const options = Object.assign({}, extra);
+          for (const [key, , value] of disabled) options[key] = value;
+          try {
+            const geo = await layoutOnce(model, direction, options);
+            geo.fallbackNotes = disabled.map(control => control[3]);
+            console.warn('ELK layout experiment fallback:', geo.fallbackNotes.join(' '), originalError);
+            return geo;
+          } catch (_) { /* Try another combination, then surface the original error. */ }
+        }
+      }
+      throw originalError;
+    }
+  }
+
+  async function layoutOnce(model, direction, extra) {
     if (!elk) elk = new global.ELK();
     const noteKeys = new Set(model.root.datamodels.map(d => d.key));
     const hinted = !!model.layout && Object.keys(model.layout).some(pk => pk[0] !== '@' && Object.keys(model.layout[pk]).some(k => !(pk === '#root' && noteKeys.has(k))));
@@ -224,8 +280,9 @@
   }
 
   async function run(model, direction, extra, base) {
-    const { graph, info, rootNotes } = toElk(model, direction, base);
-    const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), extra || {}) });
+    const { 'studio.nestedPadding': paddingPercent = 100, ...elkOptions } = extra || {};
+    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent);
+    const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), elkOptions) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
       const b = { x: ox + (n.x || 0), y: oy + (n.y || 0), w: n.width, h: n.height, labels: n.labels || [] };
@@ -308,6 +365,7 @@
     this.selected = null; this.active = new Set(); this.fired = new Set();
     this.direction = 'RIGHT';
     this.horizontalSpacing = 50; this.verticalSpacing = 50;
+    this.layoutExperiments = normalizeExperiments();
     this.seq = 0;
     this.userMoved = false;
     this._bind();
@@ -342,7 +400,7 @@
 
   Diagram.prototype.setModel = async function (model, opts) {
     const seq = ++this.seq;
-    const geo = await layout(model, this.direction, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing));
+    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments)));
     if (seq !== this.seq) return;
     const first = !this.geo;
     this.model = model; this.geo = geo;
@@ -715,5 +773,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions };
+  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions };
 })(window);

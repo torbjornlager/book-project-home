@@ -32,11 +32,27 @@ The diagram toolbar’s **Spacing ▾** dropdown provides experimental horizonta
 sliders (0–100%, defaulting to 50% on both axes). **Reset spacing** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable
 gaps are removed; node sizes, label sizes, padding and label clearance still apply. They recompute the ELK
-layout without scaling text, label boxes or leaf states, and keep the current zoom
+layout without scaling text or label boxes, and keep the current zoom
 for comparison. Use **Fit** if needed. The dropdown closes with Escape or a click outside it. Preferences are stored
 in this browser; spacing controls are disabled while a chart is running. Nested
 states, routing and label clearance can limit compaction or change the arrangement,
 so a smaller spacing value does not guarantee a proportionally smaller chart.
+
+The dropdown also contains **Layout experiments**: post-compaction to shorten
+edges, space-efficient transition-label placement, and a preference for SXML
+state/transition order. Additional controls adjust self-loop clearance (0–40 px),
+straight versus balanced state placement, and layout effort (1, 7 or 20). Higher
+effort can take longer and does not guarantee a better drawing. Nested-state
+padding can be compact, normal or roomy, preserving the heading and action
+compartments. Transition labels can use automatic side selection or a consistent
+side (above/below for horizontal flow, right/left for vertical flow). Defaults retain
+the existing layout behaviour. These
+preferences are remembered separately, and **Reset experiments** restores them
+without changing spacing. They change only the drawing, not the source or
+transition priority. If the bundled ELK rejects an experimental combination,
+Studio retries with the unsupported experiment disabled and reports the fallback
+beside the diagram dimensions.
+Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 
 ## What it does
 
