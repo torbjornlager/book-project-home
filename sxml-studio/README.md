@@ -89,11 +89,19 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Transition tool (key T) to connect states, and edit in the Inspector. Transition
   order determines priority. Renaming a state updates references; Delete removes
   it together with transitions that target it.
-- Dragging existing states, transitions or notes has no effect. To create a new
-  transition, explicitly select the Transition tool and drag between states.
+- Drag states to arrange them among their siblings; layout hints are saved in
+  the source. Root datamodel notes can be freely positioned. **Auto** clears
+  manual arrangements. Dragging existing transitions has no effect. To create
+  a new transition, select the Transition tool and drag between states.
   Drag empty canvas to pan; scrolling and zooming remain available.
 - Existing arrangement hints in a trailing `<layout>` comment are still read.
   **Auto** removes those hints. Layout direction is saved in the same comment.
+- Parallel states have a **Region arrangement** selector in the Inspector:
+  Follow chart, Side by side, or Stacked. Each parallel state can be set
+  independently; separators follow the arrangement. The choice is saved in the
+  layout comment and survives Auto, direction changes, renaming and reloads.
+  Transitions that cross region boundaries require the shared chart direction,
+  so independent arrangements are unavailable for those parallel states.
 - Nested charts: the inline chart of a `<spawn type="statechart">` is drawn
   inside the state that owns it. Double-click it (or use the button in the
   Inspector) to open it as a document of its own; edits there are stored

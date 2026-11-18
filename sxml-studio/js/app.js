@@ -107,6 +107,7 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
   onOpen(key) { if (model.nested.has(key)) { openNested(key); return; } select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
   onConnect(source, target) { connect(source, target); },
+  onMove(key, dx, dy) { moveState(key, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -429,10 +430,12 @@ function updateChrome() {
   }
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
-  $('auto-layout').disabled = !model || !model.layout || !Object.keys(model.layout).some(k => k[0] !== '@') || !!run.pid || run.starting;
+  $('auto-layout').disabled = !arranged() || !!run.pid || run.starting;
   $('direction').disabled = !!run.pid || run.starting;
   for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
+  const regionControl = $('inspector').querySelector('[data-f="region-arrangement"]');
+  if (regionControl) regionControl.disabled = !!run.pid || run.starting;
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
@@ -553,6 +556,39 @@ function connect(sourceKey, targetKey) {
   const f = $('inspector').querySelector('input[data-f="on"]');
   if (f) f.focus();
   status('Transition ' + s.id + ' → ' + t.id + ' added · give it an event, guard or delay');
+}
+
+/* Dragging a state rearranges it among its siblings.  The arrangement is a
+   set of position hints for the layout engine, kept in a <layout> comment. */
+function moveState(key, dx, dy) {
+  if (!guard()) return;
+  const n = model.byKey.get(key) || model.items.get(key);
+  const parent = n ? (n.parent || n.owner) : null;
+  if (!parent) return;
+  const boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
+  const layout = Object.assign({}, model.layout || {});
+  const rootNote = parent === model.root && n.kind === 'datamodel';
+  let hint = layout[parent.key] && layout[parent.key]['@regions'] ? { '@regions': layout[parent.key]['@regions'] } : {};
+  if (rootNote) {
+    /* A datamodel note of the root has no edges, so it simply stays where it is dropped. */
+    const b = boxes.get(key);
+    hint = Object.assign({}, layout['#root'] || {});
+    hint[key] = [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))];
+  } else {
+    const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
+    for (const k of siblings) { const b = boxes.get(k); if (b && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
+    for (const k in layout[parent.key] || {}) if (parent === model.root && k.includes('/datamodel')) hint[k] = layout[parent.key][k];
+    if (!hint[key]) return;
+    hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
+  }
+  layout[parent.key] = hint;
+  SXML.setLayout(model.doc, layout);
+  selEl = n.el;
+  /* Rearranging states changes the chart's size, so refit.  A note is placed
+     freely: keep the view still, or the note seems not to have moved. */
+  diagram.userMoved = rootNote;
+  commit();
+  status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
 }
 
 function removeSelected() {
@@ -722,6 +758,26 @@ function stateInspector(box, n) {
     else if (v && !/\s/.test(v)) SXML.renameState(model.doc, n.el, v);
   }), root ? { placeholder: 'statechart_actor' } : {})));
   if (root) box.append(field('Version', input('version', n.el.getAttribute('version'), v => edit(() => SXML.setAttr(n.el, 'version', v)))));
+  if (n.kind === 'parallel') {
+    const saved = model.layout && model.layout[n.key] && model.layout[n.key]['@regions'];
+    const safe = SXMLDiagram.canArrangeRegions(model, n);
+    const control = selectBox('region-arrangement', [['', 'Follow chart'], ['RIGHT', 'Side by side'], ['DOWN', 'Stacked']], saved || '', value => edit(() => {
+      const layout = Object.assign({}, model.layout || {});
+      const hints = Object.assign({}, layout[n.key] || {});
+      if (value) hints['@regions'] = value;
+      else delete hints['@regions'];
+      if (Object.keys(hints).length) layout[n.key] = hints;
+      else delete layout[n.key];
+      SXML.setLayout(model.doc, layout);
+      selEl = n.el;
+      diagram.userMoved = false;
+    }));
+    control.setAttribute('aria-label', 'Region arrangement');
+    for (const option of control.options) if (option.value) option.disabled = !safe;
+    control.disabled = !!run.pid || run.starting;
+    box.append(field('Region arrangement', control, true));
+    if (!safe) box.append(h('p', { class: 'hint' }, 'Regions follow the chart direction because transitions cross region boundaries.'));
+  }
   const kids = n.children.filter(c => c.kind !== 'history');
   if ((root || n.kind === 'state') && (kids.length || n.initial)) {
     const opts = kids.map(c => [c.id, c.id]);
@@ -1312,16 +1368,25 @@ $('delete').onclick = removeSelected;
 $('undo').onclick = () => editor.undo();
 $('redo').onclick = () => editor.redo();
 $('fit').onclick = () => diagram.fit();
-$('auto-layout').onclick = () => { if (!guard()) return; SXML.setLayout(model.doc, diagram.direction === 'DOWN' ? { '@direction': 'DOWN' } : null); diagram.userMoved = false; commit(); status('Automatic layout restored'); };
+$('auto-layout').onclick = () => { if (!guard()) return; SXML.setLayout(model.doc, automaticArrangement(diagram.direction)); diagram.userMoved = false; commit(); status('Automatic layout restored'); };
 $('zoom-in').onclick = () => diagram.zoomBy(1.2);
 $('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
 /* The layout direction is part of the saved arrangement.  Position hints
    mean different things in the two directions, so switching starts afresh. */
-const arranged = () => !!model && !!model.layout && Object.keys(model.layout).some(k => k[0] !== '@');
+const arranged = () => !!model && !!model.layout && Object.keys(model.layout).some(k => k[0] !== '@' && Object.keys(model.layout[k]).some(child => child[0] !== '@'));
+function automaticArrangement(direction) {
+  const layout = direction === 'DOWN' ? { '@direction': 'DOWN' } : {};
+  for (const key in model.layout || {}) {
+    if (key[0] === '@') continue;
+    const regions = model.layout[key]['@regions'];
+    if (['RIGHT', 'DOWN'].includes(regions)) layout[key] = { '@regions': regions };
+  }
+  return layout;
+}
 $('direction').onclick = () => {
   if (!guard()) return;
   const next = diagram.direction === 'RIGHT' ? 'DOWN' : 'RIGHT', had = arranged();
-  SXML.setLayout(model.doc, next === 'DOWN' ? { '@direction': 'DOWN' } : null);
+  SXML.setLayout(model.doc, automaticArrangement(next));
   diagram.userMoved = false;
   commit();
   status((next === 'DOWN' ? 'Top-down layout' : 'Left-to-right layout') + (had ? ' · the manual arrangement was dropped, because it does not carry over (Undo restores it)' : ''));

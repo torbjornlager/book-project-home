@@ -83,6 +83,25 @@
     'elk.layered.crossingMinimization.strategy': 'INTERACTIVE'
   };
 
+  function canArrangeRegions(model, parallel) {
+    const region = node => {
+      for (let child = node; child && child !== parallel; child = child.parent) {
+        if (child.parent === parallel) return child;
+      }
+      return null;
+    };
+    for (const m of [model, ...(model.nested ? model.nested.values() : [])]) {
+      for (const transition of m.transitions) {
+        const source = region(transition.source);
+        for (const id of transition.to) {
+          const target = region(m.byId.get(id));
+          if ((source || target) && source !== target) return false;
+        }
+      }
+    }
+    return true;
+  }
+
   function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS) {
     const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
@@ -145,7 +164,10 @@
           else { k.x = 100000 + i; k.y = 100000 + i; }
         });
       }
-      const inter = {};
+      const requestedDirection = n.kind === 'parallel' && model.layout && model.layout[n.key] && model.layout[n.key]['@regions'];
+      const independent = ['RIGHT', 'DOWN'].includes(requestedDirection) && canArrangeRegions(model, n);
+      const inter = { 'elk.direction': independent ? requestedDirection : direction };
+      if (independent) inter['elk.hierarchyHandling'] = 'SEPARATE_CHILDREN';
       if (n.kind === 'statechart' && n.scope) {
         const title = 'statechart · ' + model.nested.get(n.scope).title;
         const minW = width(title, F_NOTE) + 44;
@@ -287,7 +309,7 @@
   async function layoutOnce(model, direction, extra) {
     if (!elk) elk = new global.ELK();
     const noteKeys = new Set(model.root.datamodels.map(d => d.key));
-    const hinted = !!model.layout && Object.keys(model.layout).some(pk => pk[0] !== '@' && Object.keys(model.layout[pk]).some(k => !(pk === '#root' && noteKeys.has(k))));
+    const hinted = !!model.layout && Object.keys(model.layout).some(pk => pk[0] !== '@' && Object.keys(model.layout[pk]).some(k => k[0] !== '@' && !(pk === '#root' && noteKeys.has(k))));
     let geo = await run(model, direction, extra, null);
     if (hinted) {
       try { geo = await run(model, direction, Object.assign({}, INTERACTIVE, extra), geo.boxes); }
@@ -652,8 +674,9 @@
         return;
       }
       const object = ev.target.closest('[data-key]') || ev.target.closest('.edge');
-      // Dragging an existing object neither edits it nor pans the chart.
-      drag = { type: object ? 'object' : 'pan', x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
+      const noteEl = ev.target.closest('[data-note]');
+      const movable = (stateEl || noteEl) && !this.running && !this.readOnly && this.h.onMove;
+      drag = { type: movable ? 'move' : object ? 'object' : 'pan', key: movable ? (noteEl ? noteEl.getAttribute('data-note') : stateEl.getAttribute('data-state')) : null, x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
       svg.setPointerCapture(ev.pointerId);
     });
     svg.addEventListener('pointermove', ev => {
@@ -662,7 +685,14 @@
         if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) >= 5) drag.moved = true;
         return;
       }
-      if (drag.type === 'pan') {
+      if (drag.type === 'move') {
+        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
+        if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
+        const b = this.geo.boxes.get(drag.key);
+        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
+        drag.dx = dx; drag.dy = dy;
+        drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy);
+      } else if (drag.type === 'pan') {
         const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
         drag.moved = true; svg.classList.add('panning');
@@ -690,6 +720,12 @@
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
         const over = ev.type === 'pointerup' && d.line ? this._stateAt(ev) : null;
         if (over && d.type === 'connect' && this.h.onConnect) this.h.onConnect(d.source, over);
+        return;
+      }
+      if (d.type === 'move' && d.moved) {
+        svg.classList.remove('moving');
+        d.ghost.remove();
+        if (ev.type === 'pointerup') this.h.onMove(d.key, d.dx, d.dy);
         return;
       }
       if (d.moved || ev.type !== 'pointerup') return;
@@ -742,5 +778,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS };
+  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
 })(window);
