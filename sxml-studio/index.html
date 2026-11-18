@@ -40,8 +40,7 @@
 <div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-settings" aria-selected="false" aria-controls="settings" tabindex="-1">Settings</button></div>
 <div id="inspector" class="side-view" role="tabpanel" aria-labelledby="tab-inspector"></div>
 <div id="run" class="side-view run-view" role="tabpanel" aria-labelledby="tab-run" hidden>
-<div class="run-actions"><button id="run-start" class="primary" title="Spawn the chart in a fresh browser engine">▷ Run chart</button><button id="run-halt" disabled>Halt</button><span id="config" class="config"></span></div>
-<form id="query-form"><label for="goal">Ask the node · <code>$Pid</code> is the running chart</label><div class="goal-wrap"><span>?-</span><textarea id="goal" rows="2" spellcheck="false">$Pid ! </textarea></div><div class="query-actions"><button id="run-goal" class="primary" disabled>Run query ↵</button><span class="query-caption">Enter to run · click a transition in the diagram to send its event</span></div></form>
+<div class="run-actions"><button id="run-start" class="primary" title="Spawn the chart in a fresh browser engine">▷ Run chart</button><button id="run-halt" disabled>Halt</button></div>
 <div class="queries"><div class="section-title">QUERIES FOR THIS CHART</div><div id="suggestions"></div></div>
 <div class="section-title log-title">TRACE AND OUTPUT <label><input type="checkbox" id="show-trace" checked> trace</label><button id="clear">Clear</button></div>
 <div id="log" class="log" aria-live="polite"></div>

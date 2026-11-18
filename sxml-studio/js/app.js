@@ -717,12 +717,9 @@ function runControls() {
   $('run-top').textContent = $('run-start').textContent;
   $('run-top').disabled = $('run-start').disabled;
   $('run-halt').disabled = !run.node || run.starting;
-  $('run-goal').disabled = run.starting || run.busy;
   const badge = $('run-badge');
   badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
   badge.classList.toggle('live', !!run.pid && !run.done);
-  $('config').textContent = run.pid ? '{' + run.active.join(', ') + '}' : '';
-  $('config').title = run.pid ? 'Active configuration of ' + run.pid : '';
   updateChrome();
 }
 
@@ -867,9 +864,8 @@ function sendTransition(t) {
   const bare = pattern.replace(/'(?:[^'\\]|\\.)*'/g, '');
   if (/(^|[^\w])[A-Z_]\w*/.test(bare)) {
     showSide('run');
-    $('goal').value = '$Pid ! ' + pattern;
-    $('goal').focus();
-    status('The pattern has variables · fill in a concrete event and press Enter');
+    const event = window.prompt('Enter a concrete event for this transition:', pattern);
+    if (event && event.trim()) runGoal('$Pid ! ' + event.trim());
     return;
   }
   runGoal('$Pid ! ' + pattern);
@@ -983,12 +979,12 @@ function play(item) {
 function renderSuggestions() {
   const box = $('suggestions');
   box.replaceChildren();
-  const goals = model ? model.examples.filter(g => !/<editor>/.test(g)) : [];
-  if (!goals.length) goals.push('statechart_halt($Pid, Reply, 1)');
+  const goals = model ? model.examples.filter(g => !/<editor>|\bstatechart_halt\s*\(/.test(g)) : [];
+  box.parentElement.hidden = !goals.length;
   for (const goal of goals) {
     const b = document.createElement('button');
     b.textContent = '?- ' + goal.replace(/\s+/g, ' ') + '.';
-    b.onclick = () => { $('goal').value = goal; /statechart_halt\(/.test(goal) ? haltChart() : runGoal(goal); };
+    b.onclick = () => runGoal(goal);
     box.append(b);
   }
 }
@@ -1144,7 +1140,6 @@ async function selectFile(index) {
   selEl = null; selKey = '#root'; focusItem = null;
   diagram.userMoved = false;
   $('log').replaceChildren();
-  $('goal').value = '$Pid ! ';
   reparse({ fit: true });
   showSide('inspector');
   runControls();
@@ -1249,8 +1244,6 @@ for (const b of document.querySelectorAll('.view-switch button')) b.onclick = ()
 $('run-start').onclick = startChart;
 $('run-top').onclick = startChart;
 $('run-halt').onclick = haltChart;
-$('query-form').onsubmit = e => { e.preventDefault(); runGoal($('goal').value); };
-$('goal').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runGoal($('goal').value); } };
 $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
 $('theme').onclick = () => { const light = document.body.classList.toggle('light'); $('theme').textContent = light ? 'Dark mode' : 'Light mode'; editor.refresh(); };

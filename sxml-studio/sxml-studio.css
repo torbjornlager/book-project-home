@@ -100,12 +100,7 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .run-view[hidden]{display:none}
 .run-actions{display:flex;align-items:center;gap:6px;padding:14px 16px 4px;flex:none}
 .run-actions button{font-size:11px}
-.config{font:10.5px ui-monospace,monospace;color:var(--accent);margin-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.query-pane form{padding:10px 16px 8px;flex:none}
-.query-pane label code{font:11px ui-monospace,monospace;color:var(--accent)}
-#goal{min-height:38px}
 .query-actions{align-items:center}
-.query-actions .query-caption{margin:0 0 0 6px}
 .queries{padding:0 16px;flex:none;max-height:150px;overflow:auto}
 .queries .section-title{margin-top:4px}
 #suggestions button{font:10px ui-monospace,monospace;margin:0 5px 5px 0;color:var(--accent);background:transparent;max-width:100%;overflow:hidden;text-overflow:ellipsis}
