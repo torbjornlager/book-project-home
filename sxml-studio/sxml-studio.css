@@ -173,3 +173,5 @@ body[data-view=source] .source-pane{flex:1 1 0}
 
 .side-tabs #tab-settings{margin-left:auto;display:flex;align-items:center;justify-content:center;padding-inline:14px}
 #tab-settings svg{width:1.4em;height:1.4em;pointer-events:none}
+
+.brand .brand-mark{display:block;width:42px;height:42px;flex:none;object-fit:contain;padding:3px;background:#fff;border:2px solid var(--accent);border-radius:50%;margin-right:3px}
