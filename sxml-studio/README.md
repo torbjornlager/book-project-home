@@ -97,7 +97,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - Existing arrangement hints in a trailing `<layout>` comment are still read.
   **Auto** removes those hints. Layout direction is saved in the same comment.
 - Parallel states have a **Region arrangement** selector in the Inspector:
-  Follow chart, Side by side, or Stacked. Each parallel state can be set
+  Stacked (the default), Side by side, or Follow chart. Each parallel state can be set
   independently; separators follow the arrangement. The choice is saved in the
   layout comment and survives Auto, direction changes, renaming and reloads.
   Transitions that cross region boundaries require the shared chart direction,

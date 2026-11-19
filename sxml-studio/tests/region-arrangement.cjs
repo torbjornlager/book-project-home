@@ -38,6 +38,13 @@ function separators(geo, node) {
   return lines;
 }
 (async () => {
+  model.layout = null;
+  const defaultGeo = await D.layout(model, 'RIGHT', D.spacingOptions('RIGHT'));
+  assert(defaultGeo.boxes.get('emotions').y + defaultGeo.boxes.get('emotions').h <= defaultGeo.boxes.get('behavior').y, 'Parallel states must default to stacked regions.');
+  assert(defaultGeo.boxes.get('af').y + defaultGeo.boxes.get('af').h <= defaultGeo.boxes.get('as').y, 'Nested parallel states must also default to stacked.');
+  model.layout = {agent: {'@regions': 'AUTO'}};
+  const automaticGeo = await D.layout(model, 'RIGHT', D.spacingOptions('RIGHT'));
+  assert(automaticGeo.boxes.get('emotions').x + automaticGeo.boxes.get('emotions').w <= automaticGeo.boxes.get('behavior').x, 'Explicit Follow chart must still follow horizontal layout.');
   for (const direction of ['RIGHT', 'DOWN']) for (const arrangement of ['RIGHT', 'DOWN']) {
     model.layout = {agent: {'@regions': arrangement}, emotions: {'@regions': 'RIGHT'}};
     const before = JSON.stringify(model.layout);

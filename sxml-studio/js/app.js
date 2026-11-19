@@ -761,10 +761,10 @@ function stateInspector(box, n) {
   if (n.kind === 'parallel') {
     const saved = model.layout && model.layout[n.key] && model.layout[n.key]['@regions'];
     const safe = SXMLDiagram.canArrangeRegions(model, n);
-    const control = selectBox('region-arrangement', [['', 'Follow chart'], ['RIGHT', 'Side by side'], ['DOWN', 'Stacked']], saved || '', value => edit(() => {
+    const control = selectBox('region-arrangement', [['DOWN', 'Stacked'], ['RIGHT', 'Side by side'], ['AUTO', 'Follow chart']], saved || (safe ? 'DOWN' : 'AUTO'), value => edit(() => {
       const layout = Object.assign({}, model.layout || {});
       const hints = Object.assign({}, layout[n.key] || {});
-      if (value) hints['@regions'] = value;
+      if (value !== 'DOWN') hints['@regions'] = value;
       else delete hints['@regions'];
       if (Object.keys(hints).length) layout[n.key] = hints;
       else delete layout[n.key];
@@ -773,7 +773,7 @@ function stateInspector(box, n) {
       diagram.userMoved = false;
     }));
     control.setAttribute('aria-label', 'Region arrangement');
-    for (const option of control.options) if (option.value) option.disabled = !safe;
+    for (const option of control.options) if (option.value !== 'AUTO') option.disabled = !safe;
     control.disabled = !!run.pid || run.starting;
     box.append(field('Region arrangement', control, true));
     if (!safe) box.append(h('p', { class: 'hint' }, 'Regions follow the chart direction because transitions cross region boundaries.'));
@@ -1379,7 +1379,7 @@ function automaticArrangement(direction) {
   for (const key in model.layout || {}) {
     if (key[0] === '@') continue;
     const regions = model.layout[key]['@regions'];
-    if (['RIGHT', 'DOWN'].includes(regions)) layout[key] = { '@regions': regions };
+    if (['RIGHT', 'DOWN', 'AUTO'].includes(regions)) layout[key] = { '@regions': regions };
   }
   return layout;
 }

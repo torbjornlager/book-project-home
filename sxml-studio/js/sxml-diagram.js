@@ -164,7 +164,7 @@
           else { k.x = 100000 + i; k.y = 100000 + i; }
         });
       }
-      const requestedDirection = n.kind === 'parallel' && model.layout && model.layout[n.key] && model.layout[n.key]['@regions'];
+      const requestedDirection = n.kind === 'parallel' ? (model.layout && model.layout[n.key] && model.layout[n.key]['@regions']) || 'DOWN' : null;
       const independent = ['RIGHT', 'DOWN'].includes(requestedDirection) && canArrangeRegions(model, n);
       const inter = { 'elk.direction': independent ? requestedDirection : direction };
       if (independent) inter['elk.hierarchyHandling'] = 'SEPARATE_CHILDREN';
