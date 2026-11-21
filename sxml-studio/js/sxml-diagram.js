@@ -102,19 +102,28 @@
     return true;
   }
 
-  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS) {
+  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map()) {
     const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
     const hints = base ? model.layout : null;
     const rootNotes = [];
     const info = new Map();      // elk id -> description
     function noteNode(dm, owner) {
-      const all = dm.body.split('\n');
+      const live = liveDatamodels.get(dm.key);
+      const all = [], changedLines = [];
+      if (live) {
+        live.facts.forEach((clause, index) => {
+          if (index && clause.includes('\n')) { all.push(''); changedLines.push(false); }
+          const lines = clause.split('\n');
+          all.push(...lines); changedLines.push(...lines.map(() => live.changed[index]));
+        });
+        if (!all.length) all.push('(no clauses)');
+      } else all.push(...dm.body.replace(/\t/g, '    ').split('\n'));
       let lines = all.slice(0, MAX_NOTE_LINES).map(l => cut(l.replace(/\s+$/, ''), MAX_NOTE));
-      if (all.length > MAX_NOTE_LINES) lines.push('…');
+      if (all.length > MAX_NOTE_LINES || live?.truncated) lines.push('… more clauses (hover to view)');
       const w = Math.max(76, ...lines.map(l => width(l, F_NOTE))) + 22;
       const h = 24 + lines.length * 14 + 8;
-      info.set(dm.key, { type: 'note', item: dm, lines });
+      info.set(dm.key, { type: 'note', item: dm, lines, live, changedLines, fullText: all.join('\n') });
       return { id: dm.key, width: w, height: h };
     }
     function node(n) {
@@ -319,9 +328,9 @@
   }
 
   async function run(model, direction, extra, base) {
-    const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, ...elkOptions } = extra || {};
+    const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, ...elkOptions } = extra || {};
     const appearance = normalizeAppearance(appearanceSettings);
-    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance);
+    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), elkOptions) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -407,6 +416,7 @@
     this.horizontalSpacing = 50; this.verticalSpacing = 50;
     this.layoutExperiments = normalizeExperiments();
     this.appearance = normalizeAppearance();
+    this.liveDatamodels = new Map();
     this.applyAppearance(this.appearance);
     this.seq = 0;
     this.userMoved = false;
@@ -457,8 +467,9 @@
   };
 
   Diagram.prototype.setModel = async function (model, opts) {
+    this.pendingModel = model;
     const seq = ++this.seq;
-    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance }));
+    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance, 'studio.liveDatamodels': this.liveDatamodels }));
     if (seq !== this.seq) return;
     const first = !this.geo;
     this.model = model; this.geo = geo;
@@ -579,8 +590,12 @@
     el('path', { class: 'shape', d: 'M' + b.x + ' ' + b.y + ' h' + (b.w - f) + ' l' + f + ' ' + f + ' v' + (b.h - f) + ' h' + (-b.w) + ' z' }, grp);
     el('path', { class: 'fold', d: 'M' + (b.x + b.w - f) + ' ' + b.y + ' v' + f + ' h' + f }, grp);
     el('text', { class: 'note-title', x: b.x + 10, y: b.y + 15 }, grp, 'DATAMODEL');
-    inf.lines.forEach((t, i) => el('text', { class: 'note-line', x: b.x + 10, y: b.y + 32 + i * 14, 'xml:space': 'preserve' }, grp, t));
-    el('title', {}, grp, dm.body);
+    inf.lines.forEach((t, i) => {
+      const y = b.y + 32 + i * 14;
+      if (inf.live && inf.changedLines[i]) el('rect', {class: 'fact-change', x: b.x + 6, y: y - 11, width: b.w - 12, height: 14, rx: 3}, grp);
+      el('text', { class: 'note-line', x: b.x + 10, y, 'xml:space': 'preserve' }, grp, t);
+    });
+    el('title', {}, grp, inf.fullText + (inf.live?.truncated ? '\n… snapshot limited to 40 clauses' : ''));
     if (!dm.scope) this.itemEls.set(dm.key, grp);
   };
 
@@ -633,7 +648,27 @@
   };
 
   Diagram.prototype.select = function (key) { this.selected = key; this._paint(); };
+  Diagram.prototype.setDatamodelFacts = function (updates) {
+    for (const update of updates) {
+      const counts = new Map();
+      for (const fact of this.liveDatamodels.get(update.key)?.facts || []) counts.set(fact, (counts.get(fact) || 0) + 1);
+      const changed = update.facts.map(fact => {
+        const count = counts.get(fact) || 0;
+        if (count) counts.set(fact, count - 1);
+        return !count;
+      });
+      this.liveDatamodels.set(update.key, {facts: update.facts.slice(), truncated: update.truncated, changed});
+    }
+    const model = this.pendingModel || this.model;
+    return model ? this.setModel(model, {preserveViewport: true}) : Promise.resolve();
+  };
+
   Diagram.prototype.setRun = function (running, activeIds, firedKeys, nested) {
+    if (!running && this.liveDatamodels.size) {
+      this.liveDatamodels.clear();
+      const model = this.pendingModel || this.model;
+      if (model) this.setModel(model, {preserveViewport: true}).catch(error => console.warn('Could not clear live facts:', error));
+    }
     this.running = running;
     this.active = new Set(activeIds || []);
     this.fired = new Set(firedKeys || []);

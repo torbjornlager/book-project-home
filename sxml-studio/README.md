@@ -112,6 +112,13 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   when the chart is run.
 - Run chart spawns the document in the real SWI-WASM interpreter with
   tracing on, and animates the active configuration and fired transitions.
+  Datamodel notes update in place with current facts and rules during a run.
+  Snapshots follow chart actions in the trace playback, with new clauses briefly
+  highlighted; source XML is unchanged. Rules retain line breaks and indentation.
+  Up to eight lines are shown in the note, with up to forty clauses in its hover
+  text. Rule bodies are never executed for inspection.
+  Halt or restart clears the live display. Try example 09 and send its integers
+  query to watch the GCD calculation update `int/1`.
   The queries from the document's trailing `<examples>` comment become
   buttons; `$Pid` stands for the running chart. Clicking a transition while
   the chart runs sends its event.

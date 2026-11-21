@@ -91,6 +91,7 @@ start_parsed(Root) :-
     assertz(statechart_wasm:internal_queue([])),
     initialise_event_processing,
     assertz(statechart_wasm:running),
+    statechart_wasm_runtime:emit_datamodel_snapshot,
     assertz(statechart_wasm:state(dummy, Root)),
     initial_state(Root, Initial),
     enter_states([t(dummy, [Initial], [])]),

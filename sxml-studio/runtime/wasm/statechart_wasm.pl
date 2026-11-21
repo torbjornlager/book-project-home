@@ -115,7 +115,10 @@ rethrow_reserved(Error) :-
         trace_disabled/0,
         % Indicators of predicates a <datamodel> asserted, so clean/0 can
         % abolish them and not leak one chart's data/rules into the next.
-        datamodel_predicate/1.
+        datamodel_predicate/1,
+        datamodel_owner/2,
+        datamodel_block/1,
+        datamodel_snapshot_cache/1.
 
 % Trace hook (a callable; called with one argument: the event).
 :- dynamic trace_hook/1.

@@ -80,6 +80,9 @@ clean :-
     %  and rules do not leak into the next chart.
     forall(retract(statechart_wasm:datamodel_predicate(F/N)),
            catch(abolish(statechart_wasm:F/N), _, true)),
+    retractall(statechart_wasm:datamodel_owner(_, _)),
+    retractall(statechart_wasm:datamodel_block(_)),
+    retractall(statechart_wasm:datamodel_snapshot_cache(_)),
     retractall(statechart_wasm:state(_, _)),
     retractall(statechart_wasm:to_be_invoked(_, _, _)),
     retractall(statechart_wasm:initial(_)),
@@ -490,6 +493,7 @@ script(Goal) :-
           ; Result = failure),
           Error,
           ( statechart_wasm:rethrow_reserved(Error), Result = exception(Error) )),
+    emit_datamodel_snapshot,
     (   Result == success
     ->  true
     ;   Result == failure
@@ -498,6 +502,55 @@ script(Goal) :-
         enqueue_internal_event(error(Exception)), fail
     ).
 
+
+% Snapshots inspect stored clauses only; rule bodies are never called. Bound both
+% the count and printed depth so tracing cannot enumerate an unbounded database.
+emit_datamodel_snapshot :-
+    \+ statechart_wasm:trace_disabled,
+    statechart_wasm:datamodel_block(_), !,
+    catch(datamodel_snapshot, Error,
+          (statechart_wasm:rethrow_reserved(Error), true)).
+emit_datamodel_snapshot.
+
+datamodel_snapshot :-
+    root_state(Root),
+    findall(ID, (statechart_wasm:n(_, ID), ID \== Root), IDs),
+    findall(Owner, statechart_wasm:datamodel_block(Owner), Owners0),
+    sort(Owners0, Owners),
+    findall(data(Key, Facts, More),
+            ( member(Owner, Owners),
+              (Owner == Root -> Key = '#root' ; Key = Owner),
+              once(findnsols(41, Text, datamodel_fact(Owner, Text), Sample)),
+              (length(Sample, 41) -> length(Facts, 40), append(Facts, [_], Sample), More = true
+              ; Facts = Sample, More = false)
+            ), Data),
+    (statechart_wasm:datamodel_snapshot_cache(Data) -> true
+    ; retractall(statechart_wasm:datamodel_snapshot_cache(_)),
+      assertz(statechart_wasm:datamodel_snapshot_cache(Data)),
+      emit_trace(datamodel_snapshot(IDs, Data))
+    ).
+
+datamodel_fact(Owner, Text) :-
+    statechart_wasm:datamodel_owner(F/N, Owner),
+    functor(Head, F, N),
+    predicate_property(statechart_wasm:Head, dynamic),
+    clause(statechart_wasm:Head, Body),
+    copy_term(Head-Body, CopyHead-CopyBody), numbervars(CopyHead-CopyBody, 0, _),
+    with_output_to(atom(Atom), write_datamodel_clause(CopyHead, CopyBody)),
+    (atom_length(Atom, Length), Length > 240
+    -> sub_atom(Atom, 0, 240, _, Prefix), atom_concat(Prefix, '…', Text)
+    ; Text = Atom).
+
+write_datamodel_clause(Head, Body) :-
+    write_term(Head, [quoted(true), numbervars(true), max_depth(12)]),
+    (Body == true -> write('.')
+    ; write(' :-'), nl, write_datamodel_body(Body), write('.')).
+
+write_datamodel_body((First, Rest)) :- !,
+    write('    '), write_term(First, [quoted(true), numbervars(true), max_depth(12), priority(999)]),
+    write(','), nl, write_datamodel_body(Rest).
+write_datamodel_body(Goal) :-
+    write('    '), write_term(Goal, [quoted(true), numbervars(true), max_depth(12), priority(999)]).
 
 emit_trace(Event) :-
     catch(statechart_wasm:emit_trace(Event), Error,

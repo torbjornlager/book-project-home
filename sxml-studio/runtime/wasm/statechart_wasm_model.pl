@@ -189,9 +189,11 @@ model_generate_node(onentry, _Attrs, Children, Parent, _ID) :-
 model_generate_node(onexit, _Attrs, Children, Parent, _ID) :-
     children_to_actions(Children, Actions, []),
     model_assert(onexit(Parent, Actions)).
-model_generate_node(datamodel, _Attrs, Children, _Parent, _ID) :-
+model_generate_node(datamodel, _Attrs, Children, Parent, _ID) :-
     (   children_text(Children, Text)
-    ->  load_datamodel(Text)
+    ->  assertz(statechart_wasm:datamodel_block(Parent)),
+        setup_call_cleanup(asserta(current_datamodel_owner(Parent), Ref),
+                           load_datamodel(Text), erase(Ref))
     ;   true
     ).
 
@@ -531,6 +533,8 @@ children_text(Children, Text) :-
 %   `statechart_wasm` module so that <onentry>/<onexit> scripts can
 %   refer to them.  Uses open_string/2 (portable) instead of memfiles.
 
+:- dynamic current_datamodel_owner/1.
+
 load_datamodel(Text) :-
     datamodel_dynamic_snapshot(Before),
     setup_call_cleanup(
@@ -588,6 +592,11 @@ assert_local(Fact) :-
 %   clean/0 can abolish it on the next chart and the two charts stay
 %   isolated.  Deduplicated.
 track_datamodel_predicate(F/N) :-
+    (   current_datamodel_owner(Owner),
+        \+ statechart_wasm:datamodel_owner(F/N, Owner)
+    ->  assertz(statechart_wasm:datamodel_owner(F/N, Owner))
+    ;   true
+    ),
     (   statechart_wasm:datamodel_predicate(F/N)
     ->  true
     ;   assertz(statechart_wasm:datamodel_predicate(F/N))

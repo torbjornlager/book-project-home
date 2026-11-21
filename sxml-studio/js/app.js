@@ -1076,7 +1076,12 @@ function splitTop(s) {
   out.push(s.slice(start));
   return out.map(x => x.trim()).filter(x => x !== '');
 }
-const unquote = a => /^'.*'$/.test(a) ? a.slice(1, -1).replace(/\\(.)/g, '$1').replace(/''/g, "'") : a;
+const unquote = a => /^'[\s\S]*'$/.test(a) ? a.slice(1, -1).replace(/''|\\(u[\da-fA-F]{4}|U[\da-fA-F]{8}|x[\da-fA-F]+\\|[0-7]{1,3}\\|[\s\S])/g, (all, escaped) => {
+  if (all === "''") return "'";
+  if (/^[uUx]/.test(escaped) && escaped.length > 1) return String.fromCodePoint(parseInt(escaped.slice(1).replace(/\\$/, ''), 16));
+  if (/^[0-7]+\\$/.test(escaped)) return String.fromCodePoint(parseInt(escaped, 8));
+  return ({n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', v: '\v', a: '\x07'}[escaped]) ?? escaped;
+}) : a;
 const listOf = t => /^\[.*\]$/.test(t) ? splitTop(t.slice(1, -1)).map(unquote) : [];
 function termOf(text) {
   const m = /^([a-z]\w*)\(([\s\S]*)\)$/.exec(text);
@@ -1107,6 +1112,25 @@ function play(item) {
   if (item.type === 'goal') { logRow('goal', item.text); return false; }
   if (item.type === 'error') { logRow('err', item.text); return false; }
   const t = termOf(item.text);
+  if (t.name === 'datamodel_snapshot') {
+    const ids = listOf(t.args[0] || '[]');
+    const candidates = model ? [model, ...model.nested.values()] : [];
+    const chart = candidates.find(candidate => {
+      const states = candidate.nodes.filter(node => !['statechart', 'history'].includes(node.kind));
+      return states.length === ids.length && ids.every(id => candidate.byId.has(id));
+    });
+    if (!chart) return false;
+    const updates = [];
+    for (const item of listOf(t.args[1] || '[]')) {
+      const data = termOf(item), owner = unquote(data.args[0] || '');
+      if (data.name !== 'data') continue;
+      const node = owner === '#root' ? chart.root : chart.byId.get(owner);
+      for (const dm of node?.datamodels || []) updates.push({key: dm.key, facts: listOf(data.args[1] || '[]'), truncated: data.args[2] === 'true'});
+    }
+    if (!updates.length) return false;
+    diagram.setDatamodelFacts(updates).catch(error => console.warn('Could not display live facts:', error));
+    return true;
+  }
   if (t.name === 'configuration') {
     const ids = listOf(t.args[0] || '[]');
     /* A traced nested chart reports on the same channel; tell the two apart by their state names. */
