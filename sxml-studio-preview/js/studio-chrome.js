@@ -121,7 +121,8 @@
     const actions=document.querySelector('.top-actions');
     const run=document.createElement('button'); run.id='toolbar-run'; run.type='button'; run.dataset.icon='play'; run.textContent='Run'; run.className='primary';
     run.onclick=()=>{document.getElementById('run-start').click();if(matchMedia('(max-width:860px)').matches){document.body.dataset.drawer='inspector';document.getElementById('toggle-inspector').setAttribute('aria-pressed','true');}};
-    actions.append(run);
+    const runSeparator=document.createElement('span');runSeparator.className='tool-sep';runSeparator.setAttribute('aria-hidden','true');
+    document.getElementById('redo').after(runSeparator,run);
     for(const [id,label,name] of [['toggle-workspace','Files & structure','folder'],['toggle-inspector','Inspector panels','inspect']]) {
       const b=document.createElement('button'); b.id=id; b.type='button'; b.dataset.icon=name; b.textContent=label; b.className='panel-toggle compact-action'; b.setAttribute('aria-pressed','false');
       b.onclick=()=>{ const side=id==='toggle-workspace'?'workspace':'inspector'; const open=document.body.dataset.drawer===side; document.body.dataset.drawer=open?'':side; for(const t of actions.querySelectorAll('.panel-toggle'))t.setAttribute('aria-pressed',String(t===b&&!open));}; actions.append(b);
