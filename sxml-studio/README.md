@@ -133,6 +133,20 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 
 ## Navigation, debugging and scenarios
 
+The workspace opens in **Diagram** view. The canvas toolbar uses SVG icons with
+tooltips and accessible names; **Split** and **Source** remain available beside
+the filename. **Files** and **Structure** are separate tabs in the left panel.
+The Inspector groups data, actions, descriptions and advanced tools into
+expandable sections. Tests lead with saved scenarios and results; JSON editing,
+path suggestions and import/export are available in expandable sections.
+In Run, event inputs come first, followed by the timeline. Raw traces and query
+shortcuts are under **Trace & queries**, which opens automatically on errors.
+
+On narrower screens, the folder button opens Files/Structure; in portrait tablet
+layouts the inspector button opens the right-hand panels. Tap outside a panel
+or press Escape to close it. Touch devices use larger tool targets. The
+**Focus canvas** icon, or Command/Ctrl + period, hides both side panels.
+
 The **Chart structure** tree above the Explorer lists states and inline spawned
 charts. Search matches state IDs, event patterns and Prolog source; selecting a
 result reveals it in both source and diagram. Compound states can be collapsed

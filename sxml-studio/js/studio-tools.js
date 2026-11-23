@@ -44,6 +44,7 @@ window.studioTools = (() => {
       }
     }
     walk(model.root, 0);
+    window.SXMLChrome?.decorate(box);
   }
   function toggle(n) {
     if (n.kind === 'statechart') return;
@@ -199,7 +200,7 @@ window.studioTools = (() => {
     }
     if (t.name === 'transition_fired') for (const key of run.fired) fired.add(key);
     if (['configuration', 'transition_fired', 'external_event', 'internal_event', 'datamodel_snapshot', 'guard_result', 'macrostep_complete', 'unmatched', 'deferred'].includes(t.name)) {
-      history.push({text: (chartScope ? model.nested.get(chartScope).title + ': ' : '') + item.text, snapshot: s});
+      history.push({text: (chartScope ? model.nested.get(chartScope).title + ': ' : '') + item.text, term: t, snapshot: s});
       if (history.length > 1000) history.shift();
       cursor = history.length - 1;
     }
@@ -231,13 +232,22 @@ window.studioTools = (() => {
     const box = $('timeline-list'); if (!box) return;
     const scroll = box.scrollTop, end = scroll + box.clientHeight >= box.scrollHeight - 8;
     box.replaceChildren();
-    history.forEach((item, index) => box.append(button((index + 1) + '. ' + item.text, () => inspect(index), {'aria-current': String(cursor === index), title: item.text})));
+    history.forEach((item, index) => {
+      const t=item.term, name=t.name;
+      const text=name==='configuration' ? 'Active · '+listOf(t.args[0]).join(', ') :
+        name==='transition_fired' ? 'Transition · '+unquote(t.args[0])+' #'+(Number(t.args[1])+1) :
+        name==='guard_result' ? 'Guard · '+unquote(t.args[0])+' #'+(Number(t.args[1])+1)+' '+(t.args[2]==='true'?'passed':'failed') :
+        name==='datamodel_snapshot' ? 'Data updated' : name==='macrostep_complete' ? 'Step complete' :
+        name==='external_event' || name==='internal_event' ? 'Event · '+t.args.join(', ') : name+' · '+t.args.join(', ');
+      box.append(button(text, () => inspect(index), {'aria-current': String(cursor === index), title: item.text, 'data-icon':name==='configuration'?'state':name==='transition_fired'?'transition':name==='datamodel_snapshot'?'code':name==='guard_result'?(t.args[2]==='true'?'check':'close'):name==='macrostep_complete'?'check':'play'}));
+    });
     box.scrollTop = !paused && end ? box.scrollHeight : scroll;
     const state = $('playback-state');
     if (state) state.textContent = paused ? 'Viewing observation ' + (cursor + 1) + (run.pid ? ' · interpreter continues running' : ' · engine stopped') : 'Following live trace';
     if ($('timeline-pause')) { $('timeline-pause').disabled = !history.length || testing; $('timeline-pause').textContent = paused ? 'Follow live' : 'Pause playback'; }
     if ($('timeline-previous')) $('timeline-previous').disabled = cursor <= 0 || testing;
     if ($('timeline-next')) $('timeline-next').disabled = testing || (!run.queue.length && cursor >= history.length - 1);
+    window.SXMLChrome?.decorate($('debug-tools'));
   }
   function renderPalette() {
     const box = $('event-palette'); if (!box) return;
@@ -247,32 +257,39 @@ window.studioTools = (() => {
     if (!run.pid || run.done) { box.append(hint('Run the chart to discover event handlers.')); return; }
     for (const t of SXMLStudio.candidates(model, run.active)) {
       const input = h('input', {value: drafts.get(t.key) ?? t.on, 'aria-label': 'Concrete event for ' + t.source.id + ' handler ' + (t.index + 1), oninput: e => drafts.set(t.key, e.target.value)});
-      const row = h('div', {class: 'event-row'}, input, button('Send', () => safeSend(input.value), {disabled: run.busy || testing || paused}));
+      const row = h('div', {class: 'event-row'}, input, button('Send', () => safeSend(input.value), {disabled: run.busy || testing || paused, class: 'compact-action', title: 'Send concrete event'}));
       box.append(h('div', {class: 'event-owner'}, t.source.id + ' #' + (t.index + 1) + (t.cond ? ' · if ' + t.cond : '')), row);
     }
     if (!box.children.length) box.append(hint('No event handlers in the active configuration.'));
+    window.SXMLChrome?.decorate(box);
   }
   function renderDebug() {
     const box = $('debug-tools'); if (!box || !model) return;
-    // Rebuild controls, preserving event term drafts and timeline scroll.
     const scroll = $('timeline-list')?.scrollTop || 0;
-    box.replaceChildren(h('div', {class: 'section-title'}, 'EXECUTION TIMELINE'),
-      hint('Playback controls change the display. Timers and actors keep running.'),
-      h('div', {class: 'tools-actions'},
-        button(paused ? 'Follow live' : 'Pause playback', () => paused ? resume() : inspect(history.length - 1), {id: 'timeline-pause', disabled: !history.length || testing}),
-        button('Previous', () => inspect(cursor - 1), {id: 'timeline-previous', disabled: cursor <= 0 || testing}),
-        button('Next', () => {
-          if (cursor < history.length - 1) inspect(cursor + 1);
-          else if (run.queue.length) {
-            paused = false; const last = history.at(-1);
-            while (run.queue.length) { const item = run.queue.shift(); play(item); played(item); if (history.at(-1) !== last) break; }
-            paused = true; renderDebug();
-          }
-        }, {id: 'timeline-next', disabled: testing || (!run.queue.length && cursor >= history.length - 1)})),
-      h('label', {}, 'Playback speed ', selectBox('playback-speed', [['650', 'Slow'], ['260', 'Normal'], ['0', 'Instant']], String(speed), value => { speed = Number(value); })),
-      h('p', {id: 'playback-state', class: 'hint'}), h('div', {id: 'timeline-list', class: 'timeline-list'}),
-      h('div', {class: 'section-title'}, 'EVENT HANDLERS'), hint('Candidate handlers include ancestors. Guards are evaluated by the interpreter when an event is sent.'), h('div', {id: 'event-palette'}));
-    renderTimeline(); $('timeline-list').scrollTop = scroll; renderPalette();
+    const timeline = h('details', {class:'ui-section', open:timelineOpen},
+      h('summary', {}, SXMLChrome.icon('clock'), 'Execution timeline'),
+      h('div', {class:'ui-section-body'},
+        h('div', {class:'playback-toolbar'},
+          button(paused ? 'Follow live' : 'Pause playback', () => paused ? resume() : inspect(history.length - 1), {id:'timeline-pause', class:'compact-action', disabled:!history.length || testing}),
+          button('Previous', () => inspect(cursor - 1), {id:'timeline-previous', class:'compact-action', disabled:cursor <= 0 || testing}),
+          button('Next', () => {
+            if (cursor < history.length - 1) inspect(cursor + 1);
+            else if (run.queue.length) {
+              paused = false; const last = history.at(-1);
+              while (run.queue.length) { const item = run.queue.shift(); play(item); played(item); if (history.at(-1) !== last) break; }
+              paused = true; renderDebug();
+            }
+          }, {id:'timeline-next', class:'compact-action', disabled:testing || (!run.queue.length && cursor >= history.length - 1)}),
+          h('label', {class:'sr-label', for:'playback-speed'}, 'Playback speed'),
+          selectBox('playback-speed', [['650','Slow'],['260','Normal'],['0','Instant']], String(speed), value => {speed=Number(value);})),
+        h('p', {id:'playback-state', class:'hint'}), h('div', {id:'timeline-list', class:'timeline-list'}),
+        hint('Playback only. Timers and actors continue running.')));
+    timeline.querySelector('summary').onclick=()=>setTimeout(()=>{timelineOpen=timeline.open;},0);
+    box.replaceChildren(h('div', {class:'debug-heading'}, SXMLChrome.icon('play'), 'Send an event'),
+      h('div', {id:'event-palette'}), timeline);
+    const speedControl=box.querySelector('[data-f="playback-speed"]'); speedControl.id='playback-speed';
+    renderTimeline(); $('timeline-list').scrollTop=scroll; renderPalette();
+    window.SXMLChrome?.decorate(box);
   }
   async function settled(token = replayToken) {
     const deadline = Date.now() + 15000;
@@ -297,7 +314,7 @@ window.studioTools = (() => {
   }
   function showError(error) { resultText = error.message; resultFailed = true; status(error.message); const box = $('test-result'); if (box) { box.classList.add('fail'); box.textContent = error.message; } }
   async function safeSend(text) { try { return await send(text); } catch (error) { showError(error); } }
-  let scenarioDraft = '', resultText = '', resultFailed = false;
+  let scenarioDraft = '', resultText = '', resultFailed = false, scenarioEditorOpen = false, timelineOpen = true;
   async function record() {
     if (testing || !model || $('chart').classList.contains('stale')) return;
     const token = replayToken;
@@ -351,36 +368,50 @@ window.studioTools = (() => {
     }
   }
   function tests() {
-    const box = $('tests'); if (!model || !box) return;
-    const meta = data();
-    if (!scenarioDraft) scenarioDraft = JSON.stringify({name: 'My scenario', steps: [{event: 'start', states: [], facts: []}]}, null, 2);
-    box.replaceChildren(h('h3', {}, 'Scenarios'), hint('Each replay starts a fresh engine. States must be active after the event; facts match stored clauses exactly. Use the event palette or diagram when recording.'),
-      h('div', {class: 'tools-actions'}, button(recording ? 'Finish recording' : 'Record fresh run', () => {
-        if (recording) { scenarioDraft = JSON.stringify(recording, null, 2); recording = null; tests(); }
-        else record();
-      }, {disabled: testing}), button('Run all saved', () => replay(meta.scenarios), {disabled: testing || !meta.scenarios.length}),
-      button('Cancel tests', () => { replayToken++; testing = false; speed = 260; if (run.node) stopRun('Tests cancelled'); tests(); runControls(); }, {disabled: !testing})),
-      recording ? hint('Recording ' + recording.steps.length + ' events. Finish recording to review and save.') : h('span', {hidden: true}),
-      h('label', {}, h('input', {type: 'checkbox', checked: coverage, onchange: e => { coverage = e.target.checked; diagram.coveredStates = coverage ? visited : new Set(); diagram.coveredTransitions = coverage ? fired : new Set(); diagram._paint(); }}), ' Show coverage in purple'),
-      hint(visited.size + '/' + [model, ...model.nested.values()].reduce((n, m) => n + m.nodes.filter(s => s !== m.root).length, 0) + ' states and ' + fired.size + '/' + [model, ...model.nested.values()].reduce((n, m) => n + m.transitions.length, 0) + ' transitions observed (including nested observations).'));
-    for (const scenario of meta.scenarios) box.append(h('div', {class: 'tools-card'}, h('strong', {}, scenario.name), hint(scenario.steps.length + ' events'),
-      h('div', {class: 'tools-actions'}, button('Edit', () => { scenarioDraft = JSON.stringify(scenario, null, 2); tests(); }), button('Replay', () => replay([scenario]), {disabled: testing}),
-        button('Remove', () => changeMetadata(m => { m.scenarios = m.scenarios.filter(s => s.name !== scenario.name); }), {disabled: testing || !!run.pid}))));
-    box.append(h('label', {for: 'scenario-json'}, 'Scenario JSON'), h('textarea', {id: 'scenario-json', value: scenarioDraft, disabled: testing, spellcheck: 'false', oninput: e => scenarioDraft = e.target.value}),
-      h('div', {class: 'tools-actions'}, button('Save scenario', saveDraft, {disabled: testing}), button('Replay draft', () => {
-        try { const s = JSON.parse(scenarioDraft); if (!SXMLStudio.validScenario(s)) throw new Error('Invalid scenario'); replay([s]); } catch (error) { showError(error); }
-      }, {disabled: testing}), button('Export saved', () => download('sxml-scenarios.json', JSON.stringify(meta.scenarios, null, 2), 'application/json'))),
-      h('label', {for: 'scenario-import'}, 'Import scenarios'), h('input', {id: 'scenario-import', type: 'file', accept: '.json,application/json', disabled: testing || !!run.pid, onchange: async e => {
-        try { const values = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(values) || !values.every(SXMLStudio.validScenario)) throw new Error('Invalid scenario file'); changeMetadata(m => { for (const s of values) { m.scenarios = m.scenarios.filter(old => old.name !== s.name); m.scenarios.push(s); } }); }
-        catch (error) { showError(error); }
-      }}),
-      h('div', {id: 'test-result', class: 'test-result' + (resultFailed ? ' fail' : ''), role: 'status'}, resultText),
-      h('h3', {}, 'Candidate test paths'), hint('Up to 40 structural paths, at most 6 events each, beginning at the root initial state. Suggestions do not evaluate guards or prove reachability. Nested, parallel, delayed and eventless behavior must be tested in the interpreter. Replace variables with concrete Prolog terms.'));
-    const suggestions = SXMLStudio.paths(model);
-    suggestions.forEach((steps, i) => box.append(button(steps.map(s => s.event).join(' → '), () => {
-      scenarioDraft = JSON.stringify({name: 'Candidate path ' + (i + 1), steps: steps.map(s => ({event: s.event, states: []}))}, null, 2); tests();
-    }, {class: 'path-suggestion', disabled: testing})));
-    if (!suggestions.length) box.append(hint('No simple event paths found at the root initial state. Record a run for this chart.'));
+    const box=$('tests'); if(!model || !box) return;
+    const meta=data();
+    const section=(title,icon,...content)=>h('details',{class:'ui-section'},h('summary',{},SXMLChrome.icon(icon),title),h('div',{class:'ui-section-body'},...content));
+    if(!scenarioDraft) scenarioDraft=JSON.stringify({name:'My scenario',steps:[{event:SXMLStudio.paths(model,1,1)[0]?.[0]?.event || 'start',states:[],facts:[]}]},null,2);
+    const recordButton=button(recording?'Finish recording':'Record fresh run',()=>{
+      if(recording){scenarioDraft=JSON.stringify(recording,null,2);recording=null;scenarioEditorOpen=true;tests();}
+      else record();
+    },{disabled:testing, 'data-icon':recording?'stop':'record'});
+    box.replaceChildren(h('div',{class:'panel-intro'},h('h3',{},'Scenarios'),SXMLChrome.icon('test')),
+      h('div',{class:'tools-actions'},recordButton,button('Run all saved',()=>replay(meta.scenarios),{class:'primary',disabled:testing || !meta.scenarios.length}),
+        button('Cancel tests',()=>{replayToken++;testing=false;speed=260;if(run.node)stopRun('Tests cancelled');tests();runControls();},{class:'compact-action',disabled:!testing})),
+      recording?hint('Recording · '+recording.steps.length+' event'+(recording.steps.length===1?'':'s')):h('span',{hidden:true}),
+      h('div',{id:'test-result',class:'test-result'+(resultFailed?' fail':''),role:'status'},resultText));
+    for(const scenario of meta.scenarios) box.append(h('div',{class:'tools-card scenario-card'},SXMLChrome.icon('test'),
+      h('div',{class:'scenario-card-copy'},h('strong',{},scenario.name),hint(scenario.steps.length+' event'+(scenario.steps.length===1?'':'s'))),
+      h('div',{class:'tools-actions'},button('Replay',()=>replay([scenario]),{class:'compact-action',disabled:testing,title:'Replay '+scenario.name}),
+        button('Edit',()=>{scenarioDraft=JSON.stringify(scenario,null,2);scenarioEditorOpen=true;tests();},{class:'compact-action',title:'Edit '+scenario.name}),
+        button('Remove',()=>changeMetadata(m=>{m.scenarios=m.scenarios.filter(s=>s.name!==scenario.name);}),{class:'compact-action',disabled:testing || !!run.pid,title:'Remove '+scenario.name}))));
+    if(!meta.scenarios.length)box.append(h('div',{class:'empty-scenarios'},SXMLChrome.icon('test'),'Record a run to create your first scenario.'));
+    const stateTotal=[model,...model.nested.values()].reduce((n,m)=>n+m.nodes.filter(s=>s!==m.root).length,0);
+    const transitionTotal=[model,...model.nested.values()].reduce((n,m)=>n+m.transitions.length,0);
+    box.append(h('div',{class:'coverage-strip'},h('label',{},h('input',{type:'checkbox',checked:coverage,onchange:e=>{coverage=e.target.checked;diagram.coveredStates=coverage?visited:new Set();diagram.coveredTransitions=coverage?fired:new Set();diagram._paint();}}),'Show coverage in purple'),
+      hint(visited.size+' / '+stateTotal+' states · '+fired.size+' / '+transitionTotal+' transitions')));
+    const editorSection=section('Scenario editor','code',
+      h('label',{for:'scenario-json'},'Event sequence and assertions'),
+      h('textarea',{id:'scenario-json',value:scenarioDraft,disabled:testing,spellcheck:'false',oninput:e=>scenarioDraft=e.target.value}),
+      h('div',{class:'tools-actions'},button('Save scenario',saveDraft,{class:'primary',disabled:testing}),button('Replay draft',()=>{
+        try{const s=JSON.parse(scenarioDraft);if(!SXMLStudio.validScenario(s))throw new Error('Invalid scenario');replay([s]);}catch(error){showError(error);}
+      },{disabled:testing})));
+    editorSection.open=scenarioEditorOpen;
+    editorSection.querySelector('summary').onclick=()=>setTimeout(()=>{scenarioEditorOpen=editorSection.open;},0);
+    box.append(editorSection);
+    const paths=section('Suggested paths','transition',hint('Structural suggestions: up to six events. Replace variables with concrete values and add assertions. Guards, timers and nested configurations are checked during replay.'));
+    SXMLStudio.paths(model).forEach((steps,i)=>paths.lastChild.append(button(steps.map(s=>s.event).join(' → '),()=>{
+      scenarioDraft=JSON.stringify({name:'Candidate path '+(i+1),steps:steps.map(s=>({event:s.event,states:[]}))},null,2);scenarioEditorOpen=true;tests();
+    },{class:'path-suggestion',disabled:testing,'data-icon':'transition'})));
+    if(paths.lastChild.children.length===1)paths.lastChild.append(hint('Record a run to capture this chart’s behavior.'));
+    box.append(paths,section('Import and export','folder',button('Export saved',()=>download('sxml-scenarios.json',JSON.stringify(meta.scenarios,null,2),'application/json')),
+      h('label',{for:'scenario-import'},'Import scenarios (.json)'),h('input',{id:'scenario-import',type:'file',accept:'.json,application/json',disabled:testing || !!run.pid,onchange:async e=>{
+        try{const values=JSON.parse(await e.target.files[0].text());if(!Array.isArray(values)||!values.every(SXMLStudio.validScenario))throw new Error('Invalid scenario file');changeMetadata(m=>{for(const s of values){m.scenarios=m.scenarios.filter(old=>old.name!==s.name);m.scenarios.push(s);}});}
+        catch(error){showError(error);}
+      }})),section('How scenarios work','info',hint('Every replay starts a fresh engine. Each step sends a concrete Prolog event, then checks active states and stored clauses. Fact owners are #root or a state ID. Rules are never executed for assertions. Timers use real time.'),
+      hint('Recording captures sends from the event palette and diagram. Coverage describes observed execution, including inline charts.')));
+    window.SXMLChrome?.decorate(box);
   }
   $('structure-search').oninput = tree;
   const api = {adopt, selection, inspector, tests, controls, stopped, newRun, fileChanged, scope, played, send: safeSend, paused: () => paused, speed: () => speed, testing: () => testing};
