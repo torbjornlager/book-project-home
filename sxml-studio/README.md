@@ -274,7 +274,7 @@ swipl -q -g "load_files(['tests/live-datamodel.pl','tests/studio-runtime.pl']),r
   deeper or external charts remain visible as unmapped actor records in the log.
 
 In Split view, **Direction ↓ / →** also changes the pane arrangement: vertical diagrams
-place the source beside the chart; horizontal diagrams place it below. Drag the
+place the source to the left of the chart; horizontal diagrams place it above. Drag the
 divider to resize either arrangement. Each arrangement’s split size is remembered
 separately across reloads in this browser, as a proportion of the available space.
 Settings is available in the side-panel tab.

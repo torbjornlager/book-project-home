@@ -89,16 +89,17 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .test-result.fail{color:var(--error);background:color-mix(in srgb,var(--error) 8%,var(--panel))}
 .empty-scenarios{padding:24px 12px;text-align:center;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:calc(12px * var(--ui-font-scale,1));margin:14px 0}
 .empty-scenarios>.ui-icon{display:block;margin:0 auto 10px;width:26px;height:26px}
-.run-actions{padding:16px;gap:8px}.run-actions button{font-size:calc(13px * var(--ui-font-scale,1));min-height:38px}.run-actions .primary{flex:1;justify-content:center}
 #debug-tools{padding:0 16px;max-height:none;flex:1;min-height:120px;border:0}
 .debug-heading{display:flex;align-items:center;gap:8px;font-size:calc(13px * var(--ui-font-scale,1));font-weight:650;margin:8px 0 12px}.debug-heading .ui-icon{width:17px;height:17px;color:var(--muted)}
 .event-owner{font-size:calc(11px * var(--ui-font-scale,1));margin-top:12px;color:var(--muted)}
 .event-row{padding:4px 0 8px;margin:0}.event-row input{font:var(--ui-font-weight,500) calc(12px * var(--ui-font-scale,1)) ui-monospace,monospace;min-height:36px;border-radius:6px!important;background:var(--panel)!important}
 .event-row button{border:0;background:var(--accent-bg);color:var(--accent)}
 .timeline-list{max-height:210px;border-left:1px solid var(--line);margin:8px 0 8px 7px;padding-left:8px}
-.timeline-list button{display:flex;align-items:center;gap:7px;min-height:32px;border:0;border-radius:5px;font-size:calc(11px * var(--ui-font-scale,1))}
+.timeline-list button{display:flex;align-items:center;justify-content:flex-start;text-align:left;gap:7px;min-height:32px;border:0;border-radius:5px;font-size:calc(11px * var(--ui-font-scale,1))}
 .timeline-list button>.ui-icon{width:14px;height:14px;color:var(--muted)}
-.timeline-list .ui-button-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timeline-list .ui-button-label{min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-toolbar #toolbar-run{color:var(--accent);background:var(--accent-bg)}
+.chart-toolbar #toolbar-stop:not(:disabled){color:var(--error)}
 .playback-toolbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:4px 0}
 .playback-toolbar button{min-height:32px;height:32px;min-width:32px;width:32px;padding:6px!important;background:transparent;border:0}
 .playback-toolbar select{margin-left:auto;width:auto!important;max-width:100px;font-size:calc(11px * var(--ui-font-scale,1));padding:5px!important;background:transparent!important}

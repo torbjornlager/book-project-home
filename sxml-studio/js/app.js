@@ -1059,16 +1059,13 @@ function logRow(cls, parts) {
 const bold = t => { const b = document.createElement('b'); b.textContent = t; return b; };
 
 function runControls() {
-  $('run-start').disabled = run.starting || run.busy || !!window.studioTools?.testing();
-  $('run-start').textContent = run.pid ? '↻ Restart chart' : '▷ Run chart';
-  $('run-halt').disabled = !run.node || run.starting;
   const badge = $('run-badge');
   badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
   badge.classList.toggle('live', !!run.pid && !run.done);
   updateChrome();
   window.studioTools?.controls();
   window.SXMLChrome?.decorate(document.querySelector('.query-pane'));
-  window.SXMLChrome?.syncRun();
+  window.SXMLChrome?.syncRun({live: !!run.pid, runDisabled: run.starting || run.busy || !!window.studioTools?.testing(), stopDisabled: !run.node || run.starting});
 }
 
 function cancelInput() {
@@ -1641,8 +1638,6 @@ function setView(view) {
 }
 for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => setView(b.dataset.view);
 
-$('run-start').onclick = startChart;
-$('run-halt').onclick = haltChart;
 $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
 function updateUI(settings) {
@@ -1695,11 +1690,11 @@ for (const [id, property, direction, min, max] of [['left-divider', '--left', 1,
     editor.refresh();
   };
   divider.onpointerdown = e => { start = coordinate(e); size = currentSize(); divider.setPointerCapture(e.pointerId); };
-  divider.onpointermove = e => { if (divider.hasPointerCapture(e.pointerId)) set(size - (coordinate(e) - start)); };
+  divider.onpointermove = e => { if (divider.hasPointerCapture(e.pointerId)) set(size + (coordinate(e) - start)); };
   divider.onpointerup = e => { if (divider.hasPointerCapture(e.pointerId)) divider.releasePointerCapture(e.pointerId); };
   divider.onkeydown = e => {
     const keys = vertical() ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown'];
-    if (keys.includes(e.key)) { e.preventDefault(); set(currentSize() + (e.key === keys[1] ? -20 : 20)); }
+    if (keys.includes(e.key)) { e.preventDefault(); set(currentSize() + (e.key === keys[1] ? 20 : -20)); }
   };
 }
 

@@ -98,8 +98,6 @@ body[data-view=source] .source-pane{flex:1 1 0}
 /* run */
 .run-view{display:flex;flex-direction:column;overflow:hidden}
 .run-view[hidden]{display:none}
-.run-actions{display:flex;align-items:center;gap:6px;padding:14px 16px 4px;flex:none}
-.run-actions button{font-size:calc(11px * var(--ui-font-scale,1))}
 .query-actions{align-items:center}
 .queries{padding:0 16px;flex:none;max-height:150px;overflow:auto}
 .queries .section-title{margin-top:4px}
