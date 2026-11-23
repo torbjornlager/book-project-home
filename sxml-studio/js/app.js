@@ -107,7 +107,10 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
   onOpen(key) { openInInspector(key); },
   onDouble(key, info) { diagramDouble(key, info); },
-  onConnect(source, target) { connect(source, target); },
+  onHandle(key, dir, point) { extendFrom(key, dir, point); },
+  stateActions(key) { return stateActions(key); },
+  onStateAction(key, action) { stateAction(key, action); },
+  onConnect(source, target, opts) { connect(source, target, opts); },
   onMove(key, dx, dy) { moveState(key, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
@@ -551,6 +554,9 @@ function diagramDouble(key, info) {
   else openInInspector(key);
 }
 
+/* An in-place edit applies only if its element still belongs to the current model. */
+const live = el => !!(model && el && model.doc.documentElement.contains(el));
+
 function renameInPlace(n) {
   if (!guard()) return;
   select(n.key, { reveal: false });
@@ -560,7 +566,7 @@ function renameInPlace(n) {
     label: 'State id', placeholder: 'state id', hint: 'Enter to rename · Esc to cancel',
     onCommit(value) {
       const v = value.trim();
-      if (!v || v === n.id || !model.byKey.has(n.key)) return;
+      if (!v || v === n.id || !live(n.el)) return;
       if (/\s/.test(v)) { status('A state id cannot contain spaces'); return; }
       if (model.doc.querySelector('[id="' + CSS.escape(v) + '"]')) { status('Another element already has the id “' + v + '”'); return; }
       if (!guard()) return;
@@ -580,7 +586,7 @@ function editTransitionInPlace(t, anchor) {
     label: 'Transition trigger and guard', placeholder: 'event [guard]', minWidth: 220,
     hint: 'event [guard] · after 2 [guard] · [guard] alone is eventless',
     onCommit(value) {
-      if (!model.items.has(t.key)) return;
+      if (!live(t.el)) return;
       const next = SXMLDiagram.parseTrigger(value), el = t.el;
       const same = (a, b) => (a == null ? '' : String(a).replace(/\s+/g, ' ').trim()) === (b == null ? '' : b);
       if (same(t.on, next.on) && same(t.after, next.after) && same(t.cond, next.cond)) return;
@@ -592,6 +598,84 @@ function editTransitionInPlace(t, anchor) {
       status('Transition updated · the action is edited in the Inspector');
     }
   });
+}
+
+/* Floating toolbar of the selected state. */
+function stateActions(key) {
+  const n = model && model.byKey.get(key);
+  if (!n || n.kind === 'statechart' || run.pid) return [];
+  const list = [{ id: 'rename', icon: 'edit', label: 'Rename (or double-click the name)' }];
+  if (n.kind === 'state' || n.kind === 'parallel') {
+    list.push({ id: 'child', icon: 'plus', label: 'Add a child state' });
+    list.push({ id: 'transition', icon: 'transition', label: 'New transition to a new state' });
+  }
+  list.push({ id: 'zoom', icon: 'focus', label: 'Zoom to this state' });
+  list.push({ id: 'inspect', icon: 'inspect', label: 'Open in the Inspector' });
+  list.push({ id: 'delete', icon: 'trash', label: 'Delete ' + n.kind });
+  return list;
+}
+
+function stateAction(key, action) {
+  const n = model.byKey.get(key);
+  if (!n) return;
+  if (action === 'rename') renameInPlace(n);
+  else if (action === 'child') quickAdd(n);
+  else if (action === 'transition') extendFrom(key, diagram.direction === 'DOWN' ? 'down' : 'right', null);
+  else if (action === 'zoom') diagram.zoomTo(key);
+  else if (action === 'inspect') openInInspector(key);
+  else if (action === 'delete') { select(key, { reveal: false }); removeSelected(); }
+}
+
+function uniqueEvent(doc) {
+  const used = new Set(Array.from(doc.getElementsByTagName('go')).map(g => g.getAttribute('on')));
+  let i = 1;
+  while (used.has('new_event_' + i)) i++;
+  return 'new_event_' + i;
+}
+
+/* A side handle of the selected state: create a sibling state next to it in
+   that direction (or where a handle drag was dropped) and a transition to it
+   with a placeholder event, then edit the event on the canvas. */
+async function extendFrom(key, dir, point) {
+  if (!guard()) return;
+  const s = model.byKey.get(key);
+  if (!s || s.kind === 'final' || s.kind === 'history' || !s.parent) return;
+  const parent = s.parent;
+  if (parent.kind === 'parallel') { status('Each child of a parallel state is a region · add the new state inside a region instead'); return; }
+  const boxes = diagram.geo.boxes, sb = boxes.get(key), pb = boxes.get(parent.key) || { x: 0, y: 0 };
+  const el = SXML.addState(model.doc, parent.el, 'state');
+  const id = el.getAttribute('id');
+  const go = SXML.addTransition(model.doc, s.el, id);
+  go.setAttribute('on', uniqueEvent(model.doc));
+  if (sb) {
+    const W = 80, H = 40, gapX = 90, gapY = 70;
+    let x, y;
+    if (point) { x = point.x - W / 2; y = point.y - H / 2; }
+    else {
+      /* The layered layout puts a transition's target in a later layer, so a
+         handle across the flow places the new state diagonally ahead. */
+      const across = diagram.direction === 'DOWN' ? ['left', 'right'] : ['up', 'down'];
+      x = { right: sb.x + sb.w + gapX, left: sb.x - gapX - W, up: sb.x + sb.w / 2 - W / 2, down: sb.x + sb.w / 2 - W / 2 }[dir];
+      y = { right: sb.y + sb.h / 2 - H / 2, left: sb.y + sb.h / 2 - H / 2, up: sb.y - gapY - H, down: sb.y + sb.h + gapY }[dir];
+      if (across.includes(dir)) { if (diagram.direction === 'DOWN') y = sb.y + sb.h + gapY / 2; else x = sb.x + sb.w + gapX / 2; }
+    }
+    /* Pin the current siblings where they are, as a manual drag does, so the
+       new state lands beside its source instead of reshuffling the parent. */
+    const layout = Object.assign({}, model.layout || {});
+    const hint = Object.assign({}, layout[parent.key] || {});
+    for (const k of [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)]) {
+      const b = boxes.get(k);
+      if (b && !hint[k] && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)];
+    }
+    hint[id] = [Math.round(x - pb.x), Math.round(y - pb.y)];
+    layout[parent.key] = hint;
+    SXML.setLayout(model.doc, layout);
+  }
+  selEl = go; commit();
+  await diagram.pending;
+  const t = entryFor(go);
+  if (t) editTransitionInPlace(t, null);
+  status('New state ' + id + ' added · name the event, then double-click ' + id + ' to rename it');
 }
 
 /* Add a state inside `parent` and name it straight away on the canvas. */
@@ -630,13 +714,23 @@ function addState(kind) {
   if (f) { f.focus(); f.select(); }
 }
 
-function connect(sourceKey, targetKey) {
+async function connect(sourceKey, targetKey, opts) {
   if (!guard()) return;
   const s = model.byKey.get(sourceKey), t = model.byKey.get(targetKey);
   if (!s || !t || !t.id) return;
   if (s.kind === 'final') { status('A final state cannot have transitions'); return; }
   if (s.kind === 'history' && s.transitions.length) { s.transitions[0].el.setAttribute('to', t.id); selEl = s.transitions[0].el; commit(); return; }
-  selEl = SXML.addTransition(model.doc, s.el, t.id);
+  const go = SXML.addTransition(model.doc, s.el, t.id);
+  selEl = go;
+  if (opts && opts.inPlace) {
+    go.setAttribute('on', uniqueEvent(model.doc));
+    commit();
+    await diagram.pending;
+    const entry = entryFor(go);
+    if (entry) editTransitionInPlace(entry, null);
+    status('Transition ' + s.id + ' → ' + t.id + ' added · name its event');
+    return;
+  }
   commit();
   showSide('inspector');
   const f = $('inspector').querySelector('input[data-f="on"]');

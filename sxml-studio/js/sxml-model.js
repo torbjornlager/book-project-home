@@ -560,7 +560,9 @@
   function addState(doc, parentEl, kind) {
     const base = { state: 'state', parallel: 'parallel', final: 'final', history: 'h' }[kind];
     const el = doc.createElement(kind);
-    el.setAttribute('id', uniqueId(doc, base + (kind === 'history' ? '' : '1')));
+    let id = base;
+    if (kind !== 'history') { let i = 1; while (doc.querySelector('[id="' + base + i + '"]')) i++; id = base + i; }
+    el.setAttribute('id', uniqueId(doc, id));
     const hadStates = Array.from(parentEl.children).some(k => ['state', 'parallel', 'final'].includes(k.localName));
     insertChild(parentEl, el);
     if (kind === 'history') {

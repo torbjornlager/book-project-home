@@ -97,6 +97,13 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   or the body of an expanded compound or parallel state, to add a state there and
   name it at once. Enter saves, Escape cancels; every edit is undoable. While a
   chart runs, double-click opens the Inspector instead.
+- A selected state shows a handle on each side and a small floating toolbar
+  (rename, add child, new transition, zoom to, Inspector, delete). Click a handle
+  to add a sibling state with a transition to it (placeholder event
+  `new_event_N`), then name the event on the canvas. Drag a handle onto a state
+  to connect to it, or onto empty space to place the new state there. The new
+  state's position is saved as a layout hint; because layers follow the chart
+  direction, a handle across the flow places it diagonally ahead.
 - Drag states to arrange them among their siblings; layout hints are saved in
   the source. Root datamodel notes can be freely positioned. **Auto** clears
   manual arrangements. Dragging existing transitions has no effect. To create

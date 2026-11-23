@@ -500,6 +500,7 @@
   Diagram.prototype._apply = function () {
     this.view.setAttribute('transform', 'translate(' + this.tx + ',' + this.ty + ') scale(' + this.k + ')');
     if (this.h.onZoom) this.h.onZoom(this.k);
+    this._placeStateBar();
   };
 
   Diagram.prototype.fit = function () {
@@ -544,13 +545,13 @@
 
   Diagram.prototype._render = function () {
     const { boxes, edges, info } = this.geo, model = this.model, g = this.view;
-    this.closeEditor();
     while (g.firstChild) g.removeChild(g.firstChild);
     this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map(); this.edgeGeo = new Map();
     this.nodeOf = new Map(); this.frameEls = new Map();
     const gStates = el('g', {}, g), gEdges = el('g', {}, g), gLabels = el('g', {}, g);
     const gNotes = el('g', {}, g);       // root notes go on top, so a note dropped onto the chart stays visible
     this.overlay = el('g', {}, g);
+    this.handleLayer = el('g', { class: 'handles' }, this.overlay);
 
     const draw = n => {
       const b = boxes.get(n.key), inf = info.get(n.key);
@@ -725,6 +726,70 @@
       if (p) p.setAttribute('marker-end', 'url(#' + (f ? 'arrow-fired' : s ? 'arrow-sel' : 'arrow') + ')');
     }
     this.svg.classList.toggle('running', this.running === true);
+    this._drawSelectionTools();
+  };
+
+  /* Selected-state affordances: a handle on each side (click to add a
+     connected state in that direction, drag to connect or to place a new
+     state) and a small floating toolbar of state actions. */
+  Diagram.prototype._editable = function () { return !this.running && !this.readOnly && !!this.h.onHandle; };
+
+  Diagram.prototype._drawSelectionTools = function () {
+    const layer = this.handleLayer;
+    if (!layer) return;
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+    const key = this.selected, n = key && this.nodeOf && this.nodeOf.get(key), b = n && this.geo && this.geo.boxes.get(key);
+    const ok = !!(b && !n.scope && this._editable() && this.nodeEls.has(key));
+    if (ok && (n.kind === 'state' || n.kind === 'parallel')) {
+      const mid = { up: [b.x + b.w / 2, b.y], right: [b.x + b.w, b.y + b.h / 2], down: [b.x + b.w / 2, b.y + b.h], left: [b.x, b.y + b.h / 2] };
+      const titles = { up: 'above', right: 'to the right', down: 'below', left: 'to the left' };
+      for (const dir of Object.keys(mid)) {
+        const g = el('g', { class: 'handle', 'data-handle': dir, 'data-source': key }, layer);
+        el('circle', { class: 'handle-hit', cx: mid[dir][0], cy: mid[dir][1], r: 11 }, g);
+        el('circle', { class: 'handle-dot', cx: mid[dir][0], cy: mid[dir][1], r: 5 }, g);
+        el('title', {}, g, 'Click: new transition to a new state ' + titles[dir] + ' · drag: connect to a state, or drop on empty space');
+      }
+    }
+    this._stateBarKey = ok ? key : null;
+    this._renderStateBar();
+  };
+
+  Diagram.prototype._renderStateBar = function () {
+    const key = this._stateBarKey;
+    const actions = key && this.h.stateActions ? this.h.stateActions(key) : [];
+    if (!actions.length) { if (this.stateBar) this.stateBar.hidden = true; return; }
+    if (!this.stateBar) {
+      this.stateBar = document.createElement('div');
+      this.stateBar.className = 'state-bar';
+      this.stateBar.setAttribute('role', 'toolbar');
+      this.stateBar.setAttribute('aria-label', 'State actions');
+      this.stateBar.addEventListener('pointerdown', ev => ev.stopPropagation());
+      this.host.append(this.stateBar);
+    }
+    const bar = this.stateBar;
+    bar.replaceChildren();
+    for (const a of actions) {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.title = a.label; btn.setAttribute('aria-label', a.label); btn.dataset.action = a.id;
+      const icon = global.SXMLChrome && global.SXMLChrome.icon ? global.SXMLChrome.icon(a.icon) : null;
+      if (icon) btn.append(icon); else btn.textContent = a.text || a.label[0];
+      btn.onclick = () => this.h.onStateAction(key, a.id);
+      bar.append(btn);
+    }
+    bar.hidden = false;
+    this._placeStateBar();
+  };
+
+  Diagram.prototype._placeStateBar = function () {
+    const bar = this.stateBar;
+    if (!bar || bar.hidden || !this._stateBarKey) return;
+    const r = this.boxRect(this._stateBarKey);
+    if (!r) { bar.hidden = true; return; }
+    const w = bar.offsetWidth || 180, hgt = bar.offsetHeight || 32, host = this.host.getBoundingClientRect();
+    let top = r.top - hgt - 14;
+    if (top < 4) top = r.top + r.height + 14;
+    const left = Math.max(4, Math.min(r.left + r.width / 2 - w / 2, host.width - w - 4));
+    bar.style.left = left + 'px'; bar.style.top = top + 'px';
   };
 
   Diagram.prototype.select = function (key) { this.selected = key; this._paint(); };
@@ -781,6 +846,13 @@
       if (ev.button !== 0) return;
       svg.focus({ preventScroll: true });
       const stateEl = ev.target.closest('[data-state]');
+      const handleEl = ev.target.closest('[data-handle]');
+      if (handleEl && this._editable()) {
+        drag = { type: 'handle', source: handleEl.getAttribute('data-source'), dir: handleEl.getAttribute('data-handle'), start: this._point(ev), x: ev.clientX, y: ev.clientY, moved: false };
+        svg.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+        return;
+      }
       if (this.tool === 'connect' && stateEl && !this.running && !this.readOnly) {
         const key = stateEl.getAttribute('data-state');
         const start = this._point(ev);
@@ -814,6 +886,10 @@
         drag.moved = true; svg.classList.add('panning');
         this.tx = drag.tx + dx; this.ty = drag.ty + dy; this.userMoved = true; this._apply();
       } else {
+        if (drag.type === 'handle' && !drag.moved) {
+          if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 6) return;
+          drag.moved = true; svg.classList.add('moving');
+        }
         const p = this._point(ev);
         if (!drag.line) drag.line = el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay);
         const from = drag.start, to = p;
@@ -831,6 +907,17 @@
       const d = drag; drag = null;
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
+      if (d.type === 'handle') {
+        svg.classList.remove('moving');
+        if (d.line) d.line.remove();
+        if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
+        if (ev.type !== 'pointerup') return;
+        if (!d.moved) { this.h.onHandle(d.source, d.dir, null); return; }
+        const over = this._stateAt(ev);
+        if (over) this.h.onConnect(d.source, over, { inPlace: true });
+        else this.h.onHandle(d.source, d.dir, this._point(ev));
+        return;
+      }
       if (d.type === 'connect') {
         if (d.line) d.line.remove();
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
@@ -859,6 +946,16 @@
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
+  };
+
+  /* Centre a box in the view, zooming so that it fills about half of it. */
+  Diagram.prototype.zoomTo = function (key) {
+    const b = this.geo && this.geo.boxes.get(key);
+    if (!b) return;
+    const r = this.host.getBoundingClientRect();
+    this.k = Math.max(0.2, Math.min(2, (r.width * 0.5) / b.w, (r.height * 0.5) / b.h));
+    this.tx = r.width / 2 - (b.x + b.w / 2) * this.k; this.ty = r.height / 2 - (b.y + b.h / 2) * this.k;
+    this.userMoved = true; this._apply();
   };
 
   /* Screen rectangle of a diagram box, relative to the host. */
