@@ -76,7 +76,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 ## What it does
 
 - Draws the chart in the book's notation: nested states, dashed lines between
-  parallel regions, initial dots, H / H* history, bullseye finals. Entry/exit
+  parallel regions, dashed arrows for eventless transitions (no `on` or `after`), initial dots, H / H* history, bullseye finals. Entry/exit
   actions, deferrals, spawns and targetless transitions are listed inside
   their state; `<datamodel>` appears as a note.
 - Diagram and source stay in step both ways. Selecting in one highlights the

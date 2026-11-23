@@ -634,7 +634,8 @@
       }
       const scope = inf.item.scope || null;
       const key = scope || inf.item.key;
-      const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gEdges);
+      const eventless = inf.item.on == null && inf.item.after == null;
+      const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : '') + (eventless ? ' eventless' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gEdges);
       const d = roundedPath(e.points, 7);
       el('path', { class: 'edge-hit', d }, grp);
       el('path', { class: 'edge', d, 'marker-end': 'url(#arrow)' }, grp);
