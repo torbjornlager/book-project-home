@@ -10,18 +10,21 @@
 <link rel="stylesheet" href="chart.css">
 <link rel="stylesheet" href="sxml-studio.css">
 <script defer src="runtime/vendor/codemirror.min.js"></script>
-<script defer src="runtime/swi_wasm_actor_worker.js"></script>
-<script defer src="runtime/vendor/swi-wasm-node.js"></script>
+<script defer src="runtime/swi_wasm_actor_worker.js?v=20261123-studio-tools"></script>
+<script defer src="runtime/vendor/swi-wasm-node.js?v=20261123-studio-tools"></script>
 <script defer src="vendor/elk.bundled.js"></script>
 <script defer src="js/sxml-model.js"></script>
 <script defer src="js/sxml-diagram.js"></script>
+<script defer src="js/studio-model.js"></script>
 <script defer src="js/app.js"></script>
+<script defer src="js/studio-tools.js"></script>
+<link rel="stylesheet" href="studio-tools.css">
 </head>
 <body class="light" data-view="split" data-layout="horizontal">
 <script src="js/ui-preferences.js"></script>
 <header class="topbar"><div class="brand"><a class="brand-home" href="https://trinity.elfenbenstornet.se" aria-label="Trinity homepage" title="Trinity homepage"><img class="brand-mark" src="img/spider-agent.png" width="42" height="42" alt=""></a><span>Trinity <strong>SXML Studio</strong></span></div><span class="experiment">STATECHART EDITOR</span><div class="top-actions"><span class="engine"><i></i> SWI-Prolog · WASM</span></div></header>
 <main class="studio">
-<aside class="workspace"><div class="panel-heading">EXPLORER <span>LOCAL WORKSPACE</span></div><div class="workspace-title">⌄ &nbsp; SXML CODE</div><div id="files" role="group" aria-label="Example statecharts"></div><div class="file-actions"><button id="new">New statechart</button><button id="open">Open .xml file</button><input id="file-input" type="file" accept=".xml,.sxml,.statechart,.txt" hidden><button id="save">Save source</button><button id="export" title="Save the drawing as an SVG file">Save diagram</button></div><div class="workspace-note"><span class="note-mark">↗</span><p>Draw, edit and run SXML statecharts.</p><p>The interpreter runs here, in your browser. No native node is needed.</p><a href="https://github.com/torbjornlager/swi-wasm-node" target="_blank" rel="noreferrer">About the runtime ↗</a></div></aside>
+<aside class="workspace"><div class="panel-heading">EXPLORER <span>LOCAL WORKSPACE</span></div><div class="workspace-title">⌄ &nbsp; SXML CODE</div><details class="structure-panel" open><summary>Chart structure</summary><label for="structure-search" class="sr-label">Search states, events and Prolog</label><input id="structure-search" type="search" placeholder="Search chart…"><div id="structure-tree"></div></details><div id="files" role="group" aria-label="Example statecharts"></div><div class="file-actions"><button id="new">New statechart</button><button id="open">Open .xml file</button><input id="file-input" type="file" accept=".xml,.sxml,.statechart,.txt" hidden><button id="save">Save source</button><button id="export" title="Save the drawing as an SVG file">Save diagram</button></div><div class="workspace-note"><span class="note-mark">↗</span><p>Draw, edit and run SXML statecharts.</p><p>The interpreter runs here, in your browser. No native node is needed.</p><a href="https://github.com/torbjornlager/swi-wasm-node" target="_blank" rel="noreferrer">About the runtime ↗</a></div></aside>
 <div class="divider" id="left-divider" role="separator" aria-label="Resize workspace" aria-orientation="vertical" aria-valuemin="120" aria-valuemax="340" tabindex="0"></div>
 <section class="editor-pane" aria-label="Statechart editor">
 <div class="editor-tabs"><span class="file-icon">SXML</span><span id="filename">untitled.xml</span><span id="dirty" aria-label="Unsaved changes"></span><div class="view-switch" role="group" aria-label="View"><button data-view="diagram">Diagram</button><button data-view="split">Split</button><button data-view="source">Source</button></div></div>
@@ -38,14 +41,16 @@
 </section>
 <div class="divider" id="right-divider" role="separator" aria-label="Resize side panel" aria-orientation="vertical" aria-valuemin="280" aria-valuemax="640" tabindex="0"></div>
 <section class="query-pane" aria-label="Inspector, run and settings">
-<div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-settings" aria-label="Settings" title="Settings" aria-selected="false" aria-controls="settings" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-1.4.8-2.3-.6-2.5 4.3 1.7 1.7v1.6l-1.7 1.7 2.5 4.3 2.3-.6 1.4.8.6 2.4h5l.6-2.4 1.4-.8 2.3.6 2.5-4.3-1.7-1.7v-1.6l1.7-1.7-2.5-4.3-2.3.6-1.4-.8L14.5 3z"/><circle cx="12" cy="12.3" r="3"/></svg></button></div>
+<div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-tests" aria-selected="false" aria-controls="tests" tabindex="-1">Tests</button><button role="tab" id="tab-settings" aria-label="Settings" title="Settings" aria-selected="false" aria-controls="settings" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-1.4.8-2.3-.6-2.5 4.3 1.7 1.7v1.6l-1.7 1.7 2.5 4.3 2.3-.6 1.4.8.6 2.4h5l.6-2.4 1.4-.8 2.3.6 2.5-4.3-1.7-1.7v-1.6l1.7-1.7-2.5-4.3-2.3.6-1.4-.8L14.5 3z"/><circle cx="12" cy="12.3" r="3"/></svg></button></div>
 <div id="inspector" class="side-view" role="tabpanel" aria-labelledby="tab-inspector"></div>
 <div id="run" class="side-view run-view" role="tabpanel" aria-labelledby="tab-run" hidden>
 <div class="run-actions"><button id="run-start" class="primary" title="Spawn the chart in a fresh browser engine">▷ Run chart</button><button id="run-halt" disabled>Halt</button></div>
+<div id="debug-tools"></div>
 <div class="queries"><div class="section-title">QUERIES FOR THIS CHART</div><div id="suggestions"></div></div>
 <div class="section-title log-title">TRACE AND OUTPUT <label><input type="checkbox" id="show-trace" checked> trace</label><button id="clear">Clear</button></div>
 <div id="log" class="log" aria-live="polite"></div>
 </div>
+<div id="tests" class="side-view tools-view" role="tabpanel" aria-labelledby="tab-tests" hidden></div>
 <div id="settings" class="side-view settings-view" role="tabpanel" aria-labelledby="tab-settings" hidden><h3>Colour mode</h3><div class="ui-weight-control"><label for="theme">Mode</label><select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></div><h3>UI typography</h3><div class="spacing-control"><label for="ui-font-size">Font size</label><output id="ui-font-size-value" for="ui-font-size">100%</output><input id="ui-font-size" type="range" min="90" max="150" step="5" value="100"></div><div class="ui-weight-control"><label for="ui-font-weight">Font weight</label><select id="ui-font-weight"><option value="300">Light</option><option value="400">Regular</option><option value="500" selected>Medium</option><option value="600">Semibold</option><option value="700">Bold</option></select></div><button type="button" id="ui-font-reset">Reset fonts</button><p class="hint">Applies to interface text, source and trace output. Diagram text is adjusted in Appearance → Style. Preferences are saved in this browser.</p><h3>Explorer</h3><p>Bring back any original examples removed from the Explorer. Existing files, names and edits are kept.</p><button type="button" id="restore-examples">Restore missing examples</button><p id="restore-examples-status" role="status" aria-live="polite"></p></div>
 </section>
 </main>

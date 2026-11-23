@@ -213,6 +213,13 @@
         }
         if (t.on != null && !t.on.trim()) add('error', 'Empty "on" pattern in ' + label(n) + '.', t.key);
       }
+      // Warn only when shadowing is certain from literal pattern equality.
+      for (let i = 1; i < n.transitions.length; i++) {
+        const t = n.transitions[i];
+        if (t.on != null && n.transitions.slice(0, i).some(p => p.on === t.on && (p.cond == null || p.cond.trim() === 'true'))) {
+          add('warning', 'Transition ' + (i + 1) + ' in ' + label(n) + ' is shadowed by an earlier unconditional handler with the same event pattern.', t.key);
+        }
+      }
       for (const d of n.defers) if (!d.on || !d.on.trim()) add('error', '<defer> in ' + label(n) + ' needs an "on" pattern.', d.key);
       for (const s of n.spawns) {
         if (!s.type) add('error', '<spawn> in ' + label(n) + ' needs a type.', s.key);
@@ -237,7 +244,7 @@
 
   function description(doc) {
     for (const n of Array.from(doc.childNodes)) {
-      if (n.nodeType === 8 && !/<examples>|<layout>/.test(n.data)) return dedent(n.data);
+      if (n.nodeType === 8 && !/<examples>|<layout>|<studio>/.test(n.data)) return dedent(n.data);
       if (n.nodeType === 1) break;
     }
     return '';
@@ -308,6 +315,10 @@
       const name = node.localName;
       open = open || '<' + name + attrsOf(node, pad);
       const kids = Array.from(node.childNodes);
+      if (SCRIPT_TAGS.includes(name) && kids.some(k => k.nodeType === 8)) {
+        out.push(pad + open + '>' + kids.map(k => k.nodeType === 8 ? '<!--' + k.data + '-->' : k.nodeType === 4 ? '<![CDATA[' + k.data + ']]>' : escText(k.data || '')).join('') + '</' + name + '>');
+        return;
+      }
       const hasElements = kids.some(k => k.nodeType === 1 || k.nodeType === 8);
       if (!hasElements) {
         const cdata = kids.some(k => k.nodeType === 4);
@@ -461,6 +472,9 @@
     let suffix = snap.suffix.replace(/\s*<!--\s*<layout>[\s\S]*?-->/, '');
     const lay = layoutComment(doc);
     if (lay) suffix = suffix.replace(/\s*$/, '') + '\n\n<!--' + lay.data + '-->';
+    suffix = suffix.replace(/\s*<!--\s*<studio>[\s\S]*?-->/g, '');
+    const studio = Array.from(doc.childNodes).find(n => n.nodeType === 8 && /^\s*<studio>/.test(n.data));
+    if (studio) suffix = suffix.replace(/\s*$/, '') + '\n\n<!--' + studio.data + '-->';
     return snap.prefix + emit(doc.documentElement, rootInfo ? rootInfo.indent : '') + suffix.replace(/\s*$/, '') + '\n';
   }
 
@@ -652,7 +666,9 @@
   /* Replace the script text of an element, keeping CDATA when the text needs it. */
   function setScript(doc, el, text) {
     const hadCdata = Array.from(el.childNodes).some(k => k.nodeType === 4);
+    const descriptions = Array.from(el.childNodes).filter(k => k.nodeType === 8 && /^\s*<description>/.test(k.data));
     while (el.firstChild) el.removeChild(el.firstChild);
+    descriptions.forEach(k => el.appendChild(k));
     text = String(text).replace(/\s+$/, '');
     if (!text.trim()) return;
     const isXml = el.localName === 'spawn' && el.getAttribute('type') === 'statechart';

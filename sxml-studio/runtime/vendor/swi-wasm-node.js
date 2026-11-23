@@ -1856,7 +1856,7 @@
               return;
             }
             if (message.type === "statechart_trace") {
-              this.handleSwiWasmTrace(message.trace || "");
+              this.handleSwiWasmTrace(message.trace || "", pid);
               return;
             }
             if (message.type === "aborted") {
@@ -5456,8 +5456,8 @@
       emit(type, data);
       if (type === 'shell_error' || type === 'error') settle(null, new Error(data.error));
     };
-    node.handleSwiWasmTrace = function (text) {
-      emit('statechart_trace', { data: text });
+    node.handleSwiWasmTrace = function (text, actor) {
+      emit('statechart_trace', { data: text, actor: actor });
     };
     node.swiWasmStatechartOwnsActorTraffic = function () {
       return false;

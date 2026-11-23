@@ -18,7 +18,7 @@ function restoreExplorer() {
       if (!p || typeof p.name !== 'string' || (p.url != null && !urls.has(p.url)) ||
           (p.source != null && typeof p.source !== 'string') ||
           (p.draft != null && typeof p.draft !== 'string') || (!p.url && p.source == null)) throw new Error('Invalid Explorer data');
-      return { name: p.name, url: p.url, source: p.source ?? null, draft: p.draft ?? null, spawnIndex: p.spawnIndex };
+      return { name: p.name, url: p.url, source: p.source ?? null, draft: p.draft ?? null, spawnIndex: p.spawnIndex, workspaceId: p.workspaceId, local: !!p.local };
     });
     saved.files.forEach((p, i) => {
       if (p.parentIndex == null) return;
@@ -41,9 +41,9 @@ function saveExplorer() {
       const draft = i === current && loadedIndex === current ? editor.getValue() : p.draft;
       // Reload unchanged bundled sources from the server so example updates stay visible.
       const modified = draft != null && draft !== p.source;
-      return { name: p.name, url: p.url, source: p.url && !modified ? null : p.source,
+      return { name: p.name, url: p.url, source: p.url && !modified && !p.local ? null : p.source,
         draft: modified ? draft : null, parentIndex: p.parent ? programs.indexOf(p.parent) : null,
-        spawnIndex: p.spawnIndex };
+        spawnIndex: p.spawnIndex, workspaceId: p.workspaceId, local: !!p.local };
     });
     localStorage.setItem(EXPLORER_STORAGE, JSON.stringify({ files, selected: Math.max(0, current) }));
     return true;
@@ -384,6 +384,7 @@ function adopt(doc, text, opts) {
   if (programs[current].parent) writeBack(programs[current], text);
   renderInspector();
   renderSuggestions();
+  window.studioTools?.adopt();
   markSelection(false);
   updateChrome();
   if (wasRunning) stopRun('Source changed · run the chart again to apply');
@@ -458,6 +459,7 @@ function select(key, opts) {
   selEl = entry.el; selKey = entry.key;
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
   diagram.select(selKey);
+  window.studioTools?.selection(entry);
   if (opts && opts.reveal) diagram.reveal(ownerNode(entry).key);
   renderInspector();
   markSelection(!opts || opts.scroll !== false);
@@ -506,7 +508,7 @@ editor.on('cursorActivity', () => {
   if (entry && entry.key !== selKey) {
     selEl = entry.el; selKey = entry.key;
     focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
-    diagram.select(selKey); diagram.reveal(ownerNode(entry).key);
+    diagram.select(selKey); window.studioTools?.selection(entry); diagram.reveal(ownerNode(entry).key);
     renderInspector(); markSelection(false); updateChrome();
   }
 });
@@ -700,6 +702,7 @@ function renderInspector() {
   box.scrollTop = scroll;
   const focus = box.querySelector('.card.focus');
   if (focus) focus.scrollIntoView({ block: 'nearest' });
+  window.studioTools?.inspector(entry);
 }
 
 function pathOf(n) {
@@ -887,13 +890,14 @@ function logRow(cls, parts) {
 const bold = t => { const b = document.createElement('b'); b.textContent = t; return b; };
 
 function runControls() {
-  $('run-start').disabled = run.starting || run.busy;
+  $('run-start').disabled = run.starting || run.busy || !!window.studioTools?.testing();
   $('run-start').textContent = run.pid ? '↻ Restart chart' : '▷ Run chart';
   $('run-halt').disabled = !run.node || run.starting;
   const badge = $('run-badge');
   badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
   badge.classList.toggle('live', !!run.pid && !run.done);
   updateChrome();
+  window.studioTools?.controls();
 }
 
 function cancelInput() {
@@ -907,6 +911,7 @@ $('input-dialog').addEventListener('close', () => {
 });
 
 function disposeNode() {
+  window.studioTools?.stopped();
   run.generation++;
   cancelInput();
   if (run.node) { try { run.node.dispose(); } catch (e) { /* already gone */ } }
@@ -930,14 +935,14 @@ async function ensureNode() {
   const token = ++run.generation;
   const abs = p => new URL(p, location.href).href;
   const node = SwiWasmNode.create({
-    workerUrl: abs('runtime/swi_wasm_actor_worker.js'),
+    workerUrl: abs('runtime/swi_wasm_actor_worker.js?v=20261123-studio-tools'),
     engineUrl: abs('runtime/swipl-bundle.js'),
     prologBaseUrl: abs('runtime/wasm/'),
     sharedDatabaseUrl: abs('runtime/wasm/shared_db.pl'),
     onEvent(event) {
       if (token !== run.generation) return false;
       if (event.type === 'output') { enqueue({ type: 'output', text: String(event.data) }); return true; }
-      if (event.type === 'statechart_trace') { enqueue({ type: 'trace', text: String(event.data) }); return true; }
+      if (event.type === 'statechart_trace') { enqueue({ type: 'trace', text: String(event.data), actor: event.actor }); return true; }
       if (event.type === 'shell_error' || event.type === 'error') logRow('err', 'Runtime: ' + event.error);
     },
     onInput: text => new Promise(resolve => {
@@ -966,6 +971,7 @@ async function runGoal(raw) {
   const spawns = /<editor>/.test(raw);
   if (spawns) {
     if (!model || $('chart').classList.contains('stale')) { status('Fix the XML error before running'); return; }
+    window.studioTools?.newRun();
     if (run.node) disposeNode();
     $('log').replaceChildren();
   }
@@ -1001,6 +1007,7 @@ async function runGoal(raw) {
       status(spawns ? 'The chart did not start · see the log' : 'Prolog exception');
       if (spawns) diagram.setRun(false);
     }
+    return answer;
   } catch (error) {
     if (token === run.generation) { logRow('err', String(error)); status('Query failed · see the log'); }
   } finally {
@@ -1020,7 +1027,7 @@ function tidyError(text) {
 function startChart() {
   showSide('run');
   const spawn = (model && model.examples.find(g => /statechart_spawn/.test(g) && /<editor>/.test(g))) || 'statechart_spawn(Pid, [\n       src_text(<editor>)\n   ])';
-  runGoal(spawn);
+  return runGoal(spawn);
 }
 
 async function haltChart() {
@@ -1038,10 +1045,10 @@ function sendTransition(t) {
   if (/(^|[^\w])[A-Z_]\w*/.test(bare)) {
     showSide('run');
     const event = window.prompt('Enter a concrete event for this transition:', pattern);
-    if (event && event.trim()) runGoal('$Pid ! ' + event.trim());
+    if (event && event.trim()) window.studioTools ? window.studioTools.send(event.trim()) : runGoal('$Pid ! ' + event.trim());
     return;
   }
-  runGoal('$Pid ! ' + pattern);
+  if (window.studioTools) window.studioTools.send(pattern); else runGoal('$Pid ! ' + pattern);
 }
 
 /* ----- trace playback ----- */
@@ -1053,14 +1060,18 @@ function enqueue(item) {
 
 function drain() {
   run.timer = null;
+  if (run.busy && !run.pid) { run.timer = setTimeout(drain, 20); return; }
+  if (window.studioTools?.paused()) return;
   while (run.queue.length) {
     const item = run.queue.shift();
     const pause = play(item);
+    window.studioTools?.played(item);
     if (pause && run.queue.length < 400) {
-      run.timer = setTimeout(drain, run.queue.length > 40 ? 30 : 260);
+      run.timer = setTimeout(drain, run.queue.length > 40 ? 30 : (window.studioTools?.speed() ?? 260));
       return;
     }
   }
+  window.studioTools?.controls();
 }
 
 function splitTop(s) {
@@ -1112,9 +1123,19 @@ function play(item) {
   if (item.type === 'goal') { logRow('goal', item.text); return false; }
   if (item.type === 'error') { logRow('err', item.text); return false; }
   const t = termOf(item.text);
+  const scope = window.studioTools?.scope(item);
+  if (scope === false) { logRow('trace', 'Unmapped actor ' + item.actor + ' (root ' + run.pid + '): ' + item.text); return false; }
+  const traceModel = scope ? model.nested.get(scope) : model;
+  if (t.name === 'transition_fired') {
+    const state = traceModel?.byId.get(unquote(t.args[0] || ''));
+    const tr = state?.transitions[Number(t.args[1])];
+    if (tr) { run.fired.add(tr.key); diagram.setRun(true, run.active, run.fired, run.nested); }
+    return false;
+  }
+  if (t.name === 'guard_result') { logRow('trace', '  guard ' + t.args[0] + ' #' + (Number(t.args[1]) + 1) + ': ' + t.args[2]); return false; }
   if (t.name === 'datamodel_snapshot') {
     const ids = listOf(t.args[0] || '[]');
-    const candidates = model ? [model, ...model.nested.values()] : [];
+    const candidates = window.studioTools ? (traceModel ? [traceModel] : []) : model ? [model, ...model.nested.values()] : [];
     const chart = candidates.find(candidate => {
       const states = candidate.nodes.filter(node => !['statechart', 'history'].includes(node.kind));
       return states.length === ids.length && ids.every(id => candidate.byId.has(id));
@@ -1134,7 +1155,10 @@ function play(item) {
   if (t.name === 'configuration') {
     const ids = listOf(t.args[0] || '[]');
     /* A traced nested chart reports on the same channel; tell the two apart by their state names. */
-    if (model && !ids.every(id => model.byId.has(id))) {
+    if (scope) {
+      run.nested.set(scope, ids); diagram.setRun(true, run.active, run.fired, run.nested); return true;
+    }
+    if (!window.studioTools && model && !ids.every(id => model.byId.has(id))) {
       for (const [k, nm] of model.nested) if (ids.every(id => nm.byId.has(id))) {
         run.nested.set(k, ids);
         logRow('trace conf', ['configuration of ' + nm.title + ' ', bold('{' + ids.join(', ') + '}')]);
@@ -1160,7 +1184,7 @@ function play(item) {
   }
   if (t.name === 'transition') {
     const src = unquote(t.args[0] || ''), targets = listOf(t.args[1] || '[]');
-    const tr = firedTransition(src, targets);
+    const tr = window.studioTools ? null : firedTransition(src, targets);
     if (tr) run.fired.add(tr.key);
     logRow('trace', ['  transition ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
     if (!targets.length) { diagram.setRun(true, run.active, run.fired, run.nested); return true; }
@@ -1189,7 +1213,7 @@ function renderSuggestions() {
 /* ---------- side panel, files, chrome ---------- */
 
 function showSide(name) {
-  for (const v of ['inspector', 'run', 'settings']) {
+  for (const v of ['inspector', 'run', 'tests', 'settings']) {
     $(v).hidden = v !== name;
     $('tab-' + v).setAttribute('aria-selected', String(v === name));
     $('tab-' + v).tabIndex = v === name ? 0 : -1;
@@ -1197,6 +1221,7 @@ function showSide(name) {
 }
 $('tab-inspector').onclick = () => showSide('inspector');
 $('tab-run').onclick = () => showSide('run');
+$('tab-tests').onclick = () => { showSide('tests'); window.studioTools?.tests(); };
 $('tab-settings').onclick = () => showSide('settings');
 
 function renderFiles() {
@@ -1313,6 +1338,7 @@ async function selectFile(index) {
   if (run.node) stopRun('Engine stopped.');
   current = index;
   const p = programs[index];
+  window.studioTools?.fileChanged();
   updateFileSelection();
   if (p.source == null) {
     status('Loading ' + p.name + '…');
@@ -1375,7 +1401,7 @@ function download(name, text, type) {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$('save').onclick = () => { download(programs[current].name.replace(/^↳ /, ''), editor.getValue(), 'application/xml;charset=utf-8'); programs[current].source = editor.getValue(); updateChrome(); saveExplorer(); };
+$('save').onclick = () => { download(programs[current].name.replace(/^↳ /, ''), editor.getValue(), 'application/xml;charset=utf-8'); const p = programs[current]; p.local = !!p.local || p.source !== editor.getValue(); p.source = editor.getValue(); updateChrome(); saveExplorer(); };
 
 $('export').onclick = async () => {
   if (!diagram.geo) return;

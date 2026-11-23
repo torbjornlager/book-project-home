@@ -92,6 +92,7 @@ rethrow_reserved(Error) :-
         final/2,
         initial/1,
         transition/5,
+        transition_debug/3,
         after_transition/6,
         defer/3,
         onexit/2,

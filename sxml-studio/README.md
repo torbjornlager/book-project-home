@@ -123,11 +123,102 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   buttons; `$Pid` stands for the running chart. Clicking a transition while
   the chart runs sends its event.
 
+## Navigation, debugging and scenarios
+
+The **Chart structure** tree above the Explorer lists states and inline spawned
+charts. Search matches state IDs, event patterns and Prolog source; selecting a
+result reveals it in both source and diagram. Compound states can be collapsed
+from the tree or Inspector. Boundary transitions connect to the collapsed box;
+internal transitions are hidden. An active descendant highlights the collapsed
+box and adds “active inside”. Collapse is a view choice, reset on file changes,
+and never changes the XML or execution semantics.
+
+Transition labels show their source-order number when a state has multiple
+handlers. The Inspector explains priority; identical event patterns following
+an unconditional handler receive a warning. Arbitrary Prolog pattern overlap
+is not inferred. Each state or transition can have a description, stored as an
+XML comment inside that element, so it follows renaming, movement and copying.
+Chart-level plain-text notes appear at the lower left of the canvas and are
+stored in a trailing `<studio>` comment. They are currently fixed-position
+overlays rather than draggable diagram nodes.
+
+**Duplicate subtree** creates fresh IDs and rewrites internal `initial` and
+`to` references; references outside the copied subtree stay external. Prolog
+code is copied verbatim: state IDs embedded in goals are not rewritten.
+**Move to another parent** previews containment and initial-state changes,
+plus validation results, before Apply move. Existing target IDs stay the same;
+ancestor event handlers and entry/exit behavior may change. Moving a subtree
+clears positional layout hints while retaining region arrangements.
+
+The root Inspector provides up to 30 named **Checkpoints** per file, including
+source comparison, restore, open as a copy, and JSON export/import. Restoring
+is undoable. Checkpoints live in browser storage and retain their identity
+when a file is renamed; use export to keep an independent copy.
+
+The **Run** tab includes an execution timeline with pause, previous/next,
+speed, and follow-live controls. Selecting an observation displays its recorded
+configuration, transition highlights and datamodel clauses. **These controls
+pause playback only: the interpreter, timers and spawned actors keep running.**
+History is limited to the latest 1,000 observations and is cleared when source
+changes. A restart should be used to begin a new execution, rather than treating
+historical inspection as runtime rollback.
+
+The event palette discovers handlers in active states and their ancestors.
+Enter concrete Prolog terms, for example `integers([25,10,15,30])`. Patterns
+containing variables must be instantiated. Handlers are candidates, not promises
+that a guard will succeed. Guard outcomes come from actual runtime evaluation;
+inspection never evaluates them again. Trace records identify the compiled
+handler and originating actor, including inline charts with shared state IDs.
+
+The **Tests** tab records events sent through the palette or diagram and lets
+you review and save the resulting scenario. Recording starts a fresh chart;
+finish recording to edit its name and expectations. A scenario is JSON:
+
+```json
+{
+  "name": "GCD",
+  "steps": [
+    {
+      "event": "integers([25,10,15,30])",
+      "states": ["stop"],
+      "facts": [{"owner": "#root", "clause": "int(5)."}]
+    }
+  ]
+}
+```
+
+State assertions require the listed states to be active after the event. Fact
+assertions compare stored clause text exactly, without executing rules; the
+owner is `#root` or a state ID. Snapshots retain the existing 40-clause limit.
+Each replay starts a fresh browser engine and waits for the chart to acknowledge
+completion of each submitted event before checking assertions. A failed assertion
+stops that scenario and reports the step. Run all continues with the next saved
+scenario. Cancel tests disposes the engine. Scenarios (up to 200 steps each)
+travel with the XML and can also be exported/imported as JSON.
+
+Coverage marks observed states and transitions in purple. This is observed
+execution coverage, not proof that every behavior has been tested. Candidate
+path generation offers up to 40 structural paths of at most six events, starting
+at the root initial state. It does not solve Prolog guards, expand parallel or
+nested configurations, or synthesize delayed/eventless behavior. Substitute
+concrete event values and add assertions before using suggestions as tests.
+Timers use real time, and asynchronous actors are not made deterministic by
+scenario replay. Recording captures palette/diagram sends, not arbitrary shell
+queries or independently arriving actor messages.
+
+For regression checks, run each `tests/*.cjs` file with Node, and:
+
+```sh
+swipl -q -g "load_files(['tests/live-datamodel.pl','tests/studio-runtime.pl']),run_tests,halt"
+```
+
 ## Parts
 
 - `js/sxml-model.js`   parse, validate, edit, serialise
 - `js/sxml-diagram.js` layout (ELK layered, hierarchical) and SVG drawing
 - `js/app.js`          explorer, editor, inspector, run panel
+- `js/studio-model.js` metadata, subtree edits, scenarios and structural paths
+- `js/studio-tools.js` structure tree, timeline, event palette, tests, checkpoints
 - `runtime/`           swi-wasm-node at 82aac08 (worker, host, statechart
                        interpreter, SXML schema) with swipl-wasm 8.2.5.
                        `runtime/wasm/shared_db.pl` holds the facts that
@@ -141,10 +232,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   changing a state's type re-prints that state's start and end tags.
 - Inside the parent's diagram a nested chart is read-only; open it to edit.
   Only one level of nesting is drawn, and a chart loaded with `src_uri` is
-  not. Nested and outer trace events are told apart by their state names, so
-  the two charts should not share state ids.
-- When a state has several transitions with the same target, the one
-  highlighted as fired is inferred from the triggering event.
+  not. Only traces for the displayed inline level are mapped to the diagram;
+  deeper or external charts remain visible as unmapped actor records in the log.
 
 In Split view, **Direction ↓ / →** also changes the pane arrangement: vertical diagrams
 place the source beside the chart; horizontal diagrams place it below. Drag the

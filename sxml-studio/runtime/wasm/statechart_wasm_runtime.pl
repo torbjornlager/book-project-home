@@ -87,6 +87,7 @@ clean :-
     retractall(statechart_wasm:to_be_invoked(_, _, _)),
     retractall(statechart_wasm:initial(_)),
     retractall(statechart_wasm:transition(_, _, _, _, _)),
+    retractall(statechart_wasm:transition_debug(_, _, _)),
     retractall(statechart_wasm:after_transition(_, _, _, _, _, _)),
     retractall(statechart_wasm:defer(_, _, _)),
     retractall(statechart_wasm:parallel(_, _)),
@@ -406,10 +407,13 @@ invoke(State) :-
     enqueue_internal_event(spawned(Pid)),
     fail.
 invoke(State) :-
-    statechart_wasm:to_be_invoked(State, statechart, Options),
+    findall(Ref, clause(statechart_wasm:to_be_invoked(State, statechart, _), true, Ref), Refs),
+    nth0(Index, Refs, Ref),
+    clause(statechart_wasm:to_be_invoked(State, statechart, Options), true, Ref),
     current_predicate(swi_wasm_actor_bridge:statechart_spawn/2),
     swi_wasm_actor_bridge:statechart_spawn(Pid, Options),
     emit_trace(invoked(statechart, Pid, State)),
+    emit_trace(chart_invoked(State, Index, Pid)),
     assertz(statechart_wasm:invoked(State, Pid)),
     enqueue_internal_event(spawned(Pid)),
     fail.

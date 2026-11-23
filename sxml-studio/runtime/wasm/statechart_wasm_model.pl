@@ -257,10 +257,18 @@ after_delay(Value, _Delay) :-
                         'the after attribute is a delay in seconds'))).
 
 assert_transition(event(Event), Parent, Cond, Targets, Actions) :-
-    model_assert(transition(Parent, Event, Cond, Targets, Actions)).
+    assert_debug_transition(Parent, transition(Parent, Event, Cond, Targets, Actions)).
 assert_transition(after(Key, Delay), Parent, Cond, Targets, Actions) :-
-    model_assert(after_transition(Parent, Key, Delay, Cond, Targets, Actions)).
+    assert_debug_transition(Parent, after_transition(Parent, Key, Delay, Cond, Targets, Actions)).
 
+
+% Map the actual compiled clause to its zero-based <go> order, across event
+% and delayed handlers. No extra guard evaluation is needed for inspection.
+assert_debug_transition(Parent, Fact) :-
+    findall(I, statechart_wasm:transition_debug(Parent, I, _), Existing),
+    length(Existing, Index),
+    assertz(statechart_wasm:Fact, Ref),
+    model_assert(transition_debug(Parent, Index, Ref)).
 
 children_to_actions([], [], _Bindings).
 children_to_actions([Child|Children], [Action|Actions], Bindings) :-

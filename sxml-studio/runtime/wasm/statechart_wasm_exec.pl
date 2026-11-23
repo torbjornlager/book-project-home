@@ -94,8 +94,10 @@ start_parsed(Root) :-
     statechart_wasm_runtime:emit_datamodel_snapshot,
     assertz(statechart_wasm:state(dummy, Root)),
     initial_state(Root, Initial),
-    enter_states([t(dummy, [Initial], [])]),
-    run_to_quiescence.
+    enter_states([t(dummy, [Initial], [], none)]),
+    run_to_quiescence,
+    statechart_wasm_runtime:emit_datamodel_snapshot,
+    trace_emit(macrostep_complete).
 
 
 %!  send_event(+Event) is det.
@@ -116,7 +118,9 @@ send_event(Event) :-
         ->  true
         ;   trace_unmatched_event(Event)
         ),
-        run_to_quiescence
+        run_to_quiescence,
+        statechart_wasm_runtime:emit_datamodel_snapshot,
+        trace_emit(macrostep_complete)
     ).
 
 trace_external_event(Event) :-
@@ -281,28 +285,37 @@ select_after_transition(Source, Key, Ref, [Transition]) :-
     member(State, Configuration),
     is_atomic(State),
     ancestor(State, null, Source),
-    statechart_wasm:after_transition(Source, Key, _Delay,
-                                      Condition, Targets, Actions),
-    evaluate_condition(Condition),
-    Transition = t(Source, Targets, Actions),
+    clause(statechart_wasm:after_transition(Source, Key, _Delay, Condition, Targets, Actions), true, Clause),
+    statechart_wasm:transition_debug(Source, Index, Clause),
+    evaluate_traced_condition(Source, Index, Condition),
+    Transition = t(Source, Targets, Actions, Index),
     trace_transition(Transition),
     !.
 
-select_transition(null, State, t(Ancestor, Targets, Actions)) :-
+select_transition(null, State, t(Ancestor, Targets, Actions, Index)) :-
     ancestor(State, null, Ancestor),
-    statechart_wasm:transition(Ancestor, '', Condition, Targets, Actions),
-    evaluate_condition(Condition).
-select_transition(Event, State, t(Ancestor, Targets, Actions)) :-
+    clause(statechart_wasm:transition(Ancestor, '', Condition, Targets, Actions), true, Clause),
+    statechart_wasm:transition_debug(Ancestor, Index, Clause),
+    evaluate_traced_condition(Ancestor, Index, Condition).
+select_transition(Event, State, t(Ancestor, Targets, Actions, Index)) :-
     Event \== null,
     ancestor(State, null, Ancestor),
-    statechart_wasm:transition(Ancestor, Event, Condition, Targets, Actions),
-    evaluate_condition(Condition).
+    clause(statechart_wasm:transition(Ancestor, Event, Condition, Targets, Actions), true, Clause),
+    statechart_wasm:transition_debug(Ancestor, Index, Clause),
+    evaluate_traced_condition(Ancestor, Index, Condition).
 
-trace_transition(t(State, Targets, _)) :-
+evaluate_traced_condition(Source, Index, Condition) :-
+    ( evaluate_condition(Condition)
+    -> trace_emit(guard_result(Source, Index, true))
+    ;  trace_emit(guard_result(Source, Index, false)), fail
+    ).
+
+trace_transition(t(State, Targets, _, Index)) :-
     statechart_wasm:configuration(Configuration),
-    transition_exit_set(t(State, Targets, []), Configuration, ExitSet),
-    compute_entry_set([t(State, Targets, [])], EntrySet),
-    trace_emit(transition(State, Targets, ExitSet, EntrySet)).
+    transition_exit_set(t(State, Targets, [], Index), Configuration, ExitSet),
+    compute_entry_set([t(State, Targets, [], Index)], EntrySet),
+    trace_emit(transition(State, Targets, ExitSet, EntrySet)),
+    trace_emit(transition_fired(State, Index)).
 
 dedup(List, Deduped) :-
     dedup(List, [], Deduped).
@@ -323,7 +336,7 @@ evaluate_condition(Condition) :-
             fail
           )).
 
-transition_exit_set(t(Source, Targets, _), Configuration, ExitSet) :-
+transition_exit_set(t(Source, Targets, _, _), Configuration, ExitSet) :-
     (   Targets == []
     ->  ExitSet = []
     ;   find_LCCA([Source|Targets], LCA),
@@ -350,18 +363,18 @@ intersects([_|States], Set) :-
 preempted_by_any(Transition, Selected, Configuration) :-
     member(Other, Selected),
     conflict(Transition, Other, Configuration),
-    Transition = t(Source, _, _),
-    Other = t(OtherSource, _, _),
+    Transition = t(Source, _, _, _),
+    Other = t(OtherSource, _, _, _),
     \+ is_descendant(Source, OtherSource),
     !.
 
 remove_preempted(Transition, Selected, Configuration, Filtered) :-
-    Transition = t(Source, _, _),
+    Transition = t(Source, _, _, _),
     exclude(preempted_by(Transition, Configuration, Source), Selected, Filtered).
 
 preempted_by(Transition, Configuration, Source, Other) :-
     conflict(Transition, Other, Configuration),
-    Other = t(OtherSource, _, _),
+    Other = t(OtherSource, _, _, _),
     is_descendant(Source, OtherSource).
 
 remove_conflicting_transitions(Transitions0, Transitions) :-
@@ -435,7 +448,7 @@ process_states_to_exit([State|States]) :-
 
 compute_exit_set(Transitions, Configuration, StatesToExit) :-
     findall(State,
-            ( member(t(Source, Targets, _), Transitions),
+            ( member(t(Source, Targets, _, _), Transitions),
               Targets \= [],
               find_LCCA([Source|Targets], LCA),
               member(State, Configuration),
@@ -445,7 +458,7 @@ compute_exit_set(Transitions, Configuration, StatesToExit) :-
     dedup(StatesToExit0, StatesToExit).
 
 execute_transition_content(EnabledTransitions) :-
-    (   member(t(_, _, Children), EnabledTransitions),
+    (   member(t(_, _, Children, _), EnabledTransitions),
         execute_content(Children),
         fail
     ;   true
@@ -491,7 +504,7 @@ compute_entry_set(Transitions, StatesToEnter) :-
     dedup(StatesToEnter0, StatesToEnter).
 
 compute_entry_set([], States, States).
-compute_entry_set([t(Source, Targets, _)|Transitions], States0, States) :-
+compute_entry_set([t(Source, Targets, _, _)|Transitions], States0, States) :-
     (   Targets == []
     ->  States1 = States0
     ;   find_LCCA([Source|Targets], LCA),

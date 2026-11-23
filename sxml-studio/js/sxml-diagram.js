@@ -51,7 +51,7 @@
     for (const d of n.defers) lines.push({ kw: 'defer', text: one(d.on) + (d.cond ? ' [' + one(d.cond) + ']' : ''), item: d });
     if (n.kind !== 'history') {
       for (const t of n.transitions) if (!t.to.length) {
-        const trig = trigger(t), body = one(t.body);
+        const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ". " : "") + trigger(t), body = one(t.body);
         lines.push({ kw: trig ? '' : 'always', text: trig + (body ? (trig ? ' / ' : '/ ') + body : ''), item: t, internal: true });
       }
     }
@@ -67,7 +67,7 @@
   function edgeLabel(t, appearance) {
     const size = appearance.labelSize, lineHeight = size + 3;
     const font = F_MONO.replace('11px', size + 'px');
-    const trig = trigger(t), body = one(t.body);
+    const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ". " : "") + trigger(t), body = one(t.body);
     let lines = [];
     if (trig && body && (trig + ' / ' + body).length <= MAX_LABEL) lines = [trig + ' / ' + body];
     else { if (trig) lines.push(trig); if (body) lines.push('/ ' + body); }
@@ -102,7 +102,7 @@
     return true;
   }
 
-  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map()) {
+  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map(), collapsed = new Set()) {
     const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
     const hints = base ? model.layout : null;
@@ -143,6 +143,10 @@
           layoutOptions: { 'elk.nodeLabels.placement': 'OUTSIDE V_BOTTOM H_CENTER' },
           labels: labels.map((t, i) => ({ id: n.key + '/l' + i, text: t, width: width(t, i ? F_NOTE : F_HEAD) + 4, height: 15 }))
         };
+      }
+      if (collapsed.has(n.key) && n.kind !== 'statechart') {
+        info.get(n.key).collapsed = true;
+        return {id: n.key, width: Math.max(140, headW, linesW), height: top + 26};
       }
       const realKids = n.children.filter(c => c.kind !== 'history');
       /* Notes of the root are placed outside the layout engine (see run). */
@@ -200,15 +204,26 @@
       };
     }
     const root = node(model.root);
+    function visible(n) {
+      let result = n;
+      for (let p = n.parent; p; p = p.parent) if (collapsed.has(p.key)) result = p;
+      if (n.scope) {
+        const owner = model.items.get(n.scope)?.owner;
+        for (let p = owner; p; p = p.parent) if (collapsed.has(p.key)) return p;
+      }
+      return result;
+    }
     const all = [model, ...(model.nested ? model.nested.values() : [])];
     for (const m of all) for (const t of m.transitions) {
       if (!t.to.length) continue;
       t.to.forEach((id, i) => {
         const target = m.byId.get(id);
         if (!target) return;
+        const sourceNode = visible(t.source), targetNode = visible(target);
+        if (sourceNode === targetNode && (sourceNode !== t.source || targetNode !== target)) return;
         const eid = t.key + '>' + i;
         const lab = edgeLabel(t, appearance);
-        const e = { id: eid, sources: [t.source.key], targets: [target.key] };
+        const e = { id: eid, sources: [sourceNode.key], targets: [targetNode.key] };
         if (lab.lines.length) e.labels = [{ id: eid + '/label', text: lab.full, width: lab.w, height: lab.h }];
         edges.push(e);
         info.set(eid, { type: 'edge', item: t, label: lab, historyDefault: t.source.kind === 'history' });
@@ -328,9 +343,9 @@
   }
 
   async function run(model, direction, extra, base) {
-    const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, ...elkOptions } = extra || {};
+    const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, 'studio.collapsed': collapsed, ...elkOptions } = extra || {};
     const appearance = normalizeAppearance(appearanceSettings);
-    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels);
+    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels, collapsed);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), elkOptions) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -417,6 +432,8 @@
     this.layoutExperiments = normalizeExperiments();
     this.appearance = normalizeAppearance();
     this.liveDatamodels = new Map();
+    this.collapsed = new Set();
+    this.coveredStates = new Set(); this.coveredTransitions = new Set();
     this.applyAppearance(this.appearance);
     this.seq = 0;
     this.userMoved = false;
@@ -469,7 +486,7 @@
   Diagram.prototype.setModel = async function (model, opts) {
     this.pendingModel = model;
     const seq = ++this.seq;
-    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance, 'studio.liveDatamodels': this.liveDatamodels }));
+    const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance, 'studio.liveDatamodels': this.liveDatamodels, 'studio.collapsed': this.collapsed }));
     if (seq !== this.seq) return;
     const first = !this.geo;
     this.model = model; this.geo = geo;
@@ -506,6 +523,8 @@
       const grp = el('g', { class: 'state k-' + n.kind + (n.compound ? ' compound' : '') + (n.scope ? ' inner' : ''), 'data-key': n.scope || n.key, 'data-state': n.scope ? null : n.key }, gStates);
       this.nodeEls.set(n.key, grp);
       this.nodeOf.set(n.key, n);
+      const description = global.SXMLStudio?.description(n.el);
+      if (description) el('title', {}, grp, description);
       if (n.kind === 'history') {
         el('circle', { class: 'shape', cx: b.x + HIST_R, cy: b.y + HIST_R, r: HIST_R }, grp);
         el('text', { class: 'hist', x: b.x + HIST_R, y: b.y + HIST_R + 4.5, 'text-anchor': 'middle' }, grp, n.htype === 'deep' ? 'H*' : 'H');
@@ -544,6 +563,10 @@
       if (inf.lines.length && n.compound) {
         el('line', { class: 'rule soft', x1: b.x, y1: b.y + inf.top, x2: b.x + b.w, y2: b.y + inf.top }, grp);
       }
+      if (inf.collapsed) {
+        el('text', {class: 'note-title collapse-status', x: b.x + 10, y: b.y + b.h - 8}, grp, '+ ' + n.children.length + ' children');
+        return;
+      }
       for (const dm of n.datamodels) this._note(gStates, dm, boxes.get(dm.key), info.get(dm.key));
       this._init(gStates, n, boxes);
       if (n.kind === 'parallel') this._regions(grp, n, boxes);
@@ -575,7 +598,8 @@
         const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
-        el('title', {}, lg, inf.label.full);
+        const description = global.SXMLStudio?.description(inf.item.el);
+        el('title', {}, lg, inf.label.full + (description ? '\n' + description : ''));
         entry.push(lg);
       }
     }
@@ -622,6 +646,8 @@
     }
   };
 
+  function infDescendants(n) { return n ? n.children.flatMap(c => [c, ...infDescendants(c)]) : []; }
+
   /* Selection, active configuration and fired transitions are CSS classes. */
   Diagram.prototype._paint = function () {
     if (!this.nodeEls) return;
@@ -630,7 +656,11 @@
       const n = this.nodeOf.get(k);
       const act = n && n.scope ? (this.activeNested && this.activeNested.get(n.scope)) : this.active;
       g.classList.toggle('selected', k === sel);
-      g.classList.toggle('active', !!(n && n.id && act && act.has(n.id)));
+      const activeBelow = !!(n && this.collapsed?.has(k) && infDescendants(n).some(c => act?.has(c.id)));
+      g.classList.toggle('active', !!(n && n.id && act && act.has(n.id)) || activeBelow);
+      g.classList.toggle('covered', !!this.coveredStates?.has(k));
+      const label = g.querySelector('.collapse-status');
+      if (label) label.textContent = '+ ' + n.children.length + ' children' + (activeBelow ? ' · active inside' : '');
     }
     for (const [k, g] of this.frameEls) g.classList.toggle('selected', k === sel);
     for (const [k, g] of this.itemEls) {
@@ -639,6 +669,7 @@
     }
     for (const [k, parts] of this.edgeEls) for (const g of parts) {
       const s = k === sel, f = this.fired.has(k);
+      g.classList.toggle('covered', !!this.coveredTransitions?.has(k));
       g.classList.toggle('selected', s);
       g.classList.toggle('fired', f);
       const p = g.querySelector('.edge');
@@ -807,6 +838,20 @@
     clone.removeAttribute('tabindex');
     clone.lastChild.removeAttribute('transform');
     for (const o of clone.querySelectorAll('.handle,.rubber,.ghost,.end')) o.remove();
+    const notes = global.SXMLStudio?.metadata(this.model.doc).notes || [];
+    if (notes.length) {
+      let y = Math.ceil(this.geo.height) + 16;
+      const group = el('g', {}, clone);
+      for (const note of notes) {
+        const lines = note.split('\n').flatMap(line => line.match(/.{1,60}(?:\s|$)|\S{1,60}/g) || ['']);
+        const w = Math.min(560, Math.max(180, ...lines.map(line => width(line, F_NOTE) + 24))), height = lines.length * 16 + 20;
+        el('rect', {x: 16, y, width: w, height, rx: 4, fill: 'var(--note)', stroke: 'var(--stroke)'}, group);
+        lines.forEach((line, i) => el('text', {class: 'note-line', x: 28, y: y + 18 + i * 16}, group, line));
+        y += height + 12;
+      }
+      const w = Math.max(600, Math.ceil(this.geo.width));
+      clone.setAttribute('viewBox', '0 0 ' + w + ' ' + y); clone.setAttribute('width', w); clone.setAttribute('height', y);
+    }
     const style = document.createElementNS(SVGNS, 'style');
     style.textContent = cssText;
     clone.insertBefore(style, clone.firstChild);

@@ -30,7 +30,7 @@ const fake = {model, liveDatamodels:new Map(), calls:0, setModel(m, options) {as
   const helpers = app.slice(app.indexOf('function splitTop('), app.indexOf('function firedTransition('));
   const playback = app.slice(app.indexOf('function play(item)'), app.indexOf('/* ---------- side panel, files, chrome ---------- */'));
   const received = [];
-  const context = {model, diagram:{setDatamodelFacts(updates) {received.push(updates); return Promise.resolve();}}, console};
+  const context = {window: {}, model, diagram:{setDatamodelFacts(updates) {received.push(updates); return Promise.resolve();}}, console};
   vm.createContext(context); vm.runInContext(helpers + playback, context);
   assert(context.play({type:'trace', text:"datamodel_snapshot([init],[data('#root',['int(30).','label(\\'a,b\\').'],false)])"}));
   assert.equal(received[0][0].facts[1], "label('a,b').");
