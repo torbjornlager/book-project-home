@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="runtime/vendor/codemirror.min.css">
 <link rel="stylesheet" href="studio.css">
 <link rel="stylesheet" href="chart.css">
-<link rel="stylesheet" href="sxml-studio.css">
+<link rel="stylesheet" href="sxml-studio.css?v=20261123-ui5">
 <script defer src="runtime/vendor/codemirror.min.js"></script>
 <script defer src="runtime/swi_wasm_actor_worker.js?v=20261123-studio-tools"></script>
 <script defer src="runtime/vendor/swi-wasm-node.js?v=20261123-studio-tools"></script>
@@ -16,11 +16,11 @@
 <script defer src="js/sxml-model.js"></script>
 <script defer src="js/sxml-diagram.js"></script>
 <script defer src="js/studio-model.js"></script>
-<script defer src="js/studio-chrome.js?v=20261123-ui4"></script>
-<script defer src="js/app.js?v=20261123-ui2"></script>
+<script defer src="js/studio-chrome.js?v=20261123-ui6"></script>
+<script defer src="js/app.js?v=20261123-ui6"></script>
 <script defer src="js/studio-tools.js?v=20261123-ui2"></script>
 <link rel="stylesheet" href="studio-tools.css">
-<link rel="stylesheet" href="studio-chrome.css?v=20261123-ui4">
+<link rel="stylesheet" href="studio-chrome.css?v=20261123-ui6">
 </head>
 <body class="light" data-view="diagram" data-layout="horizontal">
 <script src="js/ui-preferences.js"></script>
@@ -31,13 +31,13 @@
 <section class="editor-pane" aria-label="Statechart editor">
 <div class="editor-tabs"><span class="file-icon">SXML</span><span id="filename">untitled.xml</span><span id="dirty" aria-label="Unsaved changes"></span><div class="view-switch" role="group" aria-label="View"><button data-view="diagram">Diagram</button><button data-view="split">Split</button><button data-view="source">Source</button></div></div>
 <div class="editor-content">
+<div class="source-pane"><div class="code-wrap"><textarea id="source" aria-label="SXML source"></textarea></div></div>
+<div class="hdivider" id="source-divider" role="separator" aria-label="Resize source editor" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="36" tabindex="0"></div>
 <div class="chart-pane">
 <div class="chart-toolbar" role="toolbar" aria-label="Diagram tools"><span class="tool-label">ADD</span><button data-add="state" title="Add a state inside the selected state">State</button><button data-add="parallel" title="Add a parallel state inside the selected state">Parallel</button><button data-add="final" title="Add a final state inside the selected state">Final</button><button data-add="history" title="Add a history state inside the selected state">History</button><button id="tool-connect" aria-pressed="false" title="Transition tool: drag from one state to another">Transition</button><span class="tool-sep"></span><button id="delete" title="Delete the selection (Delete key)">Delete</button><span class="tool-sep" aria-hidden="true"></span><button id="undo" class="icon-button" aria-label="Undo" title="Undo (Ctrl or Command + Z)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5-5 5 5 5M4 10h10a6 6 0 0 1 6 6v3"/></svg></button><button id="redo" class="icon-button" aria-label="Redo" title="Redo (Ctrl or Command + Shift + Z)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5 5 5-5 5M20 10H10a6 6 0 0 0-6 6v3"/></svg></button><span class="tool-space"></span><button id="layout-toggle" class="icon-button" popovertarget="layout-popover" aria-label="Appearance" title="Appearance"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.1a2.4 2.4 0 0 0 1.8-4l-.3-.4a1 1 0 0 1 .8-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="10" r=".9"/><circle cx="10" cy="6.5" r=".9"/><circle cx="14.5" cy="6.5" r=".9"/><circle cx="17.5" cy="10" r=".9"/></svg></button><span class="tool-sep" aria-hidden="true"></span><button id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button><span id="zoom">100%</span><button id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button><button id="fit" title="Fit the chart to the pane">Fit</button></div>
 <div id="chart" class="chart-host"></div>
 <div id="problems" class="problems" hidden></div>
 </div>
-<div class="hdivider" id="source-divider" role="separator" aria-label="Resize source editor" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="36" tabindex="0"></div>
-<div class="source-pane"><div class="code-wrap"><textarea id="source" aria-label="SXML source"></textarea></div></div>
 </div>
 <div class="editor-foot"><span id="stats">SXML 0.2</span><span>UTF-8 &nbsp; · &nbsp; Browser-local source</span></div>
 </section>
@@ -46,7 +46,6 @@
 <div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-tests" aria-selected="false" aria-controls="tests" tabindex="-1">Tests</button><button role="tab" id="tab-settings" aria-label="Settings" title="Settings" aria-selected="false" aria-controls="settings" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-1.4.8-2.3-.6-2.5 4.3 1.7 1.7v1.6l-1.7 1.7 2.5 4.3 2.3-.6 1.4.8.6 2.4h5l.6-2.4 1.4-.8 2.3.6 2.5-4.3-1.7-1.7v-1.6l1.7-1.7-2.5-4.3-2.3.6-1.4-.8L14.5 3z"/><circle cx="12" cy="12.3" r="3"/></svg></button></div>
 <div id="inspector" class="side-view" role="tabpanel" aria-labelledby="tab-inspector"></div>
 <div id="run" class="side-view run-view" role="tabpanel" aria-labelledby="tab-run" hidden>
-<div class="run-actions"><button id="run-start" class="primary" title="Spawn the chart in a fresh browser engine">▷ Run chart</button><button id="run-halt" disabled>Halt</button></div>
 <div id="debug-tools"></div>
 <div class="queries"><div class="section-title">QUERIES FOR THIS CHART</div><div id="suggestions"></div></div>
 <div class="section-title log-title">TRACE AND OUTPUT <label><input type="checkbox" id="show-trace" checked> trace</label><button id="clear">Clear</button></div>
