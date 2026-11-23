@@ -169,11 +169,20 @@ for (const axis of ['horizontal', 'vertical']) $('spacing-' + axis).oninput = e 
   diagram[axis + 'Spacing'] = Number(e.target.value);
   changeSpacing();
 };
-$('spacing-reset').onclick = () => {
+for (const axis of ['horizontal', 'vertical']) $('spacing-reset-' + axis).onclick = () => {
   if (run.pid || run.starting) return;
-  diagram.horizontalSpacing = diagram.verticalSpacing = 50;
+  diagram[axis + 'Spacing'] = 50;
   changeSpacing();
 };
+/* The toolbar's spacing sliders open just below their buttons. */
+for (const [pop, btn] of [['spacing-h-popover', 'spacing-h-toggle'], ['spacing-v-popover', 'spacing-v-toggle']]) {
+  $(pop).addEventListener('toggle', ev => {
+    if (ev.newState !== 'open') return;
+    const b = $(btn).getBoundingClientRect(), panel = $(pop).getBoundingClientRect();
+    $(pop).style.left = Math.max(12, Math.min(b.left, window.innerWidth - panel.width - 12)) + 'px';
+    $(pop).style.top = Math.max(12, Math.min(b.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
+  });
+}
 function saveLayoutExperiments() {
   try { localStorage.setItem(EXPERIMENTS_STORAGE, JSON.stringify(diagram.layoutExperiments)); }
   catch (e) { console.warn('Could not save layout experiments:', e); }
@@ -438,7 +447,12 @@ function updateChrome() {
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !arranged() || !!run.pid || run.starting;
   $('direction').disabled = !!run.pid || run.starting;
-  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
+  /* Spacing tunes the automatic layout, so it waits for Auto once positions are saved. */
+  for (const id of ['spacing-h-toggle', 'spacing-v-toggle']) {
+    $(id).disabled = !!run.pid || run.starting || arranged();
+    $(id).title = (id === 'spacing-h-toggle' ? 'Horizontal' : 'Vertical') + ' spacing' + (arranged() ? ' · applies to automatic layout: use Auto layout first' : '');
+  }
+  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
   const regionControl = $('inspector').querySelector('[data-f="region-arrangement"]');
   if (regionControl) regionControl.disabled = !!run.pid || run.starting;
@@ -758,7 +772,7 @@ function moveState(key, dx, dy) {
   selEl = n.el;
   diagram.userMoved = true;
   commit();
-  status('Position saved in the <layout> comment · “Auto” returns to automatic layout');
+  status('Position saved in the <layout> comment · “Auto layout” returns to automatic layout');
 }
 
 /* A transition label keeps the offset it was dragged by, relative to its
@@ -776,7 +790,7 @@ function moveLabel(edgeId, dx, dy) {
   if (t) selEl = t.el;
   diagram.userMoved = true;
   commit();
-  status('Label position saved · “Auto” resets labels and states');
+  status('Label position saved · “Auto layout” resets labels and states');
 }
 
 function removeSelected() {

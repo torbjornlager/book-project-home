@@ -35,7 +35,7 @@ and trace output. **Reset fonts** restores 100% and Medium (the default). These 
 are remembered across reloads; diagram text has its own **Appearance → Style** controls.
 
 The toolbar’s **Appearance ▾** button opens a panel with **Layout** and **Style** tabs.
-It opens on Layout each time, with **Auto** and **Direction** at the top. **Style** adjusts transition thickness and colour,
+It opens on Layout each time, with **Direction** at the top. **Style** adjusts transition thickness and colour,
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser
@@ -47,8 +47,11 @@ transparent to solid, including highlighted labels; the text itself stays opaque
 Active compound and parallel states highlight their headers with the same green
 background as active atomic states, while keeping their child areas neutral.
 
-The **Appearance → Layout** tab provides experimental horizontal and vertical spacing
-sliders (0–100%, defaulting to 50% on both axes). **Reset spacing** returns to
+The canvas toolbar has **Auto layout** (wand icon) and **Horizontal spacing** /
+**Vertical spacing** buttons (arrows between bars); each spacing button opens a
+slider (0–100%, default 50%) with **Reset to 50%**. Spacing tunes the automatic
+layout, so it is disabled while positions are saved: use Auto layout first.
+**Reset** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable
 gaps are removed; node sizes, label sizes, padding and label clearance still apply. They recompute the ELK
 layout without scaling text or label boxes, and keep the current zoom
@@ -119,7 +122,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   from its arrow. The first drag reproduces ELK's drawing exactly: parents grow
   but never shrink below ELK's size, and regions only move apart if one grows.
   New states from handles or double-clicks go where they were asked for; others
-  are placed beside their placed siblings. **Auto** (Appearance → Layout) drops
+  are placed beside their placed siblings. **Auto layout** (wand icon in the toolbar) drops
   the saved positions and returns to automatic layout; **Direction** does the
   same in the other direction. Undo covers both. Root datamodel notes can be
   freely positioned in either mode. To create a new transition, use a handle or

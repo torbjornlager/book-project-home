@@ -191,3 +191,8 @@ svg.chart.moving .handles,svg.chart.panning .handles{display:none}
 /* Draggable transition labels */
 svg.chart:not(.running) .tlabel[data-edge]{cursor:grab}
 svg.chart.moving .tlabel{cursor:grabbing}
+/* Toolbar spacing sliders */
+.axis-popover{width:min(240px,calc(100vw - 24px))}
+.axis-popover .spacing-control{margin:2px 0 10px}
+.axis-popover .axis-actions{display:flex;justify-content:flex-end}
+.axis-popover .axis-hint{margin-top:8px}
