@@ -102,15 +102,24 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   to add a sibling state with a transition to it (placeholder event
   `new_event_N`), then name the event on the canvas. Drag a handle onto a state
   to connect to it, or onto empty space to place the new state there. The new
-  state's position is saved as a layout hint; because layers follow the chart
-  direction, a handle across the flow places it diagonally ahead.
-- Drag states to arrange them among their siblings; layout hints are saved in
-  the source. Root datamodel notes can be freely positioned. **Auto** clears
-  manual arrangements. Dragging existing transitions has no effect. To create
-  a new transition, select the Transition tool and drag between states.
-  Drag empty canvas to pan; scrolling and zooming remain available.
-- Existing arrangement hints in a trailing `<layout>` comment are still read.
-  **Auto** removes those hints. Layout direction is saved in the same comment.
+  state is placed exactly beside its source, or where it was dropped.
+- Layout: a chart without saved positions is laid out automatically by ELK
+  (layered), and re-laid out after every change. Dragging a state freezes the
+  current drawing and puts the state exactly where it is dropped; from then on
+  all positions are exact and saved in a trailing `<layout>` comment as each
+  child's offset in its parent, `{"parent": {"child": [x, y]}}`. A parent always
+  wraps its children with its padding and header, so moving a child never moves
+  its siblings. The regions of a parallel state stay in a tidy row or column,
+  in the order of their positions, so dragging a region reorders it. Transitions
+  between moved states are redrawn as straight (or, for parallel transitions,
+  bent) arrows with the label beside them; untouched ones keep ELK's routes.
+  New states from handles or double-clicks go where they were asked for; others
+  are placed beside their placed siblings. **Auto** (Appearance → Layout) drops
+  the saved positions and returns to automatic layout; **Direction** does the
+  same in the other direction. Undo covers both. Root datamodel notes can be
+  freely positioned in either mode. To create a new transition, use a handle or
+  the Transition tool. Drag empty canvas to pan; scrolling and zooming remain
+  available. The layout direction is saved in the same comment.
 - Parallel states have a **Region arrangement** selector in the Inspector:
   Stacked (the default), Side by side, or Follow chart. Each parallel state can be set
   independently; separators follow the arrangement. The choice is saved in the

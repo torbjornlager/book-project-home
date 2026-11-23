@@ -541,7 +541,7 @@ function diagramDouble(key, info) {
   if (model.nested.has(key)) { openNested(key); return; }
   if (run.pid) { if (key !== '#root') openInInspector(key); return; }
   const entry = entryByKey(key) || model.root;
-  if (entry === model.root) { quickAdd(model.root); return; }
+  if (entry === model.root) { quickAdd(model.root, info.point); return; }
   if (entry.kind === 'go') {
     if (entry.source.kind === 'history') openInInspector(key);
     else editTransitionInPlace(entry, info.anchor);
@@ -550,7 +550,7 @@ function diagramDouble(key, info) {
   if (!model.byKey.has(key)) { openInInspector(key); return; }
   const intent = SXMLDiagram.doubleClickIntent(entry, diagram.geo && diagram.geo.boxes.get(key), info.point, info.onName, diagram.collapsed.has(key));
   if (intent === 'rename') renameInPlace(entry);
-  else if (intent === 'add') quickAdd(entry);
+  else if (intent === 'add') quickAdd(entry, info.point);
   else openInInspector(key);
 }
 
@@ -642,33 +642,22 @@ async function extendFrom(key, dir, point) {
   if (!s || s.kind === 'final' || s.kind === 'history' || !s.parent) return;
   const parent = s.parent;
   if (parent.kind === 'parallel') { status('Each child of a parallel state is a region · add the new state inside a region instead'); return; }
-  const boxes = diagram.geo.boxes, sb = boxes.get(key), pb = boxes.get(parent.key) || { x: 0, y: 0 };
+  const sb = diagram.geo.boxes.get(key);
   const el = SXML.addState(model.doc, parent.el, 'state');
   const id = el.getAttribute('id');
   const go = SXML.addTransition(model.doc, s.el, id);
   go.setAttribute('on', uniqueEvent(model.doc));
   if (sb) {
+    /* Exact placement: beside the source in the handle's direction, or at the drop point. */
     const W = 80, H = 40, gapX = 90, gapY = 70;
     let x, y;
     if (point) { x = point.x - W / 2; y = point.y - H / 2; }
     else {
-      /* The layered layout puts a transition's target in a later layer, so a
-         handle across the flow places the new state diagonally ahead. */
-      const across = diagram.direction === 'DOWN' ? ['left', 'right'] : ['up', 'down'];
       x = { right: sb.x + sb.w + gapX, left: sb.x - gapX - W, up: sb.x + sb.w / 2 - W / 2, down: sb.x + sb.w / 2 - W / 2 }[dir];
       y = { right: sb.y + sb.h / 2 - H / 2, left: sb.y + sb.h / 2 - H / 2, up: sb.y - gapY - H, down: sb.y + sb.h + gapY }[dir];
-      if (across.includes(dir)) { if (diagram.direction === 'DOWN') y = sb.y + sb.h + gapY / 2; else x = sb.x + sb.w + gapX / 2; }
     }
-    /* Pin the current siblings where they are, as a manual drag does, so the
-       new state lands beside its source instead of reshuffling the parent. */
-    const layout = Object.assign({}, model.layout || {});
-    const hint = Object.assign({}, layout[parent.key] || {});
-    for (const k of [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)]) {
-      const b = boxes.get(k);
-      if (b && !hint[k] && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)];
-    }
-    hint[id] = [Math.round(x - pb.x), Math.round(y - pb.y)];
-    layout[parent.key] = hint;
+    const layout = diagram.positions(model.layout);
+    layout[parent.key] = Object.assign({}, layout[parent.key] || {}, { [id]: diagram.offsetAt(parent.key, x, y) });
     SXML.setLayout(model.doc, layout);
   }
   selEl = go; commit();
@@ -679,9 +668,15 @@ async function extendFrom(key, dir, point) {
 }
 
 /* Add a state inside `parent` and name it straight away on the canvas. */
-async function quickAdd(parent) {
+async function quickAdd(parent, point) {
   if (!guard()) return;
   const el = SXML.addState(model.doc, parent.el, 'state');
+  if (point && arranged()) {
+    /* With saved positions, the new state goes where the double-click was. */
+    const layout = diagram.positions(model.layout);
+    layout[parent.key] = Object.assign({}, layout[parent.key] || {}, { [el.getAttribute('id')]: diagram.offsetAt(parent.key, point.x - 40, point.y - 20) });
+    SXML.setLayout(model.doc, layout);
+  }
   selEl = el; commit();
   await diagram.pending;
   const n = entryFor(el);
@@ -743,32 +738,26 @@ async function connect(sourceKey, targetKey, opts) {
 function moveState(key, dx, dy) {
   if (!guard()) return;
   const n = model.byKey.get(key) || model.items.get(key);
-  const parent = n ? (n.parent || n.owner) : null;
-  if (!parent) return;
-  const boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
-  const layout = Object.assign({}, model.layout || {});
-  const rootNote = parent === model.root && n.kind === 'datamodel';
-  let hint = layout[parent.key] && layout[parent.key]['@regions'] ? { '@regions': layout[parent.key]['@regions'] } : {};
+  const parentKey = diagram.geo.parentOf && diagram.geo.parentOf.get(key);
+  const rootNote = n && n.kind === 'datamodel' && (n.owner || n.parent) === model.root;
+  if (!n || (!parentKey && !rootNote)) return;
+  let layout;
   if (rootNote) {
     /* A datamodel note of the root has no edges, so it simply stays where it is dropped. */
-    const b = boxes.get(key);
-    hint = Object.assign({}, layout['#root'] || {});
-    hint[key] = [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))];
+    const b = diagram.geo.boxes.get(key);
+    layout = Object.assign({}, model.layout || {});
+    layout['#root'] = Object.assign({}, layout['#root'] || {}, { [key]: [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))] });
   } else {
-    const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
-    for (const k of siblings) { const b = boxes.get(k); if (b && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
-    for (const k in layout[parent.key] || {}) if (parent === model.root && k.includes('/datamodel')) hint[k] = layout[parent.key][k];
-    if (!hint[key]) return;
-    hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
+    /* The first drag freezes the current drawing; from then on positions are exact. */
+    layout = diagram.positions(model.layout);
+    const r = layout[parentKey][key];
+    layout[parentKey][key] = [Math.round(r[0] + dx), Math.round(r[1] + dy)];
   }
-  layout[parent.key] = hint;
   SXML.setLayout(model.doc, layout);
   selEl = n.el;
-  /* Rearranging states changes the chart's size, so refit.  A note is placed
-     freely: keep the view still, or the note seems not to have moved. */
-  diagram.userMoved = rootNote;
+  diagram.userMoved = true;
   commit();
-  status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
+  status('Position saved in the <layout> comment · “Auto” returns to automatic layout');
 }
 
 function removeSelected() {
