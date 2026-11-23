@@ -703,6 +703,7 @@ function renderInspector() {
   const focus = box.querySelector('.card.focus');
   if (focus) focus.scrollIntoView({ block: 'nearest' });
   window.studioTools?.inspector(entry);
+  window.SXMLChrome?.inspector(box);
 }
 
 function pathOf(n) {
@@ -878,6 +879,7 @@ const run = { nested: new Map(), node: null, pid: null, source: null, busy: fals
 let inputResolve = null;
 
 function logRow(cls, parts) {
+  if (cls === 'err' && $('runtime-console')) $('runtime-console').open = true;
   const log = $('log');
   const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
   const d = document.createElement('div');
@@ -898,6 +900,8 @@ function runControls() {
   badge.classList.toggle('live', !!run.pid && !run.done);
   updateChrome();
   window.studioTools?.controls();
+  window.SXMLChrome?.decorate(document.querySelector('.query-pane'));
+  window.SXMLChrome?.syncRun();
 }
 
 function cancelInput() {
@@ -1244,6 +1248,7 @@ function renderFiles() {
     remove.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';
     $('files').append(h('div', { class: 'file-row' + (i === current ? ' active' : '') }, b, remove));
   });
+  window.SXMLChrome?.decorate($('files'));
 }
 
 function renameFile(file, button) {
@@ -1535,7 +1540,7 @@ new ResizeObserver(() => { if (!diagram.userMoved) diagram.fit(); }).observe($('
 window.addEventListener('pagehide', disposeNode);
 window.addEventListener('beforeunload', e => { if (programs.some(p => p.source != null && (p === programs[current] ? editor.getValue() : p.draft != null ? p.draft : p.source) !== p.source)) { e.preventDefault(); e.returnValue = ''; } });
 
-setView('split');
+setView('diagram');
 const wanted = examplePrograms().find(p => decodeURIComponent(location.hash.slice(1)).startsWith(p.name.slice(0, 2)) && location.hash.length > 2);
 const wantedIndex = wanted ? programs.findIndex(p => p.url === wanted.url) : -1;
 selectFile(wantedIndex >= 0 ? wantedIndex : restoredExplorer ? restoredExplorer.selected : 0);
