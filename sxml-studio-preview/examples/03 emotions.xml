@@ -1,0 +1,62 @@
+<!--
+
+    Emotions: orthogonal (parallel) regions reacting together.
+
+    An agent's inner state is split into regions that are all active at
+    once. Two emotion dimensions run in parallel (anger/fear and
+    anticipation/surprise), alongside a behavior region (attacking or
+    fleeing). Because the regions are orthogonal, one event is offered to
+    all of them at the same time: sending `e` can advance every region at
+    once, while `d` and `f` move individual regions back. This is how a
+    statechart captures several independent aspects of one actor without
+    a combinatorial explosion of states.
+
+-->
+
+<statechart version="0.2" initial="agent">
+    <parallel id="agent">
+        <parallel id="emotions">
+            <state id="AF-dimension" initial="anger">
+                <state id="anger">
+                    <go to="fear" on="e"/>
+                </state>
+                <state id="fear">
+                    <go to="anger" on="d"/>
+                </state>
+            </state>
+            <state id="AS-dimension" initial="anticipation">
+                <state id="anticipation">
+                    <go to="surprise" on="e"/>
+                </state>
+                <state id="surprise">
+                    <go to="anticipation" on="f"/>
+                </state>
+            </state>
+        </parallel>
+        <state id="behavior" initial="attacking">
+            <state id="attacking">
+                <go to="fleeing" on="e"/>
+            </state>
+            <state id="fleeing">
+                <go to="attacking" on="d"/>
+            </state>
+        </state>
+    </parallel>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! e.
+
+?- $Pid ! d.
+
+?- $Pid ! f.
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

@@ -1,0 +1,52 @@
+<!--
+
+    Deferred events: postponing what a state cannot yet handle.
+
+    A state can mark certain events to be kept for later rather than
+    dropped. In the initialising state, command/1 events match <defer>,
+    so any that arrive are held in arrival order instead of being
+    discarded. The initialised event then moves the chart to the ready
+    state, where the deferred commands are re-offered, and handled,
+    before any newer external event is accepted. Send two command/1
+    events first, then initialised, and watch the held commands run in
+    the order they came in.
+
+-->
+
+<statechart version="0.2" initial="initialising">
+    <state id="initialising">
+        <onentry>
+            writeln('Initialising...')
+        </onentry>
+        <defer on="command(_)"/>
+        <go to="ready" on="initialised"/>
+    </state>
+
+    <state id="ready">
+        <onentry>
+            writeln('Ready.')
+        </onentry>
+        <go on="command(Command)">
+            format('Performing ~p.~n', [Command])
+        </go>
+    </state>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! command(open).
+
+?- $Pid ! command(close).
+
+?- $Pid ! initialised.
+
+?- $Pid ! command(status).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->
