@@ -89,7 +89,6 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .test-result.fail{color:var(--error);background:color-mix(in srgb,var(--error) 8%,var(--panel))}
 .empty-scenarios{padding:24px 12px;text-align:center;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:calc(12px * var(--ui-font-scale,1));margin:14px 0}
 .empty-scenarios>.ui-icon{display:block;margin:0 auto 10px;width:26px;height:26px}
-.run-actions{padding:16px;gap:8px}.run-actions button{font-size:calc(13px * var(--ui-font-scale,1));min-height:38px}.run-actions .primary{flex:1;justify-content:center}
 #debug-tools{padding:0 16px;max-height:none;flex:1;min-height:120px;border:0}
 .debug-heading{display:flex;align-items:center;gap:8px;font-size:calc(13px * var(--ui-font-scale,1));font-weight:650;margin:8px 0 12px}.debug-heading .ui-icon{width:17px;height:17px;color:var(--muted)}
 .event-owner{font-size:calc(11px * var(--ui-font-scale,1));margin-top:12px;color:var(--muted)}

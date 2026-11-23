@@ -43,7 +43,7 @@
     for (const [key, value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',class:'ui-icon'})) svg.setAttribute(key,value);
     const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',paths[name] || paths.state); svg.append(path); return svg;
   }
-  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-tests':'test','tab-settings':'settings','run-start':'play','run-halt':'stop','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
+  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-tests':'test','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
   const labels = {'Record fresh run':'record','Finish recording':'stop','Run all saved':'play','Cancel tests':'close','Edit':'edit','Replay':'play','Remove':'trash','Save scenario':'check','Replay draft':'play','Export saved':'download','Send':'play','Duplicate subtree':'copy','Apply move':'move','Add note':'plus','Remove note':'trash','Save checkpoint':'plus','Export checkpoints':'download','Preview / compare':'code','Restore':'restart','Open copy':'copy','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;
@@ -55,7 +55,6 @@
       if (b.closest('.structure-row') && b.hasAttribute('aria-expanded')) {name=b.getAttribute('aria-expanded')==='true'?'down':'next';b.classList.add('tree-toggle');}
       if (b.closest('#files') && !b.classList.contains('file-remove')) name = 'file';
       if (!name) continue;
-      if (b.id === 'run-start' && /Restart/.test(label)) name = 'restart';
       if (b.id === 'timeline-pause' && /Follow/.test(label)) name = 'play';
       const old = b.querySelector('svg');
       if (!old || old.dataset.chromeIcon !== name) { if (old) old.remove(); const svg=icon(name); svg.dataset.chromeIcon=name; b.prepend(svg); }
@@ -120,9 +119,9 @@
     tabs.onkeydown=e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault(); const next=[...tabs.children].find(b=>b.getAttribute('aria-selected')!=='true'); next.click(); next.focus();}};
     const actions=document.querySelector('.top-actions');
     const run=document.createElement('button'); run.id='toolbar-run'; run.type='button'; run.dataset.icon='play'; run.textContent='Run'; run.className='primary';
-    run.onclick=()=>{document.getElementById('run-start').click();if(matchMedia('(max-width:860px)').matches){document.body.dataset.drawer='inspector';document.getElementById('toggle-inspector').setAttribute('aria-pressed','true');}};
+    run.onclick=()=>{startChart();if(matchMedia('(max-width:860px)').matches){document.body.dataset.drawer='inspector';document.getElementById('toggle-inspector').setAttribute('aria-pressed','true');}};
     const stop=document.createElement('button');stop.id='toolbar-stop';stop.type='button';stop.dataset.icon='stop';stop.textContent='Stop';stop.title='Stop chart';stop.setAttribute('aria-label','Stop chart');stop.disabled=true;
-    stop.onclick=()=>document.getElementById('run-halt').click();
+    stop.onclick=()=>haltChart();
     const runSeparator=document.createElement('span');runSeparator.className='tool-sep';runSeparator.setAttribute('aria-hidden','true');
     document.getElementById('redo').after(runSeparator,run,stop);
     for(const [id,label,name] of [['toggle-workspace','Files & structure','folder'],['toggle-inspector','Inspector panels','inspect']]) {
@@ -135,10 +134,12 @@
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.body.dataset.drawer='';for(const b of actions.querySelectorAll('.panel-toggle'))b.setAttribute('aria-pressed','false');} if((e.metaKey||e.ctrlKey)&&e.key==='.'){e.preventDefault();focus.click();}});
     decorate(document); inspector(document.getElementById('inspector')); syncRun();
   }
-  function syncRun() {
-    const source=document.getElementById('run-start'), target=document.getElementById('toolbar-run'); if(!source || !target)return;
-    const stop=document.getElementById('toolbar-stop');if(stop)stop.disabled=document.getElementById('run-halt').disabled;
-    const live=/Restart/.test(source.textContent); target.disabled=source.disabled;
+  let executionState={live:false,runDisabled:false,stopDisabled:true};
+  function syncRun(state) {
+    if(state) executionState=state;
+    const target=document.getElementById('toolbar-run');if(!target)return;
+    const stop=document.getElementById('toolbar-stop');if(stop)stop.disabled=executionState.stopDisabled;
+    const live=executionState.live; target.disabled=executionState.runDisabled;
     const label=live?'Restart':'Run';
     target.title=live?'Restart chart':'Run chart';
     if(target.querySelector('.ui-button-label')?.textContent!==label){target.textContent=label;target.dataset.icon=live?'restart':'play';decorate(target.parentNode);}
