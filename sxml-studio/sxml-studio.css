@@ -188,3 +188,6 @@ svg.chart.moving .handles,svg.chart.panning .handles{display:none}
 .chart-host .state-bar button:hover{background:var(--accent-bg);color:var(--blue)}
 .chart-host .state-bar button[data-action="delete"]:hover{color:var(--error)}
 .chart-host .state-bar svg{width:17px;height:17px}
+/* Draggable transition labels */
+svg.chart:not(.running) .tlabel[data-edge]{cursor:grab}
+svg.chart.moving .tlabel{cursor:grabbing}

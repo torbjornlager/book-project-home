@@ -112,6 +112,7 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onStateAction(key, action) { stateAction(key, action); },
   onConnect(source, target, opts) { connect(source, target, opts); },
   onMove(key, dx, dy) { moveState(key, dx, dy); },
+  onMoveLabel(edgeId, dx, dy) { moveLabel(edgeId, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -758,6 +759,24 @@ function moveState(key, dx, dy) {
   diagram.userMoved = true;
   commit();
   status('Position saved in the <layout> comment · “Auto” returns to automatic layout');
+}
+
+/* A transition label keeps the offset it was dragged by, relative to its
+   default place beside the arrow, so it follows the arrow when states move. */
+function moveLabel(edgeId, dx, dy) {
+  if (!guard()) return;
+  const owner = diagram.geo.labelOwner && diagram.geo.labelOwner.get(edgeId);
+  if (!owner) return;
+  const layout = diagram.positions(model.layout);
+  layout[owner] = Object.assign({}, layout[owner] || {});
+  const old = Array.isArray(layout[owner][edgeId]) ? layout[owner][edgeId] : [0, 0];
+  layout[owner][edgeId] = [Math.round(old[0] + dx), Math.round(old[1] + dy)];
+  SXML.setLayout(model.doc, layout);
+  const t = entryByKey(edgeId.split('>')[0]);
+  if (t) selEl = t.el;
+  diagram.userMoved = true;
+  commit();
+  status('Label position saved · “Auto” resets labels and states');
 }
 
 function removeSelected() {

@@ -414,19 +414,18 @@
       if (pinf && pinf.type === 'parallel') {
         const regs = kids.filter(k => { const t = geo.info.get(k); return t && (t.type === 'state' || t.type === 'parallel'); });
         if (regs.length > 1) {
-          const down = pinf.regions !== 'RIGHT', ax = down ? 1 : 0, cross = 1 - ax;
+          const down = pinf.regions !== 'RIGHT', ax = down ? 1 : 0;
           const elkSorted = regs.slice().sort((a, c) => boxes.get(a)[down ? 'y' : 'x'] - boxes.get(c)[down ? 'y' : 'x']);
           const e0 = boxes.get(elkSorted[0]), e1 = boxes.get(elkSorted[1]);
           const gap = Math.max(0, down ? e1.y - e0.y - e0.h : e1.x - e0.x - e0.w);
           const order = regs.slice().sort((a, c) => (rel.get(a)[ax] - shift.get(a)[ax]) - (rel.get(c)[ax] - shift.get(c)[ax]));
-          const breadth = Math.max(...regs.map(k => size.get(k)[cross]));
-          const start = Math.min(...regs.map(k => rel.get(k)[cross] - shift.get(k)[cross]));
-          let along = Math.min(...regs.map(k => rel.get(k)[ax] - shift.get(k)[ax]));
+          /* Each region keeps its place unless the one before it now reaches it. */
+          let along = -Infinity;
           for (const k of order) {
-            const r = [0, 0], sk = shift.get(k), sz = size.get(k).slice();
-            r[ax] = along + sk[ax]; r[cross] = start + sk[cross];
-            sz[cross] = breadth; size.set(k, sz); rel.set(k, r);
-            along += sz[ax] + gap;
+            const r = rel.get(k).slice(), sk = shift.get(k), sz = size.get(k);
+            const pos = Math.max(r[ax] - sk[ax], along);
+            r[ax] = pos + sk[ax]; rel.set(k, r);
+            along = pos + sz[ax] + gap;
           }
         }
       }
@@ -436,13 +435,16 @@
         const [rx, ry] = rel.get(k), [sx, sy] = shift.get(k), [w, h] = size.get(k);
         x0 = Math.min(x0, rx - sx); y0 = Math.min(y0, ry - sy); x1 = Math.max(x1, rx - sx + w); y1 = Math.max(y1, ry - sy + h);
       }
-      const sh = [pad.left - x0, pad.top - y0], min = meta.min.get(p) || [0, 0];
-      shift.set(p, sh);
-      size.set(p, [Math.max(min[0], x1 + sh[0] + pad.right), Math.max(min[1], y1 + sh[1] + pad.bottom)]);
+      /* Grow, never shrink, relative to ELK's box, so an unchanged arrangement
+         is drawn exactly as ELK drew it. */
+      const left = Math.min(0, x0 - pad.left), top = Math.min(0, y0 - pad.top);
+      const right = Math.max(b.w, x1 + pad.right), bottom = Math.max(b.h, y1 + pad.bottom);
+      shift.set(p, [-left, -top]);
+      size.set(p, [right - left, bottom - top]);
     }
     fit(rootKey);
     geo.rel = rel; geo.shift = shift; geo.parentOf = meta.parent;
-    if (!apply) return geo;
+    if (!apply) return offsetLabels(geo, saved);
     const abs = new Map([[rootKey, [0, 0]]]);
     (function place(p) {
       for (const k of meta.kids.get(p) || []) {
@@ -454,11 +456,13 @@
     const before = new Map(boxes);
     const next = new Map(boxes);
     for (const [k, a] of abs) { const b = boxes.get(k), sz = size.get(k); next.set(k, Object.assign({}, b, { x: a[0], y: a[1], w: sz[0], h: sz[1] })); }
-    const same = k => { const a = before.get(k), b = next.get(k); return a && b && Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5; };
+    /* Saved offsets are rounded to whole pixels at each nesting level, so allow a few pixels' drift. */
+    const near = (u, v) => Math.abs(u - v) < 3;
+    const same = k => { const a = before.get(k), b = next.get(k); return a && b && near(a.x, b.x) && near(a.y, b.y) && near(a.w, b.w) && near(a.h, b.h); };
     const pairs = new Map();
     for (const e of geo.edges) if (e.source && e.target) { const id = [e.source, e.target].sort().join('|'); pairs.set(id, (pairs.get(id) || []).concat(e)); }
     for (const e of geo.edges) {
-      if (!e.source || !e.target || (same(e.source) && same(e.target) && (!e.container || same(e.container)))) continue;
+      if (!e.source || !e.target || (same(e.source) && same(e.target))) continue;
       const group = pairs.get([e.source, e.target].sort().join('|'));
       routeEdge(e, next.get(e.source), next.get(e.target), group.indexOf(e), group.length);
     }
@@ -467,6 +471,24 @@
     for (const b of next.values()) { width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24); }
     geo.width = width; geo.height = height;
     geo.free = true;
+    return offsetLabels(geo, saved);
+  }
+
+  /* A dragged transition label keeps its offset from where it would sit by
+     default, saved with the transition's source: layout[source][edgeId]. */
+  function offsetLabels(geo, saved) {
+    geo.labelOwner = new Map();
+    for (const e of geo.edges) {
+      const inf = geo.info.get(e.id);
+      if (!inf || !inf.item || !inf.item.source || !e.labels || !e.labels.length) continue;
+      const owner = inf.item.source.key;
+      geo.labelOwner.set(e.id, owner);
+      const off = saved[owner] && saved[owner][e.id];
+      if (Array.isArray(off) && off.length === 2 && off.every(Number.isFinite)) {
+        const l = e.labels[0];
+        e.labels = [Object.assign({}, l, { x: l.x + off[0], y: l.y + off[1], home: { x: l.x + l.w / 2, y: l.y + l.h / 2 } })];
+      }
+    }
     return geo;
   }
 
@@ -786,7 +808,11 @@
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
-        const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gLabels);
+        /* A label dragged well away from its arrow gets a faint leader line back to it. */
+        if (lb.home && Math.hypot(lb.x + lb.w / 2 - lb.home.x, lb.y + lb.h / 2 - lb.home.y) > Math.max(lb.w, lb.h) * 0.75 + 12) {
+          el('line', { class: 'label-leader', x1: lb.x + lb.w / 2, y1: lb.y + lb.h / 2, x2: lb.home.x, y2: lb.home.y }, gLabels);
+        }
+        const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key, 'data-edge': scope ? null : e.id }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
         const description = global.SXMLStudio?.description(inf.item.el);
@@ -1002,6 +1028,12 @@
         ev.preventDefault();
         return;
       }
+      const labelEl = ev.target.closest('[data-edge]');
+      if (labelEl && this._editable() && this.h.onMoveLabel && this.tool !== 'connect') {
+        drag = { type: 'label', edge: labelEl.getAttribute('data-edge'), el: labelEl, x: ev.clientX, y: ev.clientY, moved: false, target: ev.target };
+        svg.setPointerCapture(ev.pointerId);
+        return;
+      }
       const object = ev.target.closest('[data-key]') || ev.target.closest('.edge');
       const noteEl = ev.target.closest('[data-note]');
       const movable = (stateEl || noteEl) && !this.running && !this.readOnly && this.h.onMove;
@@ -1012,6 +1044,14 @@
       if (!drag) return;
       if (drag.type === 'object') {
         if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) >= 5) drag.moved = true;
+        return;
+      }
+      if (drag.type === 'label') {
+        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
+        if (!drag.moved && Math.hypot(dx, dy) * this.k < 4) return;
+        drag.moved = true; svg.classList.add('moving');
+        drag.dx = dx; drag.dy = dy;
+        drag.el.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
         return;
       }
       if (drag.type === 'move') {
@@ -1048,6 +1088,12 @@
       const d = drag; drag = null;
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
+      if (d.type === 'label' && d.moved) {
+        svg.classList.remove('moving');
+        if (ev.type === 'pointerup') this.h.onMoveLabel(d.edge, d.dx, d.dy);
+        else d.el.removeAttribute('transform');
+        return;
+      }
       if (d.type === 'handle') {
         svg.classList.remove('moving');
         if (d.line) d.line.remove();

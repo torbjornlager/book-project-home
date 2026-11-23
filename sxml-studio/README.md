@@ -109,10 +109,15 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   all positions are exact and saved in a trailing `<layout>` comment as each
   child's offset in its parent, `{"parent": {"child": [x, y]}}`. A parent always
   wraps its children with its padding and header, so moving a child never moves
-  its siblings. The regions of a parallel state stay in a tidy row or column,
-  in the order of their positions, so dragging a region reorders it. Transitions
+  its siblings. The regions of a parallel state stay in a row or column, in the
+  order of their positions, so dragging a region past another reorders them. Transitions
   between moved states are redrawn as straight (or, for parallel transitions,
   bent) arrows with the label beside them; untouched ones keep ELK's routes.
+  Drag a transition label to move it; it keeps its offset from its default
+  place beside the arrow (saved with the transition's source state), so it
+  follows when states move, and a faint leader line joins a label dragged far
+  from its arrow. The first drag reproduces ELK's drawing exactly: parents grow
+  but never shrink below ELK's size, and regions only move apart if one grows.
   New states from handles or double-clicks go where they were asked for; others
   are placed beside their placed siblings. **Auto** (Appearance → Layout) drops
   the saved positions and returns to automatic layout; **Direction** does the

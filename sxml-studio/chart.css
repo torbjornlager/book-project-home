@@ -70,3 +70,4 @@ svg.chart .nested .note-title{fill:var(--blue)}
 svg.chart .nested-icon{fill:none;stroke:var(--blue);stroke-width:1.1}
 svg.chart .nested.selected>.shape{stroke-width:2.2;stroke-dasharray:none}
 svg.chart .transition.inner .edge-hit,svg.chart .tlabel.inner{cursor:pointer}
+svg.chart .label-leader{stroke:var(--edge);stroke-width:.8;stroke-dasharray:1.5 3;opacity:.7;pointer-events:none}
