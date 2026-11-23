@@ -175,3 +175,7 @@ body[data-view=source] .source-pane{flex:1 1 0}
 #tab-settings svg{width:1.4em;height:1.4em;pointer-events:none}
 
 .brand .brand-mark{display:block;width:42px;height:42px;flex:none;object-fit:contain;padding:3px;background:#fff;border:2px solid var(--accent);border-radius:50%;margin-right:3px}
+/* On-canvas text editing (double-click a state name or transition label) */
+.chart-host .inplace{position:absolute;z-index:5;display:flex;flex-direction:column;gap:3px}
+.chart-host .inplace input{box-sizing:border-box;width:100%;height:28px;padding:3px 8px;border:1.5px solid var(--blue);border-radius:6px;background:var(--raised);color:var(--fg);font:12px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;box-shadow:0 4px 14px rgba(0,0,0,.18);outline:none}
+.chart-host .inplace-hint{align-self:flex-start;padding:2px 7px;border-radius:4px;background:var(--panel);color:var(--muted);font-size:calc(10.5px * var(--ui-font-scale,1));white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.12)}

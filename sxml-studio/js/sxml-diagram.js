@@ -40,6 +40,47 @@
     return s;
   }
 
+  /* In-place editing of a transition label uses the label's own notation:
+     "event [guard]", "after 2 [guard]", or "[guard]" alone for an eventless
+     transition.  A trailing bracket is a guard only when it starts the text or
+     follows a space, as trigger() writes it, so list-valued patterns survive. */
+  function editableTrigger(t) {
+    let s = t.on != null ? one(t.on) : t.after != null ? 'after ' + one(t.after) : '';
+    if (t.cond != null && one(t.cond)) s += (s ? ' ' : '') + '[' + one(t.cond) + ']';
+    return s;
+  }
+
+  function parseTrigger(text) {
+    let s = one(text), cond = null;
+    if (s.endsWith(']')) {
+      let depth = 0, quote = null;
+      for (let i = s.length - 1; i >= 0; i--) {
+        const c = s[i];
+        if (quote) { if (c === quote) quote = null; continue; }
+        if (c === "'" || c === '"') quote = c;
+        else if (c === ']') depth++;
+        else if (c === '[' && --depth === 0) {
+          if (i === 0 || s[i - 1] === ' ') { cond = s.slice(i + 1, -1).trim() || null; s = s.slice(0, i).trim(); }
+          break;
+        }
+      }
+    }
+    const m = /^after\s+(\d+(?:\.\d*)?|\.\d+)\s*s?$/i.exec(s);
+    if (m) return { on: null, after: m[1], cond };
+    return { on: s || null, after: null, cond };
+  }
+
+  /* What a double-click on a state means: rename it from its name compartment,
+     add a child inside the body of an expanded compound or parallel state, and
+     otherwise open it in the Inspector. */
+  function doubleClickIntent(n, b, point, onName, collapsed) {
+    if (!n || n.kind === 'history') return 'open';
+    if (n.kind === 'final' || onName) return 'rename';
+    if (b && point && point.y <= b.y + HEAD_H) return 'rename';
+    if ((n.compound || n.kind === 'parallel') && !collapsed) return 'add';
+    return 'open';
+  }
+
   /* Text lines shown inside a state. */
   function compartment(n) {
     const lines = [];
@@ -483,7 +524,14 @@
     this._apply();
   };
 
-  Diagram.prototype.setModel = async function (model, opts) {
+  /* `pending` resolves once the latest requested model has been drawn. */
+  Diagram.prototype.setModel = function (model, opts) {
+    const p = this._setModel(model, opts);
+    this.pending = p.catch(() => {});
+    return p;
+  };
+
+  Diagram.prototype._setModel = async function (model, opts) {
     this.pendingModel = model;
     const seq = ++this.seq;
     const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance, 'studio.liveDatamodels': this.liveDatamodels, 'studio.collapsed': this.collapsed }));
@@ -496,6 +544,7 @@
 
   Diagram.prototype._render = function () {
     const { boxes, edges, info } = this.geo, model = this.model, g = this.view;
+    this.closeEditor();
     while (g.firstChild) g.removeChild(g.firstChild);
     this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map(); this.edgeGeo = new Map();
     this.nodeOf = new Map(); this.frameEls = new Map();
@@ -719,6 +768,7 @@
     const last = { key: null, time: 0 };
     svg.addEventListener('wheel', ev => {
       ev.preventDefault();
+      this.closeEditor(true);
       const r = this.host.getBoundingClientRect();
       if (ev.ctrlKey || ev.metaKey) {
         this.zoomBy(Math.exp(-ev.deltaY * 0.01), ev.clientX - r.left, ev.clientY - r.top);
@@ -800,12 +850,73 @@
       /* Pointer capture retargets native dblclick to the svg, so detect it here. */
       const now = Date.now(), twice = last.key === key && now - last.time < 450;
       last.key = key; last.time = twice ? 0 : now;
-      if (twice && key !== '#root' && this.h.onOpen) this.h.onOpen(key);
+      if (twice && this.h.onDouble) {
+        const point = this._point(ev), cls = d.target.classList;
+        this.h.onDouble(key, { point, anchor: t, onName: !!(cls && cls.contains('name')) });
+      } else if (twice && key !== '#root' && this.h.onOpen) this.h.onOpen(key);
       else if (this.h.onSelect) this.h.onSelect(key, ev);
     };
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
+  };
+
+  /* Screen rectangle of a diagram box, relative to the host. */
+  Diagram.prototype.boxRect = function (key, header) {
+    const b = this.geo && this.geo.boxes.get(key);
+    if (!b) return null;
+    return { left: b.x * this.k + this.tx, top: b.y * this.k + this.ty, width: b.w * this.k, height: (header ? Math.min(b.h, HEAD_H) : b.h) * this.k };
+  };
+
+  /* A one-line text field over part of the drawing.  Enter or leaving the
+     field commits; Escape cancels.  Redrawing the diagram cancels it. */
+  Diagram.prototype.editInPlace = function (where, value, opts) {
+    this.closeEditor();
+    opts = opts || {};
+    const hostRect = this.host.getBoundingClientRect();
+    let r = where && where.getBoundingClientRect ? where.getBoundingClientRect() : where;
+    if (!r) return null;
+    if (where && where.getBoundingClientRect) r = { left: r.left - hostRect.left, top: r.top - hostRect.top, width: r.width, height: r.height };
+    const box = document.createElement('div');
+    box.className = 'inplace';
+    const field = document.createElement('input');
+    field.value = value || '';
+    field.spellcheck = false;
+    field.autocomplete = 'off';
+    field.setAttribute('aria-label', opts.label || 'Edit');
+    if (opts.placeholder) field.placeholder = opts.placeholder;
+    const w = Math.max(opts.minWidth || 140, r.width + 16);
+    const left = Math.max(4, Math.min(r.left + r.width / 2 - w / 2, hostRect.width - w - 4));
+    const top = Math.max(4, Math.min(r.top + r.height / 2 - 14, hostRect.height - 32));
+    Object.assign(box.style, { left: left + 'px', top: top + 'px', width: w + 'px' });
+    box.append(field);
+    if (opts.hint) { const hint = document.createElement('div'); hint.className = 'inplace-hint'; hint.textContent = opts.hint; box.append(hint); }
+    let done = false;
+    const close = save => {
+      if (done) return;
+      done = true;
+      if (this.editor === box) this.editor = null;
+      box.remove();
+      if (save && opts.onCommit) opts.onCommit(field.value);
+      else if (!save && opts.onCancel) opts.onCancel();
+      if (!save || !opts.keepFocus) this.svg.focus({ preventScroll: true });
+    };
+    box.close = close;
+    field.addEventListener('keydown', ev => {
+      ev.stopPropagation();
+      if (ev.key === 'Enter') { ev.preventDefault(); close(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); close(false); }
+    });
+    field.addEventListener('blur', () => close(true));
+    this.host.append(box);
+    this.editor = box;
+    field.focus();
+    field.select();
+    return field;
+  };
+
+  Diagram.prototype.closeEditor = function (save) {
+    if (this.editor) this.editor.close(!!save);
   };
 
   Diagram.prototype._stateAt = function (ev) {
@@ -858,5 +969,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
+  global.SXMLDiagram = { Diagram, layout, trigger, editableTrigger, parseTrigger, doubleClickIntent, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
 })(window);

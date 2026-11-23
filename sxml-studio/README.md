@@ -89,6 +89,14 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Transition tool (key T) to connect states, and edit in the Inspector. Transition
   order determines priority. Renaming a state updates references; Delete removes
   it together with transitions that target it.
+- On-canvas editing: double-click a state's name to rename it in place (references
+  are updated, as in the Inspector). Double-click a transition label, or an
+  internal transition listed inside a state, to edit its trigger and guard in the
+  label's own notation: `event [guard]`, `after 2 [guard]`, or `[guard]` alone for
+  an eventless transition. Actions stay in the Inspector. Double-click empty canvas,
+  or the body of an expanded compound or parallel state, to add a state there and
+  name it at once. Enter saves, Escape cancels; every edit is undoable. While a
+  chart runs, double-click opens the Inspector instead.
 - Drag states to arrange them among their siblings; layout hints are saved in
   the source. Root datamodel notes can be freely positioned. **Auto** clears
   manual arrangements. Dragging existing transitions has no effect. To create

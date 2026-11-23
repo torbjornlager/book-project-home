@@ -105,7 +105,8 @@ let snap = null;             // source text of every element, for format-preserv
 
 const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
-  onOpen(key) { if (model.nested.has(key)) { openNested(key); return; } select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
+  onOpen(key) { openInInspector(key); },
+  onDouble(key, info) { diagramDouble(key, info); },
   onConnect(source, target) { connect(source, target); },
   onMove(key, dx, dy) { moveState(key, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
@@ -518,6 +519,89 @@ function onDiagramClick(key) {
   if (run.pid && entry && entry.kind === 'go' && entry.on != null) { sendTransition(entry); return; }
   select(key, { reveal: false });
   if (!run.pid && $('settings').hidden) showSide('inspector');
+}
+
+function openInInspector(key) {
+  if (model.nested.has(key)) { openNested(key); return; }
+  select(key, { reveal: false });
+  showSide('inspector');
+  const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]');
+  if (f) f.focus();
+}
+
+/* ---------- on-canvas editing ---------- */
+
+/* Double-click: rename a state from its name, edit a transition's trigger and
+   guard from its label, or add a state to empty canvas or a compound body. */
+function diagramDouble(key, info) {
+  if (!model) return;
+  if (model.nested.has(key)) { openNested(key); return; }
+  if (run.pid) { if (key !== '#root') openInInspector(key); return; }
+  const entry = entryByKey(key) || model.root;
+  if (entry === model.root) { quickAdd(model.root); return; }
+  if (entry.kind === 'go') {
+    if (entry.source.kind === 'history') openInInspector(key);
+    else editTransitionInPlace(entry, info.anchor);
+    return;
+  }
+  if (!model.byKey.has(key)) { openInInspector(key); return; }
+  const intent = SXMLDiagram.doubleClickIntent(entry, diagram.geo && diagram.geo.boxes.get(key), info.point, info.onName, diagram.collapsed.has(key));
+  if (intent === 'rename') renameInPlace(entry);
+  else if (intent === 'add') quickAdd(entry);
+  else openInInspector(key);
+}
+
+function renameInPlace(n) {
+  if (!guard()) return;
+  select(n.key, { reveal: false });
+  const nameEl = diagram.nodeEls.get(n.key)?.querySelector('.name');
+  const where = n.kind === 'final' && nameEl ? nameEl : diagram.boxRect(n.key, true);
+  diagram.editInPlace(where, n.id || '', {
+    label: 'State id', placeholder: 'state id', hint: 'Enter to rename · Esc to cancel',
+    onCommit(value) {
+      const v = value.trim();
+      if (!v || v === n.id || !model.byKey.has(n.key)) return;
+      if (/\s/.test(v)) { status('A state id cannot contain spaces'); return; }
+      if (model.doc.querySelector('[id="' + CSS.escape(v) + '"]')) { status('Another element already has the id “' + v + '”'); return; }
+      if (!guard()) return;
+      SXML.renameState(model.doc, n.el, v);
+      selEl = n.el; commit();
+      status('Renamed ' + n.id + ' → ' + v + ' · references updated');
+    }
+  });
+}
+
+function editTransitionInPlace(t, anchor) {
+  if (!guard()) return;
+  select(t.key, { reveal: false });
+  const label = (diagram.edgeEls.get(t.key) || []).find(g => g.classList.contains('tlabel'));
+  const where = label || (anchor && anchor.getBoundingClientRect ? anchor : diagram.boxRect(t.source.key, true));
+  diagram.editInPlace(where, SXMLDiagram.editableTrigger(t), {
+    label: 'Transition trigger and guard', placeholder: 'event [guard]', minWidth: 220,
+    hint: 'event [guard] · after 2 [guard] · [guard] alone is eventless',
+    onCommit(value) {
+      if (!model.items.has(t.key)) return;
+      const next = SXMLDiagram.parseTrigger(value), el = t.el;
+      const same = (a, b) => (a == null ? '' : String(a).replace(/\s+/g, ' ').trim()) === (b == null ? '' : b);
+      if (same(t.on, next.on) && same(t.after, next.after) && same(t.cond, next.cond)) return;
+      if (!guard()) return;
+      if (!same(t.on, next.on)) SXML.setAttr(el, 'on', next.on);
+      if (!same(t.after, next.after)) SXML.setAttr(el, 'after', next.after);
+      if (!same(t.cond, next.cond)) SXML.setAttr(el, 'if', next.cond);
+      selEl = el; commit();
+      status('Transition updated · the action is edited in the Inspector');
+    }
+  });
+}
+
+/* Add a state inside `parent` and name it straight away on the canvas. */
+async function quickAdd(parent) {
+  if (!guard()) return;
+  const el = SXML.addState(model.doc, parent.el, 'state');
+  selEl = el; commit();
+  await diagram.pending;
+  const n = entryFor(el);
+  if (n && diagram.nodeEls.get(n.key)) { diagram.reveal(n.key); renameInPlace(n); }
 }
 
 /* ---------- editing ---------- */
