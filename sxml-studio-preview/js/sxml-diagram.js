@@ -40,6 +40,47 @@
     return s;
   }
 
+  /* In-place editing of a transition label uses the label's own notation:
+     "event [guard]", "after 2 [guard]", or "[guard]" alone for an eventless
+     transition.  A trailing bracket is a guard only when it starts the text or
+     follows a space, as trigger() writes it, so list-valued patterns survive. */
+  function editableTrigger(t) {
+    let s = t.on != null ? one(t.on) : t.after != null ? 'after ' + one(t.after) : '';
+    if (t.cond != null && one(t.cond)) s += (s ? ' ' : '') + '[' + one(t.cond) + ']';
+    return s;
+  }
+
+  function parseTrigger(text) {
+    let s = one(text), cond = null;
+    if (s.endsWith(']')) {
+      let depth = 0, quote = null;
+      for (let i = s.length - 1; i >= 0; i--) {
+        const c = s[i];
+        if (quote) { if (c === quote) quote = null; continue; }
+        if (c === "'" || c === '"') quote = c;
+        else if (c === ']') depth++;
+        else if (c === '[' && --depth === 0) {
+          if (i === 0 || s[i - 1] === ' ') { cond = s.slice(i + 1, -1).trim() || null; s = s.slice(0, i).trim(); }
+          break;
+        }
+      }
+    }
+    const m = /^after\s+(\d+(?:\.\d*)?|\.\d+)\s*s?$/i.exec(s);
+    if (m) return { on: null, after: m[1], cond };
+    return { on: s || null, after: null, cond };
+  }
+
+  /* What a double-click on a state means: rename it from its name compartment,
+     add a child inside the body of an expanded compound or parallel state, and
+     otherwise open it in the Inspector. */
+  function doubleClickIntent(n, b, point, onName, collapsed) {
+    if (!n || n.kind === 'history') return 'open';
+    if (n.kind === 'final' || onName) return 'rename';
+    if (b && point && point.y <= b.y + HEAD_H) return 'rename';
+    if ((n.compound || n.kind === 'parallel') && !collapsed) return 'add';
+    return 'open';
+  }
+
   /* Text lines shown inside a state. */
   function compartment(n) {
     const lines = [];
@@ -180,6 +221,7 @@
       const requestedDirection = n.kind === 'parallel' ? (model.layout && model.layout[n.key] && model.layout[n.key]['@regions']) || 'DOWN' : null;
       const independent = ['RIGHT', 'DOWN'].includes(requestedDirection) && canArrangeRegions(model, n);
       const inter = { 'elk.direction': independent ? requestedDirection : direction };
+      if (n.kind === 'parallel') info.get(n.key).regions = independent ? requestedDirection : direction;
       if (independent) inter['elk.hierarchyHandling'] = 'SEPARATE_CHILDREN';
       if (n.kind === 'statechart' && n.scope) {
         const title = 'statechart · ' + model.nested.get(n.scope).title;
@@ -334,18 +376,266 @@
     if (!elk) elk = new global.ELK();
     const noteKeys = new Set(model.root.datamodels.map(d => d.key));
     const hinted = !!model.layout && Object.keys(model.layout).some(pk => pk[0] !== '@' && Object.keys(model.layout[pk]).some(k => k[0] !== '@' && !(pk === '#root' && noteKeys.has(k))));
-    let geo = await run(model, direction, extra, null);
-    if (hinted) {
-      try { geo = await run(model, direction, Object.assign({}, INTERACTIVE, extra), geo.boxes); }
-      catch (e) { console.warn('Manual arrangement could not be applied; using automatic layout.', e); }
+    const geo = await run(model, direction, extra, null);
+    /* Saved positions are exact: ELK supplies sizes and the positions of
+       anything not yet placed, and the saved arrangement is applied on top. */
+    return freeLayout(geo, model, hinted);
+  }
+
+  /* ---------- free (saved) positions ----------
+
+     A position saved in the <layout> comment is a child's offset in its
+     parent's frame: layout[parentKey][childKey] = [x, y].  A parent always
+     wraps its children tightly (with its padding and header), so moving a
+     child never moves its siblings, and moving it by (dx, dy) adds exactly
+     (dx, dy) to its saved offset.  `shift` is how far a parent's top-left
+     moved to wrap its children; offsets are corrected by it when drawing. */
+  function freeLayout(geo, model, apply) {
+    const { boxes, meta } = geo, saved = (model.layout) || {};
+    const rel = new Map(), shift = new Map(), size = new Map();
+    const rootKey = meta.root;
+    function fit(p) {
+      const kids = meta.kids.get(p) || [], b = boxes.get(p);
+      for (const k of kids) fit(k);
+      if (!kids.length) { size.set(p, [b.w, b.h]); shift.set(p, [0, 0]); return; }
+      const hint = apply ? (saved[p] || {}) : {};
+      const placed = kids.filter(k => Array.isArray(hint[k]) && hint[k].length === 2 && hint[k].every(Number.isFinite));
+      for (const k of placed) rel.set(k, hint[k].slice());
+      if (placed.length) {
+        /* Children without a saved place go in a column beside the placed ones. */
+        let right = -Infinity, y = Infinity;
+        for (const k of placed) { right = Math.max(right, rel.get(k)[0] - shift.get(k)[0] + size.get(k)[0]); y = Math.min(y, rel.get(k)[1] - shift.get(k)[1]); }
+        for (const k of kids) if (!rel.has(k)) { rel.set(k, [right + 40 + shift.get(k)[0], y + shift.get(k)[1]]); y += size.get(k)[1] + 24; }
+      } else for (const k of kids) { const c = boxes.get(k); rel.set(k, [c.x - b.x + shift.get(k)[0], c.y - b.y + shift.get(k)[1]]); }
+      if (!apply) { size.set(p, [b.w, b.h]); shift.set(p, [0, 0]); return; }
+      /* Regions of a parallel state stay in a tidy row or column, in the order
+         of their saved positions, so dragging a region reorders it. */
+      const pinf = geo.info.get(p);
+      if (pinf && pinf.type === 'parallel') {
+        const regs = kids.filter(k => { const t = geo.info.get(k); return t && (t.type === 'state' || t.type === 'parallel'); });
+        if (regs.length > 1) {
+          const down = pinf.regions !== 'RIGHT', ax = down ? 1 : 0;
+          const elkSorted = regs.slice().sort((a, c) => boxes.get(a)[down ? 'y' : 'x'] - boxes.get(c)[down ? 'y' : 'x']);
+          const e0 = boxes.get(elkSorted[0]), e1 = boxes.get(elkSorted[1]);
+          const gap = Math.max(0, down ? e1.y - e0.y - e0.h : e1.x - e0.x - e0.w);
+          const order = regs.slice().sort((a, c) => (rel.get(a)[ax] - shift.get(a)[ax]) - (rel.get(c)[ax] - shift.get(c)[ax]));
+          /* Each region keeps its place unless the one before it now reaches it. */
+          let along = -Infinity;
+          for (const k of order) {
+            const r = rel.get(k).slice(), sk = shift.get(k), sz = size.get(k);
+            const pos = Math.max(r[ax] - sk[ax], along);
+            r[ax] = pos + sk[ax]; rel.set(k, r);
+            along = pos + sz[ax] + gap;
+          }
+        }
+      }
+      const pad = meta.pad.get(p) || { top: 24, left: 24, right: 24, bottom: 24 };
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const k of kids) {
+        const [rx, ry] = rel.get(k), [sx, sy] = shift.get(k), [w, h] = size.get(k);
+        x0 = Math.min(x0, rx - sx); y0 = Math.min(y0, ry - sy); x1 = Math.max(x1, rx - sx + w); y1 = Math.max(y1, ry - sy + h);
+      }
+      /* Grow, never shrink, relative to ELK's box, so an unchanged arrangement
+         is drawn exactly as ELK drew it. */
+      const left = Math.min(0, x0 - pad.left), top = Math.min(0, y0 - pad.top);
+      const right = Math.max(b.w, x1 + pad.right), bottom = Math.max(b.h, y1 + pad.bottom);
+      shift.set(p, [-left, -top]);
+      size.set(p, [right - left, bottom - top]);
+    }
+    fit(rootKey);
+    geo.rel = rel; geo.shift = shift; geo.parentOf = meta.parent;
+    if (!apply) return offsetLabels(geo, saved);
+    const abs = new Map([[rootKey, [0, 0]]]);
+    (function place(p) {
+      for (const k of meta.kids.get(p) || []) {
+        const a = abs.get(p), r = rel.get(k), sk = shift.get(k), sp = shift.get(p);
+        abs.set(k, [a[0] + r[0] - sk[0] + sp[0], a[1] + r[1] - sk[1] + sp[1]]);
+        place(k);
+      }
+    })(rootKey);
+    const before = new Map(boxes);
+    const next = new Map(boxes);
+    for (const [k, a] of abs) { const b = boxes.get(k), sz = size.get(k); next.set(k, Object.assign({}, b, { x: a[0], y: a[1], w: sz[0], h: sz[1] })); }
+    /* Saved offsets are rounded to whole pixels at each nesting level, so allow a few pixels' drift. */
+    const near = (u, v) => Math.abs(u - v) < 3;
+    const same = k => { const a = before.get(k), b = next.get(k); return a && b && near(a.x, b.x) && near(a.y, b.y) && near(a.w, b.w) && near(a.h, b.h); };
+    const pairs = new Map();
+    for (const e of geo.edges) if (e.source && e.target) { const id = [e.source, e.target].sort().join('|'); pairs.set(id, (pairs.get(id) || []).concat(e)); }
+    for (const e of geo.edges) {
+      if (!e.source || !e.target || (same(e.source) && same(e.target))) continue;
+      const group = pairs.get([e.source, e.target].sort().join('|'));
+      routeEdge(e, next.get(e.source), next.get(e.target), group.indexOf(e), group.length, next);
+    }
+    geo.boxes = next;
+    let width = 0, height = 0;
+    for (const b of next.values()) { width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24); }
+    geo.width = width; geo.height = height;
+    geo.free = true;
+    return offsetLabels(geo, saved);
+  }
+
+  /* New label anchors are absolute canvas coordinates. Legacy two-number
+     offsets still load correctly. Both live with the transition's source. */
+  function offsetLabels(geo, saved) {
+    geo.labelOwner = new Map();
+    for (const e of geo.edges) {
+      const inf = geo.info.get(e.id);
+      if (!inf || !inf.item || !inf.item.source || !e.labels || !e.labels.length) continue;
+      const owner = inf.item.source.key;
+      geo.labelOwner.set(e.id, owner);
+      const off = saved[owner] && saved[owner][e.id];
+      if (Array.isArray(off) && off.slice(0, 2).length === 2 && off.slice(0, 2).every(Number.isFinite)) {
+        const l = e.labels[0], absolute = off[2] === 'absolute';
+        e.labels = [Object.assign({}, l, { x: (absolute ? 0 : l.x) + off[0], y: (absolute ? 0 : l.y) + off[1] })];
+        routeThroughLabel(e, geo.boxes);
+        geo.width = Math.max(geo.width, e.labels[0].x + l.w + 24);
+        geo.height = Math.max(geo.height, e.labels[0].y + l.h + 24);
+      }
     }
     return geo;
+  }
+
+  const contains = (o, i) => i.x >= o.x - 0.5 && i.y >= o.y - 0.5 && i.x + i.w <= o.x + o.w + 0.5 && i.y + i.h <= o.y + o.h + 0.5;
+  const isRound = b => b.w === b.h && b.w <= 2 * HIST_R + 0.5;
+  /* Where the ray from the centre of b along (vx, vy) leaves b. */
+  function exitPoint(b, vx, vy) {
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, len = Math.hypot(vx, vy) || 1;
+    if (isRound(b)) return { x: cx + vx / len * b.w / 2, y: cy + vy / len * b.w / 2 };
+    const t = Math.min(vx ? (b.w / 2) / Math.abs(vx) : Infinity, vy ? (b.h / 2) / Math.abs(vy) : Infinity);
+    return { x: cx + vx * t, y: cy + vy * t };
+  }
+  /* The point of the outer box's border nearest to the inner box, and the inner box's matching exit. */
+  function nestedRoute(outer, inner, outward) {
+    const d = [['left', inner.x - outer.x], ['right', outer.x + outer.w - inner.x - inner.w], ['top', inner.y - outer.y], ['bottom', outer.y + outer.h - inner.y - inner.h]].sort((a, b) => a[1] - b[1])[0][0];
+    const cx = inner.x + inner.w / 2, cy = inner.y + inner.h / 2;
+    const v = { left: [-1, 0], right: [1, 0], top: [0, -1], bottom: [0, 1] }[d];
+    const a = exitPoint(inner, v[0], v[1]);
+    const b = { left: { x: outer.x, y: cy }, right: { x: outer.x + outer.w, y: cy }, top: { x: cx, y: outer.y }, bottom: { x: cx, y: outer.y + outer.h } }[d];
+    return outward ? [a, b] : [b, a];
+  }
+  function routeEdge(e, s, t, index, count, boxes) {
+    let pts;
+    const off = (index - (count - 1) / 2) * 18;
+    if (s === t || (s.x === t.x && s.y === t.y && s.w === t.w)) {
+      const k = 22 + index * 12, r = s.x + s.w, top = s.y;
+      pts = [{ x: r - 16, y: top }, { x: r - 16, y: top - k }, { x: r + k, y: top - k }, { x: r + k, y: top + 16 }, { x: r, y: top + 16 }];
+    } else if (contains(t, s)) pts = nestedRoute(t, s, true);
+    else if (contains(s, t)) pts = nestedRoute(s, t, false);
+    else {
+      const sc = centre(s), tc = centre(t);
+      const a = port(s, tc, off), b = port(t, sc, off);
+      pts = [a.border, ...orthogonalPath(a.outer, b.outer, routeObstacles(boxes, s, t)), b.border];
+    }
+    e.points = pts;
+    if (e.labels && e.labels.length) {
+      const i = Math.floor((pts.length - 1) / 2), a = pts[i], b = pts[i + 1];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, l = e.labels[0];
+      const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+      e.labels = [Object.assign({}, l, horizontal ? { x: mx - l.w / 2, y: my - l.h - 3 } : { x: mx + 5, y: my - l.h / 2 })];
+    }
+  }
+
+  const centre = b => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+  function port(b, toward, offset = 0) {
+    const c = centre(b), dx = toward.x - c.x, dy = toward.y - c.y;
+    let border, outer;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      const sign = dx < 0 ? -1 : 1;
+      border = { x: c.x + sign * b.w / 2, y: c.y + (isRound(b) ? 0 : Math.max(-b.h / 2 + 8, Math.min(b.h / 2 - 8, offset))) };
+      outer = { x: border.x + sign * 16, y: border.y };
+    } else {
+      const sign = dy < 0 ? -1 : 1;
+      border = { x: c.x + (isRound(b) ? 0 : Math.max(-b.w / 2 + 8, Math.min(b.w / 2 - 8, offset))), y: c.y + sign * b.h / 2 };
+      outer = { x: border.x, y: border.y + sign * 16 };
+    }
+    return { border, outer };
+  }
+  function routeObstacles(boxes, s, t) {
+    return [...(boxes || new Map()).values()].filter(b =>
+      b === s || b === t || (!contains(b, s) && !contains(b, t) && !contains(s, b) && !contains(t, b))
+    ).map(b => ({ x: b.x - 6, y: b.y - 6, w: b.w + 12, h: b.h + 12 }));
+  }
+  /* Rectilinear visibility grid. A* favours short routes with few bends and
+     keeps unrelated state boxes clear. Every returned segment is axis aligned. */
+  function orthogonalPath(a, b, obstacles) {
+    const inside = (p, r) => p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
+    const rects = obstacles.filter(r => !inside(a, r) && !inside(b, r));
+    const xs = [...new Set([a.x, b.x, ...rects.flatMap(r => [r.x, r.x + r.w])])].sort((u,v) => u-v);
+    const ys = [...new Set([a.y, b.y, ...rects.flatMap(r => [r.y, r.y + r.h])])].sort((u,v) => u-v);
+    const nx = xs.length, start = ys.indexOf(a.y) * nx + xs.indexOf(a.x), goal = ys.indexOf(b.y) * nx + xs.indexOf(b.x);
+    const point = i => ({ x: xs[i % nx], y: ys[Math.floor(i / nx)] });
+    const clear = (p,q) => !rects.some(r => p.x === q.x
+      ? p.x > r.x && p.x < r.x+r.w && Math.max(p.y,q.y) > r.y && Math.min(p.y,q.y) < r.y+r.h
+      : p.y > r.y && p.y < r.y+r.h && Math.max(p.x,q.x) > r.x && Math.min(p.x,q.x) < r.x+r.w);
+    const heap = [], dist = new Map(), prev = new Map();
+    function push(v) {
+      let i = heap.length; heap.push(v);
+      while (i) { const p = (i-1)>>1; if (heap[p].f <= v.f) break; heap[i] = heap[p]; i=p; }
+      heap[i]=v;
+    }
+    function pop() {
+      const first = heap[0], last = heap.pop();
+      if (heap.length) { let i=0; while (i*2+1 < heap.length) { let k=i*2+1; if (k+1<heap.length && heap[k+1].f<heap[k].f) k++; if (heap[k].f>=last.f) break; heap[i]=heap[k]; i=k; } heap[i]=last; }
+      return first;
+    }
+    const h = p => Math.abs(p.x-b.x)+Math.abs(p.y-b.y);
+    dist.set(start*3,0); push({ id:start, dir:0, cost:0, f:h(a), key:start*3 });
+    while (heap.length) {
+      const u=pop(); if (u.cost !== dist.get(u.key)) continue;
+      if (u.id === goal) {
+        const pts=[]; let key=u.key;
+        while (key != null) { pts.push(point(Math.floor(key/3))); key=prev.get(key); }
+        return simplify(pts.reverse());
+      }
+      const p=point(u.id), ix=u.id%nx, iy=Math.floor(u.id/nx);
+      for (const [id,dir] of [[ix>0?u.id-1:-1,1],[ix+1<nx?u.id+1:-1,1],[iy>0?u.id-nx:-1,2],[iy+1<ys.length?u.id+nx:-1,2]]) {
+        if (id<0) continue;
+        const q=point(id); if (!clear(p,q)) continue;
+        const cost=u.cost+Math.abs(p.x-q.x)+Math.abs(p.y-q.y)+(u.dir && u.dir!==dir?20:0), key=id*3+dir;
+        if (cost >= (dist.get(key) ?? Infinity)) continue;
+        dist.set(key,cost); prev.set(key,u.key); push({id,dir,cost,key,f:cost+h(q)});
+      }
+    }
+    return [a, {x:b.x,y:a.y}, b];
+  }
+  function simplify(points) {
+    const out=[];
+    for (const p of points) {
+      const b=out.at(-1), a=out.at(-2);
+      if (b && b.x===p.x && b.y===p.y) continue;
+      if (a && ((a.x===b.x && b.x===p.x) || (a.y===b.y && b.y===p.y))) out.pop();
+      out.push(p);
+    }
+    return out;
+  }
+  /* The label is a horizontal segment of the transition itself, rather than
+     a detached annotation. Moving it steers both halves of the route. */
+  function routeThroughLabel(e, boxes) {
+    const s=boxes.get(e.source), t=boxes.get(e.target), l=e.labels[0];
+    if (!s || !t || !l) return;
+    const forward=centre(s).x <= centre(t).x;
+    const left={x:l.x-12,y:l.y+l.h/2}, right={x:l.x+l.w+12,y:left.y};
+    const a=forward?left:right, b=forward?right:left;
+    const sp=port(s,a), tp=port(t,b), obstacles=routeObstacles(boxes,s,t);
+    e.points=simplify([sp.border, ...orthogonalPath(sp.outer,a,obstacles), b,
+      ...orthogonalPath(b,tp.outer,obstacles).slice(1), tp.border]);
+    e.routedLabel = true;
   }
 
   async function run(model, direction, extra, base) {
     const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, 'studio.collapsed': collapsed, ...elkOptions } = extra || {};
     const appearance = normalizeAppearance(appearanceSettings);
     const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels, collapsed);
+    const meta = { root: graph.id, parent: new Map(), kids: new Map(), min: new Map(), pad: new Map() };
+    (function scan(n) {
+      const o = n.layoutOptions || {};
+      const pad = /top=([\d.]+),left=([\d.]+),bottom=([\d.]+),right=([\d.]+)/.exec(o['elk.padding'] || '');
+      if (pad) meta.pad.set(n.id, { top: +pad[1], left: +pad[2], bottom: +pad[3], right: +pad[4] });
+      const min = /\(([\d.]+),([\d.]+)\)/.exec(o['elk.nodeSize.minimum'] || '');
+      meta.min.set(n.id, min ? [+min[1], +min[2]] : [n.width || 0, n.height || 0]);
+      meta.kids.set(n.id, (n.children || []).map(c => c.id));
+      for (const c of n.children || []) { meta.parent.set(c.id, n.id); scan(c); }
+    })(graph);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), elkOptions) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -362,7 +652,7 @@
           pts.push(s.startPoint, ...(s.bendPoints || []), s.endPoint);
         }
         edges.push({
-          id: e.id, points: pts.map(p => ({ x: p.x + c.x, y: p.y + c.y })),
+          id: e.id, source: (e.sources || [])[0], target: (e.targets || [])[0], container: e.container || n.id, points: pts.map(p => ({ x: p.x + c.x, y: p.y + c.y })),
           labels: (e.labels || []).map(l => ({ x: l.x + c.x, y: l.y + c.y, w: l.width, h: l.height }))
         });
       }
@@ -383,7 +673,7 @@
       boxes.set(note.id, b);
       width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24);
     }
-    return { boxes, edges, info, width, height, appearance };
+    return { boxes, edges, info, width, height, appearance, meta };
   }
 
   /* ---------- SVG helpers ---------- */
@@ -459,6 +749,7 @@
   Diagram.prototype._apply = function () {
     this.view.setAttribute('transform', 'translate(' + this.tx + ',' + this.ty + ') scale(' + this.k + ')');
     if (this.h.onZoom) this.h.onZoom(this.k);
+    this._placeStateBar();
   };
 
   Diagram.prototype.fit = function () {
@@ -483,7 +774,14 @@
     this._apply();
   };
 
-  Diagram.prototype.setModel = async function (model, opts) {
+  /* `pending` resolves once the latest requested model has been drawn. */
+  Diagram.prototype.setModel = function (model, opts) {
+    const p = this._setModel(model, opts);
+    this.pending = p.catch(() => {});
+    return p;
+  };
+
+  Diagram.prototype._setModel = async function (model, opts) {
     this.pendingModel = model;
     const seq = ++this.seq;
     const geo = await layout(model, this.direction, Object.assign({}, spacingOptions(this.direction, this.horizontalSpacing, this.verticalSpacing), experimentOptions(this.layoutExperiments), { 'studio.appearance': this.appearance, 'studio.liveDatamodels': this.liveDatamodels, 'studio.collapsed': this.collapsed }));
@@ -502,6 +800,7 @@
     const gStates = el('g', {}, g), gEdges = el('g', {}, g), gLabels = el('g', {}, g);
     const gNotes = el('g', {}, g);       // root notes go on top, so a note dropped onto the chart stays visible
     this.overlay = el('g', {}, g);
+    this.handleLayer = el('g', { class: 'handles' }, this.overlay);
 
     const draw = n => {
       const b = boxes.get(n.key), inf = info.get(n.key);
@@ -579,15 +878,26 @@
       const inf = info.get(e.id);
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
-        el('path', { class: 'edge init', d: roundedPath(e.points, 7), 'marker-end': 'url(#arrow)' }, gEdges);
+        el('path', { class: 'edge init', d: roundedPath(e.points, 0), 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
       const scope = inf.item.scope || null;
       const key = scope || inf.item.key;
-      const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gEdges);
-      const d = roundedPath(e.points, 7);
+      const eventless = inf.item.on == null && inf.item.after == null;
+      const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : '') + (eventless ? ' eventless' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gEdges);
+      const d = roundedPath(e.points, 0);
       el('path', { class: 'edge-hit', d }, grp);
-      el('path', { class: 'edge', d, 'marker-end': 'url(#arrow)' }, grp);
+      let maskId;
+      if (e.routedLabel && e.labels[0]) {
+        const l=e.labels[0];
+        maskId='route-label-gap-' + edges.indexOf(e);
+        const x=Math.min(l.x, ...e.points.map(p => p.x))-24, y=Math.min(l.y, ...e.points.map(p => p.y))-24;
+        const width=Math.max(l.x+l.w, ...e.points.map(p => p.x))-x+24, height=Math.max(l.y+l.h, ...e.points.map(p => p.y))-y+24;
+        const mask=el('mask', { id: maskId, maskUnits: 'userSpaceOnUse', x, y, width, height }, grp);
+        el('rect', { x, y, width, height, fill: 'white' }, mask);
+        el('rect', { x: l.x-2, y: l.y-2, width: l.w+4, height: l.h+4, fill: 'black', rx: 4 }, mask);
+      }
+      el('path', { class: 'edge', d, mask: maskId ? 'url(#' + maskId + ')' : null, 'marker-end': 'url(#arrow)' }, grp);
       let entry = scope ? [] : this.edgeEls.get(key);
       if (!entry) this.edgeEls.set(key, entry = []);
       if (!scope && !this.edgeGeo.has(key)) this.edgeGeo.set(key, []);
@@ -595,7 +905,7 @@
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
-        const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gLabels);
+        const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key, 'data-edge': scope ? null : e.id }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
         const description = global.SXMLStudio?.description(inf.item.el);
@@ -676,6 +986,70 @@
       if (p) p.setAttribute('marker-end', 'url(#' + (f ? 'arrow-fired' : s ? 'arrow-sel' : 'arrow') + ')');
     }
     this.svg.classList.toggle('running', this.running === true);
+    this._drawSelectionTools();
+  };
+
+  /* Selected-state affordances: a handle on each side (click to add a
+     connected state in that direction, drag to connect or to place a new
+     state) and a small floating toolbar of state actions. */
+  Diagram.prototype._editable = function () { return !this.running && !this.readOnly && !!this.h.onHandle; };
+
+  Diagram.prototype._drawSelectionTools = function () {
+    const layer = this.handleLayer;
+    if (!layer) return;
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+    const key = this.selected, n = key && this.nodeOf && this.nodeOf.get(key), b = n && this.geo && this.geo.boxes.get(key);
+    const ok = !!(b && !n.scope && this._editable() && this.nodeEls.has(key));
+    if (ok && (n.kind === 'state' || n.kind === 'parallel')) {
+      const mid = { up: [b.x + b.w / 2, b.y], right: [b.x + b.w, b.y + b.h / 2], down: [b.x + b.w / 2, b.y + b.h], left: [b.x, b.y + b.h / 2] };
+      const titles = { up: 'above', right: 'to the right', down: 'below', left: 'to the left' };
+      for (const dir of Object.keys(mid)) {
+        const g = el('g', { class: 'handle', 'data-handle': dir, 'data-source': key }, layer);
+        el('circle', { class: 'handle-hit', cx: mid[dir][0], cy: mid[dir][1], r: 11 }, g);
+        el('circle', { class: 'handle-dot', cx: mid[dir][0], cy: mid[dir][1], r: 5 }, g);
+        el('title', {}, g, 'Click: new transition to a new state ' + titles[dir] + ' · drag: connect to a state, or drop on empty space');
+      }
+    }
+    this._stateBarKey = ok ? key : null;
+    this._renderStateBar();
+  };
+
+  Diagram.prototype._renderStateBar = function () {
+    const key = this._stateBarKey;
+    const actions = key && this.h.stateActions ? this.h.stateActions(key) : [];
+    if (!actions.length) { if (this.stateBar) this.stateBar.hidden = true; return; }
+    if (!this.stateBar) {
+      this.stateBar = document.createElement('div');
+      this.stateBar.className = 'state-bar';
+      this.stateBar.setAttribute('role', 'toolbar');
+      this.stateBar.setAttribute('aria-label', 'State actions');
+      this.stateBar.addEventListener('pointerdown', ev => ev.stopPropagation());
+      this.host.append(this.stateBar);
+    }
+    const bar = this.stateBar;
+    bar.replaceChildren();
+    for (const a of actions) {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.title = a.label; btn.setAttribute('aria-label', a.label); btn.dataset.action = a.id;
+      const icon = global.SXMLChrome && global.SXMLChrome.icon ? global.SXMLChrome.icon(a.icon) : null;
+      if (icon) btn.append(icon); else btn.textContent = a.text || a.label[0];
+      btn.onclick = () => this.h.onStateAction(key, a.id);
+      bar.append(btn);
+    }
+    bar.hidden = false;
+    this._placeStateBar();
+  };
+
+  Diagram.prototype._placeStateBar = function () {
+    const bar = this.stateBar;
+    if (!bar || bar.hidden || !this._stateBarKey) return;
+    const r = this.boxRect(this._stateBarKey);
+    if (!r) { bar.hidden = true; return; }
+    const w = bar.offsetWidth || 180, hgt = bar.offsetHeight || 32, host = this.host.getBoundingClientRect();
+    let top = r.top - hgt - 14;
+    if (top < 4) top = r.top + r.height + 14;
+    const left = Math.max(4, Math.min(r.left + r.width / 2 - w / 2, host.width - w - 4));
+    bar.style.left = left + 'px'; bar.style.top = top + 'px';
   };
 
   Diagram.prototype.select = function (key) { this.selected = key; this._paint(); };
@@ -719,6 +1093,7 @@
     const last = { key: null, time: 0 };
     svg.addEventListener('wheel', ev => {
       ev.preventDefault();
+      this.closeEditor(true);
       const r = this.host.getBoundingClientRect();
       if (ev.ctrlKey || ev.metaKey) {
         this.zoomBy(Math.exp(-ev.deltaY * 0.01), ev.clientX - r.left, ev.clientY - r.top);
@@ -731,12 +1106,25 @@
       if (ev.button !== 0) return;
       svg.focus({ preventScroll: true });
       const stateEl = ev.target.closest('[data-state]');
+      const handleEl = ev.target.closest('[data-handle]');
+      if (handleEl && this._editable()) {
+        drag = { type: 'handle', source: handleEl.getAttribute('data-source'), dir: handleEl.getAttribute('data-handle'), start: this._point(ev), x: ev.clientX, y: ev.clientY, moved: false };
+        svg.setPointerCapture(ev.pointerId);
+        ev.preventDefault();
+        return;
+      }
       if (this.tool === 'connect' && stateEl && !this.running && !this.readOnly) {
         const key = stateEl.getAttribute('data-state');
         const start = this._point(ev);
         drag = { type: 'connect', source: key, start, line: el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay) };
         svg.setPointerCapture(ev.pointerId);
         ev.preventDefault();
+        return;
+      }
+      const labelEl = ev.target.closest('[data-edge]');
+      if (labelEl && this._editable() && this.h.onMoveLabel && this.tool !== 'connect') {
+        drag = { type: 'label', edge: labelEl.getAttribute('data-edge'), el: labelEl, x: ev.clientX, y: ev.clientY, moved: false, target: ev.target };
+        svg.setPointerCapture(ev.pointerId);
         return;
       }
       const object = ev.target.closest('[data-key]') || ev.target.closest('.edge');
@@ -751,23 +1139,37 @@
         if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) >= 5) drag.moved = true;
         return;
       }
+      if (drag.type === 'label') {
+        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
+        if (!drag.moved && Math.hypot(dx, dy) * this.k < 4) return;
+        drag.moved = true; svg.classList.add('moving');
+        drag.dx = dx; drag.dy = dy;
+        if (this._previewDrag) this._previewDrag(drag, dx, dy);
+        else drag.el.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
+        return;
+      }
       if (drag.type === 'move') {
         const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
         if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
-        const b = this.geo.boxes.get(drag.key);
-        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
+        const b = (drag.originalGeo || this.geo).boxes.get(drag.key);
+        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); if (!this._previewDrag) drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
         drag.dx = dx; drag.dy = dy;
-        drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy);
+        if (this._previewDrag) this._previewDrag(drag, dx, dy);
+        else { drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy); }
       } else if (drag.type === 'pan') {
         const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
         drag.moved = true; svg.classList.add('panning');
         this.tx = drag.tx + dx; this.ty = drag.ty + dy; this.userMoved = true; this._apply();
       } else {
+        if (drag.type === 'handle' && !drag.moved) {
+          if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 6) return;
+          drag.moved = true; svg.classList.add('moving');
+        }
         const p = this._point(ev);
         if (!drag.line) drag.line = el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay);
         const from = drag.start, to = p;
-        drag.line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
+        drag.line.setAttribute('d', roundedPath([from, { x: to.x, y: from.y }, to], 0));
         const over = this._stateAt(ev);
         if (drag.over !== over) {
           if (drag.over && this.nodeEls.get(drag.over)) this.nodeEls.get(drag.over).classList.remove('drop');
@@ -779,8 +1181,26 @@
     const finish = ev => {
       if (!drag) return;
       const d = drag; drag = null;
+      if (d.originalGeo) { this.geo = d.originalGeo; this._render(); }
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
+      if (d.type === 'label' && d.moved) {
+        svg.classList.remove('moving');
+        if (ev.type === 'pointerup') this.h.onMoveLabel(d.edge, d.dx, d.dy);
+        else d.el.removeAttribute('transform');
+        return;
+      }
+      if (d.type === 'handle') {
+        svg.classList.remove('moving');
+        if (d.line) d.line.remove();
+        if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
+        if (ev.type !== 'pointerup') return;
+        if (!d.moved) { this.h.onHandle(d.source, d.dir, null); return; }
+        const over = this._stateAt(ev);
+        if (over) this.h.onConnect(d.source, over, { inPlace: true });
+        else this.h.onHandle(d.source, d.dir, this._point(ev));
+        return;
+      }
       if (d.type === 'connect') {
         if (d.line) d.line.remove();
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
@@ -790,7 +1210,7 @@
       }
       if (d.type === 'move' && d.moved) {
         svg.classList.remove('moving');
-        d.ghost.remove();
+        if (d.ghost) d.ghost.remove();
         if (ev.type === 'pointerup') this.h.onMove(d.key, d.dx, d.dy);
         return;
       }
@@ -800,12 +1220,151 @@
       /* Pointer capture retargets native dblclick to the svg, so detect it here. */
       const now = Date.now(), twice = last.key === key && now - last.time < 450;
       last.key = key; last.time = twice ? 0 : now;
-      if (twice && key !== '#root' && this.h.onOpen) this.h.onOpen(key);
+      if (twice && this.h.onDouble) {
+        const point = this._point(ev), cls = d.target.classList;
+        this.h.onDouble(key, { point, anchor: t, onName: !!(cls && cls.contains('name')) });
+      } else if (twice && key !== '#root' && this.h.onOpen) this.h.onOpen(key);
       else if (this.h.onSelect) this.h.onSelect(key, ev);
     };
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
+  };
+
+  Diagram.prototype._previewDrag = function (drag, dx, dy) {
+    const original = drag.originalGeo || (drag.originalGeo = this.geo);
+    const boxes = new Map(original.boxes);
+    const edges = original.edges.map(e => Object.assign({}, e, { labels: e.labels.map(l => Object.assign({}, l)) }));
+    if (drag.type === 'label') {
+      const e=edges.find(e => e.id===drag.edge);
+      if (e && e.labels.length) {
+        e.labels[0].x+=dx; e.labels[0].y+=dy;
+        routeThroughLabel(e, boxes);
+      }
+    } else {
+      const moving = new Set([drag.key]);
+      for (const key of boxes.keys()) {
+        let p=key;
+        while (p && !moving.has(p)) p=original.parentOf.get(p);
+        if (p) moving.add(key);
+      }
+      for (const key of moving) {
+        const b=boxes.get(key);
+        if (b) boxes.set(key, Object.assign({},b,{x:b.x+dx,y:b.y+dy}));
+      }
+      for (const e of edges) {
+        if (!e.source || !e.target) continue;
+        const s=boxes.get(e.source), t=boxes.get(e.target);
+        if (!s || !t) continue;
+        if (moving.has(e.source) && moving.has(e.target)) {
+          e.points=e.points.map(p => ({x:p.x+dx,y:p.y+dy}));
+          e.labels=e.labels.map(l => Object.assign({},l,{x:l.x+dx,y:l.y+dy}));
+        } else if (moving.has(e.source) || moving.has(e.target)) {
+          const pinned=this.model.layout?.[original.labelOwner.get(e.id)]?.[e.id];
+          const group=edges.filter(other => (other.source===e.source && other.target===e.target) || (other.source===e.target && other.target===e.source));
+          if (pinned?.[2] === 'absolute') routeThroughLabel(e,boxes);
+          else {
+            routeEdge(e,s,t,group.indexOf(e),group.length,boxes);
+            if (Array.isArray(pinned)) {
+              e.labels[0].x+=pinned[0]; e.labels[0].y+=pinned[1]; routeThroughLabel(e,boxes);
+            }
+          }
+        }
+      }
+    }
+    this.geo=Object.assign({},original,{boxes,edges});
+    this._render();
+  };
+
+  /* Saved positions (see freeLayout): every drawn child's offset in its
+     parent's frame, merged into a copy of `layout`. */
+  Diagram.prototype.positions = function (layout) {
+    const out = Object.assign({}, layout || {});
+    if (!this.geo || !this.geo.rel) return out;
+    for (const [k, r] of this.geo.rel) {
+      const p = this.geo.parentOf.get(k);
+      if (!p) continue;
+      out[p] = Object.assign({}, out[p] || {});
+      if (!Array.isArray(out[p][k])) out[p][k] = [Math.round(r[0]), Math.round(r[1])];
+    }
+    return out;
+  };
+  /* The saved offset that puts a new, childless node's top-left at (x, y). */
+  Diagram.prototype.offsetAt = function (parentKey, x, y) {
+    const b = this.geo && this.geo.boxes.get(parentKey), sh = (this.geo && this.geo.shift && this.geo.shift.get(parentKey)) || [0, 0];
+    return b ? [Math.round(x - b.x - sh[0]), Math.round(y - b.y - sh[1])] : [Math.round(x), Math.round(y)];
+  };
+  Diagram.prototype.offsetOf = function (key) {
+    const r = this.geo && this.geo.rel && this.geo.rel.get(key);
+    return r ? r.slice() : null;
+  };
+
+  /* Centre a box in the view, zooming so that it fills about half of it. */
+  Diagram.prototype.zoomTo = function (key) {
+    const b = this.geo && this.geo.boxes.get(key);
+    if (!b) return;
+    const r = this.host.getBoundingClientRect();
+    this.k = Math.max(0.2, Math.min(2, (r.width * 0.5) / b.w, (r.height * 0.5) / b.h));
+    this.tx = r.width / 2 - (b.x + b.w / 2) * this.k; this.ty = r.height / 2 - (b.y + b.h / 2) * this.k;
+    this.userMoved = true; this._apply();
+  };
+
+  /* Screen rectangle of a diagram box, relative to the host. */
+  Diagram.prototype.boxRect = function (key, header) {
+    const b = this.geo && this.geo.boxes.get(key);
+    if (!b) return null;
+    return { left: b.x * this.k + this.tx, top: b.y * this.k + this.ty, width: b.w * this.k, height: (header ? Math.min(b.h, HEAD_H) : b.h) * this.k };
+  };
+
+  /* A one-line text field over part of the drawing.  Enter or leaving the
+     field commits; Escape cancels.  Redrawing the diagram cancels it. */
+  Diagram.prototype.editInPlace = function (where, value, opts) {
+    this.closeEditor();
+    opts = opts || {};
+    const hostRect = this.host.getBoundingClientRect();
+    let r = where && where.getBoundingClientRect ? where.getBoundingClientRect() : where;
+    if (!r) return null;
+    if (where && where.getBoundingClientRect) r = { left: r.left - hostRect.left, top: r.top - hostRect.top, width: r.width, height: r.height };
+    const box = document.createElement('div');
+    box.className = 'inplace';
+    const field = document.createElement('input');
+    field.value = value || '';
+    field.spellcheck = false;
+    field.autocomplete = 'off';
+    field.setAttribute('aria-label', opts.label || 'Edit');
+    if (opts.placeholder) field.placeholder = opts.placeholder;
+    const w = Math.max(opts.minWidth || 140, r.width + 16);
+    const left = Math.max(4, Math.min(r.left + r.width / 2 - w / 2, hostRect.width - w - 4));
+    const top = Math.max(4, Math.min(r.top + r.height / 2 - 14, hostRect.height - 32));
+    Object.assign(box.style, { left: left + 'px', top: top + 'px', width: w + 'px' });
+    box.append(field);
+    if (opts.hint) { const hint = document.createElement('div'); hint.className = 'inplace-hint'; hint.textContent = opts.hint; box.append(hint); }
+    let done = false;
+    const close = save => {
+      if (done) return;
+      done = true;
+      if (this.editor === box) this.editor = null;
+      box.remove();
+      if (save && opts.onCommit) opts.onCommit(field.value);
+      else if (!save && opts.onCancel) opts.onCancel();
+      if (!save || !opts.keepFocus) this.svg.focus({ preventScroll: true });
+    };
+    box.close = close;
+    field.addEventListener('keydown', ev => {
+      ev.stopPropagation();
+      if (ev.key === 'Enter') { ev.preventDefault(); close(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); close(false); }
+    });
+    field.addEventListener('blur', () => close(true));
+    this.host.append(box);
+    this.editor = box;
+    field.focus();
+    field.select();
+    return field;
+  };
+
+  Diagram.prototype.closeEditor = function (save) {
+    if (this.editor) this.editor.close(!!save);
   };
 
   Diagram.prototype._stateAt = function (ev) {
@@ -858,5 +1417,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
+  global.SXMLDiagram = { Diagram, layout, trigger, editableTrigger, parseTrigger, doubleClickIntent, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
 })(window);

@@ -105,9 +105,14 @@ let snap = null;             // source text of every element, for format-preserv
 
 const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
-  onOpen(key) { if (model.nested.has(key)) { openNested(key); return; } select(key, { reveal: false }); showSide('inspector'); const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]'); if (f) f.focus(); },
-  onConnect(source, target) { connect(source, target); },
+  onOpen(key) { openInInspector(key); },
+  onDouble(key, info) { diagramDouble(key, info); },
+  onHandle(key, dir, point) { extendFrom(key, dir, point); },
+  stateActions(key) { return stateActions(key); },
+  onStateAction(key, action) { stateAction(key, action); },
+  onConnect(source, target, opts) { connect(source, target, opts); },
   onMove(key, dx, dy) { moveState(key, dx, dy); },
+  onMoveLabel(edgeId, dx, dy) { moveLabel(edgeId, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -164,11 +169,20 @@ for (const axis of ['horizontal', 'vertical']) $('spacing-' + axis).oninput = e 
   diagram[axis + 'Spacing'] = Number(e.target.value);
   changeSpacing();
 };
-$('spacing-reset').onclick = () => {
+for (const axis of ['horizontal', 'vertical']) $('spacing-reset-' + axis).onclick = () => {
   if (run.pid || run.starting) return;
-  diagram.horizontalSpacing = diagram.verticalSpacing = 50;
+  diagram[axis + 'Spacing'] = 50;
   changeSpacing();
 };
+/* The toolbar's spacing sliders open just below their buttons. */
+for (const [pop, btn] of [['spacing-h-popover', 'spacing-h-toggle'], ['spacing-v-popover', 'spacing-v-toggle']]) {
+  $(pop).addEventListener('toggle', ev => {
+    if (ev.newState !== 'open') return;
+    const b = $(btn).getBoundingClientRect(), panel = $(pop).getBoundingClientRect();
+    $(pop).style.left = Math.max(12, Math.min(b.left, window.innerWidth - panel.width - 12)) + 'px';
+    $(pop).style.top = Math.max(12, Math.min(b.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
+  });
+}
 function saveLayoutExperiments() {
   try { localStorage.setItem(EXPERIMENTS_STORAGE, JSON.stringify(diagram.layoutExperiments)); }
   catch (e) { console.warn('Could not save layout experiments:', e); }
@@ -295,6 +309,14 @@ try {
 } catch (e) { console.warn('Could not restore split sizes:', e); }
 document.documentElement.style.setProperty('--source-height', splitSizes.horizontal + '%');
 document.documentElement.style.setProperty('--source-width', splitSizes.vertical + '%');
+
+/* The split between diagram and source has its own orientation, chosen
+   with the toolbar button beside the view switch and remembered here;
+   it no longer follows the diagram's layout direction. */
+const SPLIT_ORIENTATION_STORAGE = 'trinity-sxml-studio.split-orientation.v1';
+let splitBeside = false;
+try { splitBeside = localStorage.getItem(SPLIT_ORIENTATION_STORAGE) === 'beside'; } catch (e) { /* default: source below */ }
+const splitVertical = () => splitBeside;
 
 function saveSplitSize(vertical, percent) {
   if (!Number.isFinite(percent) || percent <= 0 || percent >= 100) return;
@@ -433,7 +455,12 @@ function updateChrome() {
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !arranged() || !!run.pid || run.starting;
   $('direction').disabled = !!run.pid || run.starting;
-  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
+  /* Spacing tunes the automatic layout, so it waits for Auto once positions are saved. */
+  for (const id of ['spacing-h-toggle', 'spacing-v-toggle']) {
+    $(id).disabled = !!run.pid || run.starting || arranged();
+    $(id).title = (id === 'spacing-h-toggle' ? 'Horizontal' : 'Vertical') + ' spacing' + (arranged() ? ' · applies to automatic layout: use Auto layout first' : '');
+  }
+  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
   const regionControl = $('inspector').querySelector('[data-f="region-arrangement"]');
   if (regionControl) regionControl.disabled = !!run.pid || run.starting;
@@ -520,6 +547,165 @@ function onDiagramClick(key) {
   if (!run.pid && $('settings').hidden) showSide('inspector');
 }
 
+function openInInspector(key) {
+  if (model.nested.has(key)) { openNested(key); return; }
+  select(key, { reveal: false });
+  showSide('inspector');
+  const f = $('inspector').querySelector('.card.focus textarea, .card.focus input, input[data-f="id"], input[data-f="on"]');
+  if (f) f.focus();
+}
+
+/* ---------- on-canvas editing ---------- */
+
+/* Double-click: rename a state from its name, edit a transition's trigger and
+   guard from its label, or add a state to empty canvas or a compound body. */
+function diagramDouble(key, info) {
+  if (!model) return;
+  if (model.nested.has(key)) { openNested(key); return; }
+  if (run.pid) { if (key !== '#root') openInInspector(key); return; }
+  const entry = entryByKey(key) || model.root;
+  if (entry === model.root) { quickAdd(model.root, info.point); return; }
+  if (entry.kind === 'go') {
+    if (entry.source.kind === 'history') openInInspector(key);
+    else editTransitionInPlace(entry, info.anchor);
+    return;
+  }
+  if (!model.byKey.has(key)) { openInInspector(key); return; }
+  const intent = SXMLDiagram.doubleClickIntent(entry, diagram.geo && diagram.geo.boxes.get(key), info.point, info.onName, diagram.collapsed.has(key));
+  if (intent === 'rename') renameInPlace(entry);
+  else if (intent === 'add') quickAdd(entry, info.point);
+  else openInInspector(key);
+}
+
+/* An in-place edit applies only if its element still belongs to the current model. */
+const live = el => !!(model && el && model.doc.documentElement.contains(el));
+
+function renameInPlace(n) {
+  if (!guard()) return;
+  select(n.key, { reveal: false });
+  const nameEl = diagram.nodeEls.get(n.key)?.querySelector('.name');
+  const where = n.kind === 'final' && nameEl ? nameEl : diagram.boxRect(n.key, true);
+  diagram.editInPlace(where, n.id || '', {
+    label: 'State id', placeholder: 'state id', hint: 'Enter to rename · Esc to cancel',
+    onCommit(value) {
+      const v = value.trim();
+      if (!v || v === n.id || !live(n.el)) return;
+      if (/\s/.test(v)) { status('A state id cannot contain spaces'); return; }
+      if (model.doc.querySelector('[id="' + CSS.escape(v) + '"]')) { status('Another element already has the id “' + v + '”'); return; }
+      if (!guard()) return;
+      SXML.renameState(model.doc, n.el, v);
+      selEl = n.el; commit();
+      status('Renamed ' + n.id + ' → ' + v + ' · references updated');
+    }
+  });
+}
+
+function editTransitionInPlace(t, anchor) {
+  if (!guard()) return;
+  select(t.key, { reveal: false });
+  const label = (diagram.edgeEls.get(t.key) || []).find(g => g.classList.contains('tlabel'));
+  const where = label || (anchor && anchor.getBoundingClientRect ? anchor : diagram.boxRect(t.source.key, true));
+  diagram.editInPlace(where, SXMLDiagram.editableTrigger(t), {
+    label: 'Transition trigger and guard', placeholder: 'event [guard]', minWidth: 220,
+    hint: 'event [guard] · after 2 [guard] · [guard] alone is eventless',
+    onCommit(value) {
+      if (!live(t.el)) return;
+      const next = SXMLDiagram.parseTrigger(value), el = t.el;
+      const same = (a, b) => (a == null ? '' : String(a).replace(/\s+/g, ' ').trim()) === (b == null ? '' : b);
+      if (same(t.on, next.on) && same(t.after, next.after) && same(t.cond, next.cond)) return;
+      if (!guard()) return;
+      if (!same(t.on, next.on)) SXML.setAttr(el, 'on', next.on);
+      if (!same(t.after, next.after)) SXML.setAttr(el, 'after', next.after);
+      if (!same(t.cond, next.cond)) SXML.setAttr(el, 'if', next.cond);
+      selEl = el; commit();
+      status('Transition updated · the action is edited in the Inspector');
+    }
+  });
+}
+
+/* Floating toolbar of the selected state. */
+function stateActions(key) {
+  const n = model && model.byKey.get(key);
+  if (!n || n.kind === 'statechart' || run.pid) return [];
+  const list = [{ id: 'rename', icon: 'edit', label: 'Rename (or double-click the name)' }];
+  if (n.kind === 'state' || n.kind === 'parallel') {
+    list.push({ id: 'child', icon: 'plus', label: 'Add a child state' });
+    list.push({ id: 'transition', icon: 'transition', label: 'New transition to a new state' });
+  }
+  list.push({ id: 'zoom', icon: 'focus', label: 'Zoom to this state' });
+  list.push({ id: 'inspect', icon: 'inspect', label: 'Open in the Inspector' });
+  list.push({ id: 'delete', icon: 'trash', label: 'Delete ' + n.kind });
+  return list;
+}
+
+function stateAction(key, action) {
+  const n = model.byKey.get(key);
+  if (!n) return;
+  if (action === 'rename') renameInPlace(n);
+  else if (action === 'child') quickAdd(n);
+  else if (action === 'transition') extendFrom(key, diagram.direction === 'DOWN' ? 'down' : 'right', null);
+  else if (action === 'zoom') diagram.zoomTo(key);
+  else if (action === 'inspect') openInInspector(key);
+  else if (action === 'delete') { select(key, { reveal: false }); removeSelected(); }
+}
+
+function uniqueEvent(doc) {
+  const used = new Set(Array.from(doc.getElementsByTagName('go')).map(g => g.getAttribute('on')));
+  let i = 1;
+  while (used.has('new_event_' + i)) i++;
+  return 'new_event_' + i;
+}
+
+/* A side handle of the selected state: create a sibling state next to it in
+   that direction (or where a handle drag was dropped) and a transition to it
+   with a placeholder event, then edit the event on the canvas. */
+async function extendFrom(key, dir, point) {
+  if (!guard()) return;
+  const s = model.byKey.get(key);
+  if (!s || s.kind === 'final' || s.kind === 'history' || !s.parent) return;
+  const parent = s.parent;
+  if (parent.kind === 'parallel') { status('Each child of a parallel state is a region · add the new state inside a region instead'); return; }
+  const sb = diagram.geo.boxes.get(key);
+  const el = SXML.addState(model.doc, parent.el, 'state');
+  const id = el.getAttribute('id');
+  const go = SXML.addTransition(model.doc, s.el, id);
+  go.setAttribute('on', uniqueEvent(model.doc));
+  if (sb) {
+    /* Exact placement: beside the source in the handle's direction, or at the drop point. */
+    const W = 80, H = 40, gapX = 90, gapY = 70;
+    let x, y;
+    if (point) { x = point.x - W / 2; y = point.y - H / 2; }
+    else {
+      x = { right: sb.x + sb.w + gapX, left: sb.x - gapX - W, up: sb.x + sb.w / 2 - W / 2, down: sb.x + sb.w / 2 - W / 2 }[dir];
+      y = { right: sb.y + sb.h / 2 - H / 2, left: sb.y + sb.h / 2 - H / 2, up: sb.y - gapY - H, down: sb.y + sb.h + gapY }[dir];
+    }
+    const layout = diagram.positions(model.layout);
+    layout[parent.key] = Object.assign({}, layout[parent.key] || {}, { [id]: diagram.offsetAt(parent.key, x, y) });
+    SXML.setLayout(model.doc, layout);
+  }
+  selEl = go; commit();
+  await diagram.pending;
+  const t = entryFor(go);
+  if (t) editTransitionInPlace(t, null);
+  status('New state ' + id + ' added · name the event, then double-click ' + id + ' to rename it');
+}
+
+/* Add a state inside `parent` and name it straight away on the canvas. */
+async function quickAdd(parent, point) {
+  if (!guard()) return;
+  const el = SXML.addState(model.doc, parent.el, 'state');
+  if (point && arranged()) {
+    /* With saved positions, the new state goes where the double-click was. */
+    const layout = diagram.positions(model.layout);
+    layout[parent.key] = Object.assign({}, layout[parent.key] || {}, { [el.getAttribute('id')]: diagram.offsetAt(parent.key, point.x - 40, point.y - 20) });
+    SXML.setLayout(model.doc, layout);
+  }
+  selEl = el; commit();
+  await diagram.pending;
+  const n = entryFor(el);
+  if (n && diagram.nodeEls.get(n.key)) { diagram.reveal(n.key); renameInPlace(n); }
+}
+
 /* ---------- editing ---------- */
 
 function guard() {
@@ -546,13 +732,23 @@ function addState(kind) {
   if (f) { f.focus(); f.select(); }
 }
 
-function connect(sourceKey, targetKey) {
+async function connect(sourceKey, targetKey, opts) {
   if (!guard()) return;
   const s = model.byKey.get(sourceKey), t = model.byKey.get(targetKey);
   if (!s || !t || !t.id) return;
   if (s.kind === 'final') { status('A final state cannot have transitions'); return; }
   if (s.kind === 'history' && s.transitions.length) { s.transitions[0].el.setAttribute('to', t.id); selEl = s.transitions[0].el; commit(); return; }
-  selEl = SXML.addTransition(model.doc, s.el, t.id);
+  const go = SXML.addTransition(model.doc, s.el, t.id);
+  selEl = go;
+  if (opts && opts.inPlace) {
+    go.setAttribute('on', uniqueEvent(model.doc));
+    commit();
+    await diagram.pending;
+    const entry = entryFor(go);
+    if (entry) editTransitionInPlace(entry, null);
+    status('Transition ' + s.id + ' → ' + t.id + ' added · name its event');
+    return;
+  }
   commit();
   showSide('inspector');
   const f = $('inspector').querySelector('input[data-f="on"]');
@@ -565,32 +761,45 @@ function connect(sourceKey, targetKey) {
 function moveState(key, dx, dy) {
   if (!guard()) return;
   const n = model.byKey.get(key) || model.items.get(key);
-  const parent = n ? (n.parent || n.owner) : null;
-  if (!parent) return;
-  const boxes = diagram.geo.boxes, pb = boxes.get(parent.key);
-  const layout = Object.assign({}, model.layout || {});
-  const rootNote = parent === model.root && n.kind === 'datamodel';
-  let hint = layout[parent.key] && layout[parent.key]['@regions'] ? { '@regions': layout[parent.key]['@regions'] } : {};
+  const parentKey = diagram.geo.parentOf && diagram.geo.parentOf.get(key);
+  const rootNote = n && n.kind === 'datamodel' && (n.owner || n.parent) === model.root;
+  if (!n || (!parentKey && !rootNote)) return;
+  let layout;
   if (rootNote) {
     /* A datamodel note of the root has no edges, so it simply stays where it is dropped. */
-    const b = boxes.get(key);
-    hint = Object.assign({}, layout['#root'] || {});
-    hint[key] = [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))];
+    const b = diagram.geo.boxes.get(key);
+    layout = Object.assign({}, model.layout || {});
+    layout['#root'] = Object.assign({}, layout['#root'] || {}, { [key]: [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))] });
   } else {
-    const siblings = [parent.key + '/init', ...parent.datamodels.map(d => d.key), ...parent.children.map(c => c.key)];
-    for (const k of siblings) { const b = boxes.get(k); if (b && !(parent === model.root && k.includes('/datamodel'))) hint[k] = [Math.round(b.x - pb.x), Math.round(b.y - pb.y)]; }
-    for (const k in layout[parent.key] || {}) if (parent === model.root && k.includes('/datamodel')) hint[k] = layout[parent.key][k];
-    if (!hint[key]) return;
-    hint[key] = [Math.round(hint[key][0] + dx), Math.round(hint[key][1] + dy)];
+    /* The first drag freezes the current drawing; from then on positions are exact. */
+    layout = diagram.positions(model.layout);
+    const r = layout[parentKey][key];
+    layout[parentKey][key] = [Math.round(r[0] + dx), Math.round(r[1] + dy)];
   }
-  layout[parent.key] = hint;
   SXML.setLayout(model.doc, layout);
   selEl = n.el;
-  /* Rearranging states changes the chart's size, so refit.  A note is placed
-     freely: keep the view still, or the note seems not to have moved. */
-  diagram.userMoved = rootNote;
+  diagram.userMoved = true;
   commit();
-  status('Arrangement saved in the <layout> comment · “Auto” returns to automatic layout');
+  status('Position saved in the <layout> comment · “Auto layout” returns to automatic layout');
+}
+
+/* Dragging a label pins a routing anchor on the canvas. Endpoint moves then
+   reroute the transition through that anchor. */
+function moveLabel(edgeId, dx, dy) {
+  if (!guard()) return;
+  const owner = diagram.geo.labelOwner && diagram.geo.labelOwner.get(edgeId);
+  if (!owner) return;
+  const layout = diagram.positions(model.layout);
+  layout[owner] = Object.assign({}, layout[owner] || {});
+  const label = diagram.geo.edges.find(e => e.id === edgeId)?.labels[0];
+  if (!label) return;
+  layout[owner][edgeId] = [Math.round(label.x + dx), Math.round(label.y + dy), 'absolute'];
+  SXML.setLayout(model.doc, layout);
+  const t = entryByKey(edgeId.split('>')[0]);
+  if (t) selEl = t.el;
+  diagram.userMoved = true;
+  commit();
+  status('Label position saved · “Auto layout” resets labels and states');
 }
 
 function removeSelected() {
@@ -1445,7 +1654,8 @@ $('direction').onclick = () => {
 };
 
 function syncSplitOrientation() {
-  const vertical = diagram.direction === 'DOWN';
+  const vertical = splitVertical();
+  for (const item of document.querySelectorAll('#split-menu [data-split]')) item.setAttribute('aria-checked', String((item.dataset.split === 'beside') === vertical));
   const layout = vertical ? 'vertical' : 'horizontal';
   if (document.body.dataset.layout !== layout) {
     document.body.dataset.layout = layout;
@@ -1455,7 +1665,7 @@ function syncSplitOrientation() {
   requestAnimationFrame(updateSourceDividerValue);
 }
 function updateSourceDividerValue() {
-  const vertical = diagram.direction === 'DOWN';
+  const vertical = splitVertical();
   const content = document.querySelector('.editor-content');
   const pane = document.querySelector('.source-pane');
   const total = vertical ? content.clientWidth : content.clientHeight;
@@ -1463,13 +1673,38 @@ function updateSourceDividerValue() {
   if (total && document.body.dataset.view === 'split') $('source-divider').setAttribute('aria-valuenow', Math.round(size / total * 100));
 }
 
+/* Clicking Split opens a small menu: stacked or side by side. */
+function setSplitOrientation(beside) {
+  splitBeside = beside;
+  try { localStorage.setItem(SPLIT_ORIENTATION_STORAGE, beside ? 'beside' : 'below'); } catch (e) { /* not remembered */ }
+  setView('split');
+  syncSplitOrientation();
+  requestAnimationFrame(() => { editor.refresh(); diagram.fit(); });
+}
+function openSplitMenu(button) {
+  const menu = $('split-menu');
+  syncSplitOrientation();
+  menu.showPopover();
+  const b = button.getBoundingClientRect(), m = menu.getBoundingClientRect();
+  menu.style.left = Math.max(8, Math.min(b.left, window.innerWidth - m.width - 8)) + 'px';
+  menu.style.top = (b.bottom + 6) + 'px';
+  (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus();
+}
+for (const item of document.querySelectorAll('#split-menu [data-split]')) item.onclick = () => { $('split-menu').hidePopover(); setSplitOrientation(item.dataset.split === 'beside'); };
+$('split-menu').onkeydown = e => {
+  if (!['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  e.preventDefault();
+  const items = [...$('split-menu').querySelectorAll('button')], i = items.indexOf(document.activeElement);
+  items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+};
+
 function setView(view) {
   document.body.dataset.view = view;
   for (const b of document.querySelectorAll('.view-switch button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
   editor.refresh();
   requestAnimationFrame(() => diagram.fit());
 }
-for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => setView(b.dataset.view);
+for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => b.dataset.view === 'split' ? openSplitMenu(b) : setView(b.dataset.view);
 
 $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
@@ -1508,7 +1743,7 @@ for (const [id, property, direction, min, max] of [['left-divider', '--left', 1,
 {
   const divider = $('source-divider'); let start = 0, size = 0;
   const pane = document.querySelector('.source-pane');
-  const vertical = () => diagram.direction === 'DOWN';
+  const vertical = splitVertical;
   const currentSize = () => vertical() ? pane.clientWidth : pane.clientHeight;
   const coordinate = e => vertical() ? e.clientX : e.clientY;
   const set = px => {

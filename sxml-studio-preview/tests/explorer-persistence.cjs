@@ -1,0 +1,25 @@
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const app = fs.readFileSync(require('node:path').join(__dirname, '../js/app.js'), 'utf8');
+const source = app.slice(app.indexOf('function saveExplorer()'), app.indexOf('/* ---------- source editor'));
+let stored, draft = '<statechart/>', messages = [];
+const file = {name:'example.xml',url:'examples/example.xml',source:draft,workspaceId:'stable-id'};
+const sandbox = {programs:[file], current:0, loadedIndex:0, editor:{getValue:()=>draft}, EXPLORER_STORAGE:'test',
+  localStorage:{setItem(key,value){stored=JSON.parse(value);}}, console:{warn(){}}, status:message=>messages.push(message)};
+vm.createContext(sandbox); vm.runInContext(source,sandbox);
+sandbox.saveExplorer();
+assert.equal(stored.files[0].source,null,'Pristine examples must refresh from the server.');
+draft = '<statechart><!-- <studio> {"scenarios":[]} --></statechart>';
+sandbox.saveExplorer();
+assert.equal(stored.files[0].draft,draft,'Unsaved annotations must survive reload.');
+file.source = draft; file.local = true;
+sandbox.saveExplorer();
+assert.equal(stored.files[0].source,draft,'Downloading a modified example must not discard its annotations on reload.');
+assert.equal(stored.files[0].draft,null);
+file.name='renamed.xml'; sandbox.saveExplorer();
+assert.equal(stored.files[0].workspaceId,'stable-id','Checkpoint identity must survive renaming.');
+sandbox.localStorage.setItem=()=>{throw new Error('quota');};
+assert.equal(sandbox.saveExplorer(),false);
+assert.equal(messages.length,1);
+console.log('Checked pristine refresh, draft persistence, saved example annotations, checkpoint identity and storage failure reporting.');

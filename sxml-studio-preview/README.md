@@ -35,7 +35,7 @@ and trace output. **Reset fonts** restores 100% and Medium (the default). These 
 are remembered across reloads; diagram text has its own **Appearance → Style** controls.
 
 The toolbar’s **Appearance ▾** button opens a panel with **Layout** and **Style** tabs.
-It opens on Layout each time, with **Auto** and **Direction** at the top. **Style** adjusts transition thickness and colour,
+It opens on Layout each time, with **Direction** at the top. **Style** adjusts transition thickness and colour,
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser
@@ -47,8 +47,11 @@ transparent to solid, including highlighted labels; the text itself stays opaque
 Active compound and parallel states highlight their headers with the same green
 background as active atomic states, while keeping their child areas neutral.
 
-The **Appearance → Layout** tab provides experimental horizontal and vertical spacing
-sliders (0–100%, defaulting to 50% on both axes). **Reset spacing** returns to
+The canvas toolbar has **Auto layout** (wand icon) and **Horizontal spacing** /
+**Vertical spacing** buttons (arrows between bars); each spacing button opens a
+slider (0–100%, default 50%) with **Reset to 50%**. Spacing tunes the automatic
+layout, so it is disabled while positions are saved: use Auto layout first.
+**Reset** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable
 gaps are removed; node sizes, label sizes, padding and label clearance still apply. They recompute the ELK
 layout without scaling text or label boxes, and keep the current zoom
@@ -76,7 +79,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 ## What it does
 
 - Draws the chart in the book's notation: nested states, dashed lines between
-  parallel regions, initial dots, H / H* history, bullseye finals. Entry/exit
+  parallel regions, dashed arrows for eventless transitions (no `on` or `after`), initial dots, H / H* history, bullseye finals. Entry/exit
   actions, deferrals, spawns and targetless transitions are listed inside
   their state; `<datamodel>` appears as a note.
 - Diagram and source stay in step both ways. Selecting in one highlights the
@@ -89,13 +92,43 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Transition tool (key T) to connect states, and edit in the Inspector. Transition
   order determines priority. Renaming a state updates references; Delete removes
   it together with transitions that target it.
-- Drag states to arrange them among their siblings; layout hints are saved in
-  the source. Root datamodel notes can be freely positioned. **Auto** clears
-  manual arrangements. Dragging existing transitions has no effect. To create
-  a new transition, select the Transition tool and drag between states.
-  Drag empty canvas to pan; scrolling and zooming remain available.
-- Existing arrangement hints in a trailing `<layout>` comment are still read.
-  **Auto** removes those hints. Layout direction is saved in the same comment.
+- On-canvas editing: double-click a state's name to rename it in place (references
+  are updated, as in the Inspector). Double-click a transition label, or an
+  internal transition listed inside a state, to edit its trigger and guard in the
+  label's own notation: `event [guard]`, `after 2 [guard]`, or `[guard]` alone for
+  an eventless transition. Actions stay in the Inspector. Double-click empty canvas,
+  or the body of an expanded compound or parallel state, to add a state there and
+  name it at once. Enter saves, Escape cancels; every edit is undoable. While a
+  chart runs, double-click opens the Inspector instead.
+- A selected state shows a handle on each side and a small floating toolbar
+  (rename, add child, new transition, zoom to, Inspector, delete). Click a handle
+  to add a sibling state with a transition to it (placeholder event
+  `new_event_N`), then name the event on the canvas. Drag a handle onto a state
+  to connect to it, or onto empty space to place the new state there. The new
+  state is placed exactly beside its source, or where it was dropped.
+- Layout: a chart without saved positions is laid out automatically by ELK
+  (layered), and re-laid out after every change. Dragging a state freezes the
+  current drawing and puts the state exactly where it is dropped; from then on
+  all positions are exact and saved in a trailing `<layout>` comment as each
+  child's offset in its parent, `{"parent": {"child": [x, y]}}`. A parent always
+  wraps its children with its padding and header, so moving a child never moves
+  its siblings. The regions of a parallel state stay in a row or column, in the
+  order of their positions, so dragging a region past another reorders them. Transitions
+  between moved states are rerouted with horizontal and vertical segments and
+  90° bends, avoiding unrelated states where space permits. States and their
+  connections update live while dragging. Dragging a transition label places
+  a routing anchor: the arrow bends through the label, and stays connected
+  when either endpoint moves. Label anchors are saved with the transition's
+  source state; older saved label offsets remain supported.
+  The first state drag freezes the current automatic drawing; parents grow
+  but never shrink below ELK's size, and regions move apart if one grows.
+  New states from handles or double-clicks go where they were asked for; others
+  are placed beside their placed siblings. **Auto layout** (wand icon in the toolbar) drops
+  the saved positions and returns to automatic layout; **Direction** does the
+  same in the other direction. Undo covers both. Root datamodel notes can be
+  freely positioned in either mode. To create a new transition, use a handle or
+  the Transition tool. Drag empty canvas to pan; scrolling and zooming remain
+  available. The layout direction is saved in the same comment.
 - Parallel states have a **Region arrangement** selector in the Inspector:
   Stacked (the default), Side by side, or Follow chart. Each parallel state can be set
   independently; separators follow the arrangement. The choice is saved in the
@@ -249,8 +282,9 @@ swipl -q -g "load_files(['tests/live-datamodel.pl','tests/studio-runtime.pl']),r
   not. Only traces for the displayed inline level are mapped to the diagram;
   deeper or external charts remain visible as unmapped actor records in the log.
 
-In Split view, **Direction ↓ / →** also changes the pane arrangement: vertical diagrams
-place the source to the left of the chart; horizontal diagrams place it above. Drag the
+Clicking **Split** opens a small menu: **Stacked** puts the source above the chart,
+**Side by side** puts it to its left. The choice is independent of the diagram's
+layout direction and is remembered in this browser. Drag the
 divider to resize either arrangement. Each arrangement’s split size is remembered
 separately across reloads in this browser, as a proportion of the available space.
 Settings is available in the side-panel tab.

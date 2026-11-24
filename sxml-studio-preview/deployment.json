@@ -1,0 +1,5 @@
+{
+  "source_branch": "codex/sxml-orthogonal-dragging",
+  "source_commit": "8eb1722",
+  "feature": "Live state and transition-label dragging with orthogonal routes"
+}
