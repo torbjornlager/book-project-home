@@ -541,11 +541,11 @@
     let border, outer;
     if (Math.abs(dx) >= Math.abs(dy)) {
       const sign = dx < 0 ? -1 : 1;
-      border = { x: c.x + sign * b.w / 2, y: c.y + (isRound(b) ? 0 : Math.max(-b.h / 2 + 8, Math.min(b.h / 2 - 8, offset))) };
+      border = { x: c.x + sign * b.w / 2, y: c.y + (isRound(b) ? 0 : Math.max(-b.h / 2 + Math.min(8, b.h / 4), Math.min(b.h / 2 - Math.min(8, b.h / 4), offset))) };
       outer = { x: border.x + sign * 16, y: border.y };
     } else {
       const sign = dy < 0 ? -1 : 1;
-      border = { x: c.x + (isRound(b) ? 0 : Math.max(-b.w / 2 + 8, Math.min(b.w / 2 - 8, offset))), y: c.y + sign * b.h / 2 };
+      border = { x: c.x + (isRound(b) ? 0 : Math.max(-b.w / 2 + Math.min(8, b.w / 4), Math.min(b.w / 2 - Math.min(8, b.w / 4), offset))), y: c.y + sign * b.h / 2 };
       outer = { x: border.x, y: border.y + sign * 16 };
     }
     return { border, outer };
@@ -608,17 +608,30 @@
     }
     return out;
   }
-  /* The label is a horizontal segment of the transition itself, rather than
-     a detached annotation. Moving it steers both halves of the route. */
+  /* Treat a pinned label as a routing box. Each half of the transition
+     chooses its own side, so a route can enter above and leave to the right.
+     The short connection inside the label is hidden by the label mask. */
   function routeThroughLabel(e, boxes) {
-    const s=boxes.get(e.source), t=boxes.get(e.target), l=e.labels[0];
-    if (!s || !t || !l) return;
-    const forward=centre(s).x <= centre(t).x;
-    const left={x:l.x-12,y:l.y+l.h/2}, right={x:l.x+l.w+12,y:left.y};
-    const a=forward?left:right, b=forward?right:left;
-    const sp=port(s,a), tp=port(t,b), obstacles=routeObstacles(boxes,s,t);
-    e.points=simplify([sp.border, ...orthogonalPath(sp.outer,a,obstacles), b,
-      ...orthogonalPath(b,tp.outer,obstacles).slice(1), tp.border]);
+    const s = boxes.get(e.source), t = boxes.get(e.target), label = e.labels[0];
+    if (!s || !t || !label) return;
+    const box = { x: label.x, y: label.y, w: label.w, h: label.h };
+    let entry = port(box, centre(s)), exit = port(box, centre(t));
+    const side = p => p.outer.x < box.x ? 'left' : p.outer.x > box.x + box.w ? 'right'
+      : p.outer.y < box.y ? 'top' : 'bottom';
+    if (side(entry) === side(exit)) {
+      // Distinct attachment points when both states lie on the same side.
+      const horizontal = side(entry) === 'top' || side(entry) === 'bottom';
+      const offset = Math.min(8, (horizontal ? box.w : box.h) / 4);
+      entry = port(box, centre(s), -offset);
+      exit = port(box, centre(t), offset);
+    }
+    const source = port(s, entry.outer), target = port(t, exit.outer);
+    const obstacles = routeObstacles(boxes, s, t);
+    obstacles.push({ x: box.x - 6, y: box.y - 6, w: box.w + 12, h: box.h + 12 });
+    const incoming = [source.border, ...orthogonalPath(source.outer, entry.outer, obstacles), entry.border];
+    const outgoing = [exit.border, ...orthogonalPath(exit.outer, target.outer, obstacles), target.border];
+    e.points = simplify([...incoming, { x: exit.border.x, y: entry.border.y }, ...outgoing]);
+    e.labelPorts = { entry: entry.border, exit: exit.border };
     e.routedLabel = true;
   }
 
@@ -905,7 +918,7 @@
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
-        const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key, 'data-edge': scope ? null : e.id }, gLabels);
+        const lg = el('g', { class: 'tlabel' + (e.routedLabel ? ' routed' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key, 'data-edge': scope ? null : e.id }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
         const description = global.SXMLStudio?.description(inf.item.el);
@@ -1256,18 +1269,17 @@
         if (!e.source || !e.target) continue;
         const s=boxes.get(e.source), t=boxes.get(e.target);
         if (!s || !t) continue;
-        if (moving.has(e.source) && moving.has(e.target)) {
+        const pinned = this.model.layout?.[original.labelOwner.get(e.id)]?.[e.id];
+        if (pinned?.[2] === 'absolute' && (moving.has(e.source) || moving.has(e.target))) {
+          routeThroughLabel(e, boxes);
+        } else if (moving.has(e.source) && moving.has(e.target)) {
           e.points=e.points.map(p => ({x:p.x+dx,y:p.y+dy}));
           e.labels=e.labels.map(l => Object.assign({},l,{x:l.x+dx,y:l.y+dy}));
         } else if (moving.has(e.source) || moving.has(e.target)) {
-          const pinned=this.model.layout?.[original.labelOwner.get(e.id)]?.[e.id];
           const group=edges.filter(other => (other.source===e.source && other.target===e.target) || (other.source===e.target && other.target===e.source));
-          if (pinned?.[2] === 'absolute') routeThroughLabel(e,boxes);
-          else {
-            routeEdge(e,s,t,group.indexOf(e),group.length,boxes);
-            if (Array.isArray(pinned)) {
-              e.labels[0].x+=pinned[0]; e.labels[0].y+=pinned[1]; routeThroughLabel(e,boxes);
-            }
+          routeEdge(e,s,t,group.indexOf(e),group.length,boxes);
+          if (Array.isArray(pinned)) {
+            e.labels[0].x+=pinned[0]; e.labels[0].y+=pinned[1]; routeThroughLabel(e,boxes);
           }
         }
       }

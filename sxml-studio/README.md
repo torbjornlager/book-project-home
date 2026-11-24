@@ -117,7 +117,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   between moved states are rerouted with horizontal and vertical segments and
   90° bends, avoiding unrelated states where space permits. States and their
   connections update live while dragging. Dragging a transition label places
-  a routing anchor: the arrow bends through the label, and stays connected
+  a routing anchor: the arrow connects independently to any of the label’s
+  four sides (for example, entering above and leaving right), and stays connected
   when either endpoint moves. Label anchors are saved with the transition's
   source state; older saved label offsets remain supported.
   The first state drag freezes the current automatic drawing; parents grow

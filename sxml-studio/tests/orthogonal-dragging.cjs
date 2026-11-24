@@ -52,6 +52,25 @@ function orthogonal(geo) {
     SXMLDiagram.Diagram.prototype._previewDrag.call(diagram,labelDrag,-80,60);
     assert.equal(diagram.geo.edges.find(e=>e.id===edge.id).labels[0].x,60);
     assert.equal(pinned.edges.find(e=>e.id===edge.id).labels[0].x,140,'Preview must not mutate the saved geometry.');
+    // Exercise all four label sides independently of the automatic layout.
+    const label = routed.labels[0], cx = label.x + label.w / 2, cy = label.y + label.h / 2;
+    const offsets = {top:[0,-180],right:[240,0],bottom:[0,180],left:[-240,0]};
+    for (const [from,to] of [['top','right'],['right','bottom'],['bottom','left'],['left','top'],['top','top'],['right','right'],['bottom','bottom'],['left','left']]) {
+      const boxes = new Map(pinned.boxes);
+      for (const [key,side] of [['a',from],['b',to]]) {
+        const [dx,dy] = offsets[side];
+        boxes.set(key, {x:cx+dx-40,y:cy+dy-20,w:80,h:40});
+      }
+      const original = {...pinned,boxes};
+      const preview = {geo:original,model,_render(){orthogonal(this.geo);}};
+      SXMLDiagram.Diagram.prototype._previewDrag.call(preview,{type:'label',edge:edge.id},0,0);
+      const route = preview.geo.edges.find(e=>e.id===edge.id);
+      const onSide = (p,side) => side==='top' ? p.y===label.y : side==='bottom' ? p.y===label.y+label.h
+        : side==='left' ? p.x===label.x : p.x===label.x+label.w;
+      assert(onSide(route.labelPorts.entry,from), `Expected entry on ${from}`);
+      assert(onSide(route.labelPorts.exit,to), `Expected exit on ${to}`);
+      if (from===to) assert.notDeepEqual(route.labelPorts.entry,route.labelPorts.exit,'Same-side connections need separate attachment points.');
+    }
     saved.a[edge.id]=[20,30];
     const legacy=await SXMLDiagram.layout(model,direction);orthogonal(legacy);
     assert(legacy.edges.find(e=>e.id===edge.id).routedLabel,'Legacy offsets should also steer the route.');
