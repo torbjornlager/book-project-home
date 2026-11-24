@@ -196,3 +196,8 @@ svg.chart.moving .tlabel{cursor:grabbing}
 .axis-popover .spacing-control{margin:2px 0 10px}
 .axis-popover .axis-actions{display:flex;justify-content:flex-end}
 .axis-popover .axis-hint{margin-top:8px}
+/* Split orientation toggle beside the view switch */
+.split-orientation{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin-left:6px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--muted)}
+.split-orientation:hover{color:var(--fg)}
+.split-orientation .ui-button-label{display:none}
+.split-orientation svg{width:18px;height:18px}

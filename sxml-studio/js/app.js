@@ -310,6 +310,14 @@ try {
 document.documentElement.style.setProperty('--source-height', splitSizes.horizontal + '%');
 document.documentElement.style.setProperty('--source-width', splitSizes.vertical + '%');
 
+/* The split between diagram and source has its own orientation, chosen
+   with the toolbar button beside the view switch and remembered here;
+   it no longer follows the diagram's layout direction. */
+const SPLIT_ORIENTATION_STORAGE = 'trinity-sxml-studio.split-orientation.v1';
+let splitBeside = false;
+try { splitBeside = localStorage.getItem(SPLIT_ORIENTATION_STORAGE) === 'beside'; } catch (e) { /* default: source below */ }
+const splitVertical = () => splitBeside;
+
 function saveSplitSize(vertical, percent) {
   if (!Number.isFinite(percent) || percent <= 0 || percent >= 100) return;
   splitSizes[vertical ? 'vertical' : 'horizontal'] = percent;
@@ -1645,7 +1653,14 @@ $('direction').onclick = () => {
 };
 
 function syncSplitOrientation() {
-  const vertical = diagram.direction === 'DOWN';
+  const vertical = splitVertical();
+  const button = $('split-orientation');
+  if (button) {
+    const label = vertical ? 'Source beside the diagram · click to stack them' : 'Source and diagram stacked · click to put them side by side';
+    button.title = label; button.setAttribute('aria-label', label); button.setAttribute('aria-pressed', String(vertical));
+    button.dataset.icon = vertical ? 'split' : 'splitrows';
+    window.SXMLChrome?.decorate(button.parentNode);
+  }
   const layout = vertical ? 'vertical' : 'horizontal';
   if (document.body.dataset.layout !== layout) {
     document.body.dataset.layout = layout;
@@ -1655,13 +1670,21 @@ function syncSplitOrientation() {
   requestAnimationFrame(updateSourceDividerValue);
 }
 function updateSourceDividerValue() {
-  const vertical = diagram.direction === 'DOWN';
+  const vertical = splitVertical();
   const content = document.querySelector('.editor-content');
   const pane = document.querySelector('.source-pane');
   const total = vertical ? content.clientWidth : content.clientHeight;
   const size = vertical ? pane.clientWidth : pane.clientHeight;
   if (total && document.body.dataset.view === 'split') $('source-divider').setAttribute('aria-valuenow', Math.round(size / total * 100));
 }
+
+$('split-orientation').onclick = () => {
+  splitBeside = !splitBeside;
+  try { localStorage.setItem(SPLIT_ORIENTATION_STORAGE, splitBeside ? 'beside' : 'below'); } catch (e) { /* not remembered */ }
+  if (document.body.dataset.view !== 'split') setView('split');
+  syncSplitOrientation();
+  requestAnimationFrame(() => { editor.refresh(); diagram.fit(); });
+};
 
 function setView(view) {
   document.body.dataset.view = view;
@@ -1708,7 +1731,7 @@ for (const [id, property, direction, min, max] of [['left-divider', '--left', 1,
 {
   const divider = $('source-divider'); let start = 0, size = 0;
   const pane = document.querySelector('.source-pane');
-  const vertical = () => diagram.direction === 'DOWN';
+  const vertical = splitVertical;
   const currentSize = () => vertical() ? pane.clientWidth : pane.clientHeight;
   const coordinate = e => vertical() ? e.clientX : e.clientY;
   const set = px => {
