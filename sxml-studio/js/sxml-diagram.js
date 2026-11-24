@@ -464,7 +464,7 @@
     for (const e of geo.edges) {
       if (!e.source || !e.target || (same(e.source) && same(e.target))) continue;
       const group = pairs.get([e.source, e.target].sort().join('|'));
-      routeEdge(e, next.get(e.source), next.get(e.target), group.indexOf(e), group.length);
+      routeEdge(e, next.get(e.source), next.get(e.target), group.indexOf(e), group.length, next);
     }
     geo.boxes = next;
     let width = 0, height = 0;
@@ -474,8 +474,8 @@
     return offsetLabels(geo, saved);
   }
 
-  /* A dragged transition label keeps its offset from where it would sit by
-     default, saved with the transition's source: layout[source][edgeId]. */
+  /* New label anchors are absolute canvas coordinates. Legacy two-number
+     offsets still load correctly. Both live with the transition's source. */
   function offsetLabels(geo, saved) {
     geo.labelOwner = new Map();
     for (const e of geo.edges) {
@@ -484,9 +484,12 @@
       const owner = inf.item.source.key;
       geo.labelOwner.set(e.id, owner);
       const off = saved[owner] && saved[owner][e.id];
-      if (Array.isArray(off) && off.length === 2 && off.every(Number.isFinite)) {
-        const l = e.labels[0];
-        e.labels = [Object.assign({}, l, { x: l.x + off[0], y: l.y + off[1], home: { x: l.x + l.w / 2, y: l.y + l.h / 2 } })];
+      if (Array.isArray(off) && off.slice(0, 2).length === 2 && off.slice(0, 2).every(Number.isFinite)) {
+        const l = e.labels[0], absolute = off[2] === 'absolute';
+        e.labels = [Object.assign({}, l, { x: (absolute ? 0 : l.x) + off[0], y: (absolute ? 0 : l.y) + off[1] })];
+        routeThroughLabel(e, geo.boxes);
+        geo.width = Math.max(geo.width, e.labels[0].x + l.w + 24);
+        geo.height = Math.max(geo.height, e.labels[0].y + l.h + 24);
       }
     }
     return geo;
@@ -510,7 +513,7 @@
     const b = { left: { x: outer.x, y: cy }, right: { x: outer.x + outer.w, y: cy }, top: { x: cx, y: outer.y }, bottom: { x: cx, y: outer.y + outer.h } }[d];
     return outward ? [a, b] : [b, a];
   }
-  function routeEdge(e, s, t, index, count) {
+  function routeEdge(e, s, t, index, count, boxes) {
     let pts;
     const off = (index - (count - 1) / 2) * 18;
     if (s === t || (s.x === t.x && s.y === t.y && s.w === t.w)) {
@@ -519,12 +522,9 @@
     } else if (contains(t, s)) pts = nestedRoute(t, s, true);
     else if (contains(s, t)) pts = nestedRoute(s, t, false);
     else {
-      const sc = { x: s.x + s.w / 2, y: s.y + s.h / 2 }, tc = { x: t.x + t.w / 2, y: t.y + t.h / 2 };
-      const dx = tc.x - sc.x, dy = tc.y - sc.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
-      if (off) {
-        const m = { x: (sc.x + tc.x) / 2 + nx * off * 2, y: (sc.y + tc.y) / 2 + ny * off * 2 };
-        pts = [exitPoint(s, m.x - sc.x, m.y - sc.y), m, exitPoint(t, m.x - tc.x, m.y - tc.y)];
-      } else pts = [exitPoint(s, dx, dy), exitPoint(t, -dx, -dy)];
+      const sc = centre(s), tc = centre(t);
+      const a = port(s, tc, off), b = port(t, sc, off);
+      pts = [a.border, ...orthogonalPath(a.outer, b.outer, routeObstacles(boxes, s, t)), b.border];
     }
     e.points = pts;
     if (e.labels && e.labels.length) {
@@ -533,6 +533,93 @@
       const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
       e.labels = [Object.assign({}, l, horizontal ? { x: mx - l.w / 2, y: my - l.h - 3 } : { x: mx + 5, y: my - l.h / 2 })];
     }
+  }
+
+  const centre = b => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+  function port(b, toward, offset = 0) {
+    const c = centre(b), dx = toward.x - c.x, dy = toward.y - c.y;
+    let border, outer;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      const sign = dx < 0 ? -1 : 1;
+      border = { x: c.x + sign * b.w / 2, y: c.y + (isRound(b) ? 0 : Math.max(-b.h / 2 + 8, Math.min(b.h / 2 - 8, offset))) };
+      outer = { x: border.x + sign * 16, y: border.y };
+    } else {
+      const sign = dy < 0 ? -1 : 1;
+      border = { x: c.x + (isRound(b) ? 0 : Math.max(-b.w / 2 + 8, Math.min(b.w / 2 - 8, offset))), y: c.y + sign * b.h / 2 };
+      outer = { x: border.x, y: border.y + sign * 16 };
+    }
+    return { border, outer };
+  }
+  function routeObstacles(boxes, s, t) {
+    return [...(boxes || new Map()).values()].filter(b =>
+      b === s || b === t || (!contains(b, s) && !contains(b, t) && !contains(s, b) && !contains(t, b))
+    ).map(b => ({ x: b.x - 6, y: b.y - 6, w: b.w + 12, h: b.h + 12 }));
+  }
+  /* Rectilinear visibility grid. A* favours short routes with few bends and
+     keeps unrelated state boxes clear. Every returned segment is axis aligned. */
+  function orthogonalPath(a, b, obstacles) {
+    const inside = (p, r) => p.x > r.x && p.x < r.x + r.w && p.y > r.y && p.y < r.y + r.h;
+    const rects = obstacles.filter(r => !inside(a, r) && !inside(b, r));
+    const xs = [...new Set([a.x, b.x, ...rects.flatMap(r => [r.x, r.x + r.w])])].sort((u,v) => u-v);
+    const ys = [...new Set([a.y, b.y, ...rects.flatMap(r => [r.y, r.y + r.h])])].sort((u,v) => u-v);
+    const nx = xs.length, start = ys.indexOf(a.y) * nx + xs.indexOf(a.x), goal = ys.indexOf(b.y) * nx + xs.indexOf(b.x);
+    const point = i => ({ x: xs[i % nx], y: ys[Math.floor(i / nx)] });
+    const clear = (p,q) => !rects.some(r => p.x === q.x
+      ? p.x > r.x && p.x < r.x+r.w && Math.max(p.y,q.y) > r.y && Math.min(p.y,q.y) < r.y+r.h
+      : p.y > r.y && p.y < r.y+r.h && Math.max(p.x,q.x) > r.x && Math.min(p.x,q.x) < r.x+r.w);
+    const heap = [], dist = new Map(), prev = new Map();
+    function push(v) {
+      let i = heap.length; heap.push(v);
+      while (i) { const p = (i-1)>>1; if (heap[p].f <= v.f) break; heap[i] = heap[p]; i=p; }
+      heap[i]=v;
+    }
+    function pop() {
+      const first = heap[0], last = heap.pop();
+      if (heap.length) { let i=0; while (i*2+1 < heap.length) { let k=i*2+1; if (k+1<heap.length && heap[k+1].f<heap[k].f) k++; if (heap[k].f>=last.f) break; heap[i]=heap[k]; i=k; } heap[i]=last; }
+      return first;
+    }
+    const h = p => Math.abs(p.x-b.x)+Math.abs(p.y-b.y);
+    dist.set(start*3,0); push({ id:start, dir:0, cost:0, f:h(a), key:start*3 });
+    while (heap.length) {
+      const u=pop(); if (u.cost !== dist.get(u.key)) continue;
+      if (u.id === goal) {
+        const pts=[]; let key=u.key;
+        while (key != null) { pts.push(point(Math.floor(key/3))); key=prev.get(key); }
+        return simplify(pts.reverse());
+      }
+      const p=point(u.id), ix=u.id%nx, iy=Math.floor(u.id/nx);
+      for (const [id,dir] of [[ix>0?u.id-1:-1,1],[ix+1<nx?u.id+1:-1,1],[iy>0?u.id-nx:-1,2],[iy+1<ys.length?u.id+nx:-1,2]]) {
+        if (id<0) continue;
+        const q=point(id); if (!clear(p,q)) continue;
+        const cost=u.cost+Math.abs(p.x-q.x)+Math.abs(p.y-q.y)+(u.dir && u.dir!==dir?20:0), key=id*3+dir;
+        if (cost >= (dist.get(key) ?? Infinity)) continue;
+        dist.set(key,cost); prev.set(key,u.key); push({id,dir,cost,key,f:cost+h(q)});
+      }
+    }
+    return [a, {x:b.x,y:a.y}, b];
+  }
+  function simplify(points) {
+    const out=[];
+    for (const p of points) {
+      const b=out.at(-1), a=out.at(-2);
+      if (b && b.x===p.x && b.y===p.y) continue;
+      if (a && ((a.x===b.x && b.x===p.x) || (a.y===b.y && b.y===p.y))) out.pop();
+      out.push(p);
+    }
+    return out;
+  }
+  /* The label is a horizontal segment of the transition itself, rather than
+     a detached annotation. Moving it steers both halves of the route. */
+  function routeThroughLabel(e, boxes) {
+    const s=boxes.get(e.source), t=boxes.get(e.target), l=e.labels[0];
+    if (!s || !t || !l) return;
+    const forward=centre(s).x <= centre(t).x;
+    const left={x:l.x-12,y:l.y+l.h/2}, right={x:l.x+l.w+12,y:left.y};
+    const a=forward?left:right, b=forward?right:left;
+    const sp=port(s,a), tp=port(t,b), obstacles=routeObstacles(boxes,s,t);
+    e.points=simplify([sp.border, ...orthogonalPath(sp.outer,a,obstacles), b,
+      ...orthogonalPath(b,tp.outer,obstacles).slice(1), tp.border]);
+    e.routedLabel = true;
   }
 
   async function run(model, direction, extra, base) {
@@ -791,16 +878,26 @@
       const inf = info.get(e.id);
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
-        el('path', { class: 'edge init', d: roundedPath(e.points, 7), 'marker-end': 'url(#arrow)' }, gEdges);
+        el('path', { class: 'edge init', d: roundedPath(e.points, 0), 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
       const scope = inf.item.scope || null;
       const key = scope || inf.item.key;
       const eventless = inf.item.on == null && inf.item.after == null;
       const grp = el('g', { class: 'transition' + (inf.historyDefault ? ' hdefault' : '') + (eventless ? ' eventless' : '') + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key }, gEdges);
-      const d = roundedPath(e.points, 7);
+      const d = roundedPath(e.points, 0);
       el('path', { class: 'edge-hit', d }, grp);
-      el('path', { class: 'edge', d, 'marker-end': 'url(#arrow)' }, grp);
+      let maskId;
+      if (e.routedLabel && e.labels[0]) {
+        const l=e.labels[0];
+        maskId='route-label-gap-' + edges.indexOf(e);
+        const x=Math.min(l.x, ...e.points.map(p => p.x))-24, y=Math.min(l.y, ...e.points.map(p => p.y))-24;
+        const width=Math.max(l.x+l.w, ...e.points.map(p => p.x))-x+24, height=Math.max(l.y+l.h, ...e.points.map(p => p.y))-y+24;
+        const mask=el('mask', { id: maskId, maskUnits: 'userSpaceOnUse', x, y, width, height }, grp);
+        el('rect', { x, y, width, height, fill: 'white' }, mask);
+        el('rect', { x: l.x-2, y: l.y-2, width: l.w+4, height: l.h+4, fill: 'black', rx: 4 }, mask);
+      }
+      el('path', { class: 'edge', d, mask: maskId ? 'url(#' + maskId + ')' : null, 'marker-end': 'url(#arrow)' }, grp);
       let entry = scope ? [] : this.edgeEls.get(key);
       if (!entry) this.edgeEls.set(key, entry = []);
       if (!scope && !this.edgeGeo.has(key)) this.edgeGeo.set(key, []);
@@ -808,10 +905,6 @@
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
-        /* A label dragged well away from its arrow gets a faint leader line back to it. */
-        if (lb.home && Math.hypot(lb.x + lb.w / 2 - lb.home.x, lb.y + lb.h / 2 - lb.home.y) > Math.max(lb.w, lb.h) * 0.75 + 12) {
-          el('line', { class: 'label-leader', x1: lb.x + lb.w / 2, y1: lb.y + lb.h / 2, x2: lb.home.x, y2: lb.home.y }, gLabels);
-        }
         const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key, 'data-edge': scope ? null : e.id }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
@@ -1051,16 +1144,18 @@
         if (!drag.moved && Math.hypot(dx, dy) * this.k < 4) return;
         drag.moved = true; svg.classList.add('moving');
         drag.dx = dx; drag.dy = dy;
-        drag.el.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
+        if (this._previewDrag) this._previewDrag(drag, dx, dy);
+        else drag.el.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
         return;
       }
       if (drag.type === 'move') {
         const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
         if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
-        const b = this.geo.boxes.get(drag.key);
-        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
+        const b = (drag.originalGeo || this.geo).boxes.get(drag.key);
+        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); if (!this._previewDrag) drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
         drag.dx = dx; drag.dy = dy;
-        drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy);
+        if (this._previewDrag) this._previewDrag(drag, dx, dy);
+        else { drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy); }
       } else if (drag.type === 'pan') {
         const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
@@ -1074,7 +1169,7 @@
         const p = this._point(ev);
         if (!drag.line) drag.line = el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay);
         const from = drag.start, to = p;
-        drag.line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
+        drag.line.setAttribute('d', roundedPath([from, { x: to.x, y: from.y }, to], 0));
         const over = this._stateAt(ev);
         if (drag.over !== over) {
           if (drag.over && this.nodeEls.get(drag.over)) this.nodeEls.get(drag.over).classList.remove('drop');
@@ -1086,6 +1181,7 @@
     const finish = ev => {
       if (!drag) return;
       const d = drag; drag = null;
+      if (d.originalGeo) { this.geo = d.originalGeo; this._render(); }
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
       if (d.type === 'label' && d.moved) {
@@ -1114,7 +1210,7 @@
       }
       if (d.type === 'move' && d.moved) {
         svg.classList.remove('moving');
-        d.ghost.remove();
+        if (d.ghost) d.ghost.remove();
         if (ev.type === 'pointerup') this.h.onMove(d.key, d.dx, d.dy);
         return;
       }
@@ -1133,6 +1229,51 @@
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
+  };
+
+  Diagram.prototype._previewDrag = function (drag, dx, dy) {
+    const original = drag.originalGeo || (drag.originalGeo = this.geo);
+    const boxes = new Map(original.boxes);
+    const edges = original.edges.map(e => Object.assign({}, e, { labels: e.labels.map(l => Object.assign({}, l)) }));
+    if (drag.type === 'label') {
+      const e=edges.find(e => e.id===drag.edge);
+      if (e && e.labels.length) {
+        e.labels[0].x+=dx; e.labels[0].y+=dy;
+        routeThroughLabel(e, boxes);
+      }
+    } else {
+      const moving = new Set([drag.key]);
+      for (const key of boxes.keys()) {
+        let p=key;
+        while (p && !moving.has(p)) p=original.parentOf.get(p);
+        if (p) moving.add(key);
+      }
+      for (const key of moving) {
+        const b=boxes.get(key);
+        if (b) boxes.set(key, Object.assign({},b,{x:b.x+dx,y:b.y+dy}));
+      }
+      for (const e of edges) {
+        if (!e.source || !e.target) continue;
+        const s=boxes.get(e.source), t=boxes.get(e.target);
+        if (!s || !t) continue;
+        if (moving.has(e.source) && moving.has(e.target)) {
+          e.points=e.points.map(p => ({x:p.x+dx,y:p.y+dy}));
+          e.labels=e.labels.map(l => Object.assign({},l,{x:l.x+dx,y:l.y+dy}));
+        } else if (moving.has(e.source) || moving.has(e.target)) {
+          const pinned=this.model.layout?.[original.labelOwner.get(e.id)]?.[e.id];
+          const group=edges.filter(other => (other.source===e.source && other.target===e.target) || (other.source===e.target && other.target===e.source));
+          if (pinned?.[2] === 'absolute') routeThroughLabel(e,boxes);
+          else {
+            routeEdge(e,s,t,group.indexOf(e),group.length,boxes);
+            if (Array.isArray(pinned)) {
+              e.labels[0].x+=pinned[0]; e.labels[0].y+=pinned[1]; routeThroughLabel(e,boxes);
+            }
+          }
+        }
+      }
+    }
+    this.geo=Object.assign({},original,{boxes,edges});
+    this._render();
   };
 
   /* Saved positions (see freeLayout): every drawn child's offset in its

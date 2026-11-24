@@ -783,16 +783,17 @@ function moveState(key, dx, dy) {
   status('Position saved in the <layout> comment · “Auto layout” returns to automatic layout');
 }
 
-/* A transition label keeps the offset it was dragged by, relative to its
-   default place beside the arrow, so it follows the arrow when states move. */
+/* Dragging a label pins a routing anchor on the canvas. Endpoint moves then
+   reroute the transition through that anchor. */
 function moveLabel(edgeId, dx, dy) {
   if (!guard()) return;
   const owner = diagram.geo.labelOwner && diagram.geo.labelOwner.get(edgeId);
   if (!owner) return;
   const layout = diagram.positions(model.layout);
   layout[owner] = Object.assign({}, layout[owner] || {});
-  const old = Array.isArray(layout[owner][edgeId]) ? layout[owner][edgeId] : [0, 0];
-  layout[owner][edgeId] = [Math.round(old[0] + dx), Math.round(old[1] + dy)];
+  const label = diagram.geo.edges.find(e => e.id === edgeId)?.labels[0];
+  if (!label) return;
+  layout[owner][edgeId] = [Math.round(label.x + dx), Math.round(label.y + dy), 'absolute'];
   SXML.setLayout(model.doc, layout);
   const t = entryByKey(edgeId.split('>')[0]);
   if (t) selEl = t.el;

@@ -73,3 +73,21 @@ diagram.tool = 'connect';
 gesture(target('source', true));
 assert.deepEqual(connected, [['source', 'target']], 'The explicit Transition tool must still create transitions.');
 console.log('Checked manual state/note moves, zoom, cancellation, disabled transition retargeting, read-only runs, panning and transition creation.');
+
+// Real diagrams preview the moved object and restore original geometry before
+// the commit callback (or cancellation). Exercise this through pointer events.
+diagram.tool = null;
+const originalGeo = diagram.geo, previews = [];
+diagram._render = () => {};
+diagram._previewDrag = (drag, dx, dy) => {
+  drag.originalGeo = originalGeo;
+  previews.push([dx, dy]);
+  diagram.geo = {preview: true};
+};
+diagram.h.onMove = () => assert.strictEqual(diagram.geo, originalGeo);
+gesture(target('state', true));
+assert.deepEqual(previews.at(-1), [100, 60]);
+assert.strictEqual(diagram.geo, originalGeo);
+gesture(target('state', true), true, true);
+assert.strictEqual(diagram.geo, originalGeo, 'Cancel must restore the original drawing.');
+console.log('Checked live state-drag dispatch and original geometry restoration before commit and cancellation.');
