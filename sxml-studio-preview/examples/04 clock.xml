@@ -1,0 +1,43 @@
+<!--
+
+    Clock: internal events broadcast across parallel regions.
+
+    Two regions run in parallel. The Clock region drives itself: its two
+    child states alternate on one-second timers and raise an internal `tick`
+    on each entry. The Listener region reacts to the same tick events.
+    Timers let startup return and leave the event loop available for halt.
+    Internal events still broadcast to every parallel region, not just the
+    region that raised them.
+
+-->
+
+<statechart version="0.2" initial="Start">
+    <parallel id="Start">
+        <state id="Clock" initial="tick">
+            <state id="tick">
+                <onentry>raise(tick)</onentry>
+                <go after="1" to="tock"/>
+            </state>
+            <state id="tock">
+                <onentry>raise(tick)</onentry>
+                <go after="1" to="tick"/>
+            </state>
+        </state>
+        <state id="Listener">
+            <go on="tick">
+                writeln('Heard a tick!')
+            </go>
+        </state>
+    </parallel>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

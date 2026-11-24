@@ -1,0 +1,47 @@
+<!--
+
+    Ping-pong between two parallel regions.
+
+    Two orthogonal regions, Pinger and Ponger, rally by raising internal
+    events. Pinger waits one second, prints Ping and raises ping; Ponger
+    then waits one second, prints Pong and raises pong. The timers yield
+    between volleys, so startup returns and halt remains available in a
+    browser worker as well as on a native node. No outside input is needed.
+
+-->
+
+<statechart version="0.2" initial="Start">
+    <parallel id="Start">
+        <state id="Pinger" initial="serving">
+            <state id="serving">
+                <go after="1" to="waiting_for_pong">
+                    writeln('Ping'), raise(ping)
+                </go>
+            </state>
+            <state id="waiting_for_pong">
+                <go on="pong" to="serving"/>
+            </state>
+        </state>
+        <state id="Ponger" initial="waiting_for_ping">
+            <state id="waiting_for_ping">
+                <go on="ping" to="returning"/>
+            </state>
+            <state id="returning">
+                <go after="1" to="waiting_for_ping">
+                    writeln('Pong'), raise(pong)
+                </go>
+            </state>
+        </state>
+    </parallel>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->
