@@ -281,10 +281,9 @@ swipl -q -g "load_files(['tests/live-datamodel.pl','tests/studio-runtime.pl']),r
   not. Only traces for the displayed inline level are mapped to the diagram;
   deeper or external charts remain visible as unmapped actor records in the log.
 
-The **split orientation** button beside Diagram / Split / Source puts the source
-to the left of the chart or above it, independently of the
-diagram's layout direction; the choice is remembered in this browser, and pressing
-it from Diagram or Source view switches to Split. Drag the
+Clicking **Split** opens a small menu: **Stacked** puts the source above the chart,
+**Side by side** puts it to its left. The choice is independent of the diagram's
+layout direction and is remembered in this browser. Drag the
 divider to resize either arrangement. Each arrangement’s split size is remembered
 separately across reloads in this browser, as a proportion of the available space.
 Settings is available in the side-panel tab.

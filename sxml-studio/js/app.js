@@ -1654,13 +1654,7 @@ $('direction').onclick = () => {
 
 function syncSplitOrientation() {
   const vertical = splitVertical();
-  const button = $('split-orientation');
-  if (button) {
-    const label = vertical ? 'Source beside the diagram · click to stack them' : 'Source and diagram stacked · click to put them side by side';
-    button.title = label; button.setAttribute('aria-label', label); button.setAttribute('aria-pressed', String(vertical));
-    button.dataset.icon = vertical ? 'split' : 'splitrows';
-    window.SXMLChrome?.decorate(button.parentNode);
-  }
+  for (const item of document.querySelectorAll('#split-menu [data-split]')) item.setAttribute('aria-checked', String((item.dataset.split === 'beside') === vertical));
   const layout = vertical ? 'vertical' : 'horizontal';
   if (document.body.dataset.layout !== layout) {
     document.body.dataset.layout = layout;
@@ -1678,12 +1672,29 @@ function updateSourceDividerValue() {
   if (total && document.body.dataset.view === 'split') $('source-divider').setAttribute('aria-valuenow', Math.round(size / total * 100));
 }
 
-$('split-orientation').onclick = () => {
-  splitBeside = !splitBeside;
-  try { localStorage.setItem(SPLIT_ORIENTATION_STORAGE, splitBeside ? 'beside' : 'below'); } catch (e) { /* not remembered */ }
-  if (document.body.dataset.view !== 'split') setView('split');
+/* Clicking Split opens a small menu: stacked or side by side. */
+function setSplitOrientation(beside) {
+  splitBeside = beside;
+  try { localStorage.setItem(SPLIT_ORIENTATION_STORAGE, beside ? 'beside' : 'below'); } catch (e) { /* not remembered */ }
+  setView('split');
   syncSplitOrientation();
   requestAnimationFrame(() => { editor.refresh(); diagram.fit(); });
+}
+function openSplitMenu(button) {
+  const menu = $('split-menu');
+  syncSplitOrientation();
+  menu.showPopover();
+  const b = button.getBoundingClientRect(), m = menu.getBoundingClientRect();
+  menu.style.left = Math.max(8, Math.min(b.left, window.innerWidth - m.width - 8)) + 'px';
+  menu.style.top = (b.bottom + 6) + 'px';
+  (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus();
+}
+for (const item of document.querySelectorAll('#split-menu [data-split]')) item.onclick = () => { $('split-menu').hidePopover(); setSplitOrientation(item.dataset.split === 'beside'); };
+$('split-menu').onkeydown = e => {
+  if (!['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  e.preventDefault();
+  const items = [...$('split-menu').querySelectorAll('button')], i = items.indexOf(document.activeElement);
+  items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
 };
 
 function setView(view) {
@@ -1692,7 +1703,7 @@ function setView(view) {
   editor.refresh();
   requestAnimationFrame(() => diagram.fit());
 }
-for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => setView(b.dataset.view);
+for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => b.dataset.view === 'split' ? openSplitMenu(b) : setView(b.dataset.view);
 
 $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);

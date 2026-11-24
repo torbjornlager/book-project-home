@@ -196,8 +196,10 @@ svg.chart.moving .tlabel{cursor:grabbing}
 .axis-popover .spacing-control{margin:2px 0 10px}
 .axis-popover .axis-actions{display:flex;justify-content:flex-end}
 .axis-popover .axis-hint{margin-top:8px}
-/* Split orientation toggle beside the view switch */
-.split-orientation{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin-left:6px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--muted)}
-.split-orientation:hover{color:var(--fg)}
-.split-orientation .ui-button-label{display:none}
-.split-orientation svg{width:18px;height:18px}
+/* Split arrangement menu, opened from the Split button */
+.split-menu{position:fixed;inset:auto;margin:0;padding:4px;min-width:170px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);box-shadow:0 8px 24px rgb(0 0 0 / .2)}
+.split-menu button{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:0;border-radius:6px;background:transparent;color:var(--fg);text-align:left;font-size:calc(12px * var(--ui-font-scale,1))}
+.split-menu button:hover,.split-menu button:focus-visible{background:var(--accent-bg);outline:none}
+.split-menu button[aria-checked=true]{color:var(--accent);font-weight:600}
+.split-menu button[aria-checked=true]::after{content:'✓';margin-left:auto}
+.split-menu svg{width:17px;height:17px;flex:none}
