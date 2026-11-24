@@ -1,5 +1,5 @@
 {
   "source_branch": "codex/sxml-orthogonal-dragging",
-  "source_commit": "8eb1722",
-  "feature": "Live state and transition-label dragging with orthogonal routes"
+  "source_commit": "7c5a089",
+  "feature": "Independent four-sided routing connections for dragged transition labels"
 }

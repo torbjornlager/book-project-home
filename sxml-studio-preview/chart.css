@@ -24,6 +24,8 @@ svg.chart .arrowhead.sel{fill:var(--blue)}
 svg.chart .arrowhead.fired{fill:var(--accent)}
 svg.chart .tlabel{cursor:pointer}
 svg.chart .tlabel-bg{fill:var(--raised);fill-opacity:var(--transition-label-opacity,0)}
+svg.chart .tlabel.routed .tlabel-bg{stroke:var(--edge);stroke-width:.8;rx:8}
+svg.chart .tlabel.routed.selected .tlabel-bg{stroke:var(--blue)}
 svg.chart .tlabel .line{font-size:var(--transition-label-size,11px)}
 svg.chart .item{cursor:pointer}
 svg.chart .item-bg{fill:transparent}
