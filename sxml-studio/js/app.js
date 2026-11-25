@@ -606,7 +606,7 @@ function editTransitionInPlace(t, anchor) {
   const label = (diagram.edgeEls.get(t.key) || []).find(g => g.classList.contains('tlabel'));
   const where = label || (anchor && anchor.getBoundingClientRect ? anchor : diagram.boxRect(t.source.key, true));
   diagram.editInPlace(where, SXMLDiagram.editableTrigger(t), {
-    label: 'Transition trigger and guard', placeholder: 'event [guard]', minWidth: 220,
+    label: 'Transition trigger and guard', placeholder: 'event [guard]', minWidth: 110,
     onCommit(value) {
       if (!live(t.el)) return;
       const next = SXMLDiagram.parseTrigger(value), el = t.el;
@@ -671,7 +671,8 @@ async function extendFrom(key, dir, point) {
   go.setAttribute('on', uniqueEvent(model.doc));
   if (sb) {
     /* Exact placement: beside the source in the handle's direction, or at the drop point. */
-    const W = 80, H = 40, gapX = 90, gapY = 70;
+    // Empty states have a 26 px header and a 20 px body.
+    const W = 80, H = 46, gapX = 90, gapY = 70;
     let x, y;
     if (point) { x = point.x - W / 2; y = point.y - H / 2; }
     else {
