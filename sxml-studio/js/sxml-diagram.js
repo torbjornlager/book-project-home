@@ -591,20 +591,6 @@
 
   /* ---------- SVG helpers ---------- */
 
-  // Anchor the visible marker to the target's upper-left corner, independently
-  // of ELK's initial node and route. This must never change layout geometry.
-  function initialMarker(target) {
-    if (!target) return null;
-    const r = INIT_R * 1.25;
-    const corner = 13 - 13 / Math.SQRT2;
-    const end = isRound(target) ? exitPoint(target, -1, -1) : { x: target.x + corner, y: target.y + corner };
-    const dot = isRound(target) ? { x: end.x - 28, y: end.y - 4 } : { x: target.x - 24, y: target.y };
-    const start = { x: dot.x + r / Math.SQRT2, y: dot.y - r / Math.SQRT2 };
-    const c1 = { x: start.x + 6, y: start.y - 10 }, c2 = { x: end.x - 7, y: end.y - 16 };
-    const transform = 'translate(' + end.x + ' ' + end.y + ') scale(0.3) translate(' + (-end.x) + ' ' + (-end.y) + ')';
-    return { ...dot, r, transform, path: 'M' + start.x + ' ' + start.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + end.x + ' ' + end.y };
-  }
-
   function el(name, attrs, parent, text) {
     const e = document.createElementNS(SVGNS, name);
     for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
@@ -636,11 +622,9 @@
     this.h = handlers || {};
     this.svg = el('svg', { class: 'chart', tabindex: 0, role: 'img', 'aria-label': 'Statechart diagram' }, host);
     const defs = el('defs', {}, this.svg);
-    for (const [id, cls] of [['arrow', 'arrowhead'], ['arrow-init', 'arrowhead'], ['arrow-sel', 'arrowhead sel'], ['arrow-fired', 'arrowhead fired'], ['arrow-mute', 'arrowhead mute']]) {
-      const size = id === 'arrow-init' ? 17 : 8.5;
-      const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: size, markerHeight: size, orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse' }, defs);
-      if (id === 'arrow-init') m.setAttribute('overflow', 'visible');
-      el('path', { d: 'M0 0.8 L10 5 L0 9.2 z', class: cls, transform: id === 'arrow-init' ? 'rotate(-15 10 5)' : null }, m);
+    for (const [id, cls] of [['arrow', 'arrowhead'], ['arrow-sel', 'arrowhead sel'], ['arrow-fired', 'arrowhead fired'], ['arrow-mute', 'arrowhead mute']]) {
+      const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 8.5, markerHeight: 8.5, orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse' }, defs);
+      el('path', { d: 'M0 0.8 L10 5 L0 9.2 z', class: cls }, m);
     }
     this.view = el('g', {}, this.svg);
     this.tx = 20; this.ty = 20; this.k = 1;
@@ -670,9 +654,8 @@
     if (a.lineColor) style.setProperty('--edge', a.lineColor);
     else style.removeProperty('--edge');
     for (const marker of this.svg.querySelectorAll('marker')) {
-      const size = a.arrowSize * (marker.id === 'arrow-init' ? 2 : 1);
-      marker.setAttribute('markerWidth', size);
-      marker.setAttribute('markerHeight', size);
+      marker.setAttribute('markerWidth', a.arrowSize);
+      marker.setAttribute('markerHeight', a.arrowSize);
     }
   };
 
@@ -808,8 +791,7 @@
       const inf = info.get(e.id);
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
-        const marker = initialMarker(boxes.get(e.target));
-        if (marker) el('path', { class: 'edge init', d: marker.path, transform: marker.transform, 'marker-end': 'url(#arrow-init)' }, gEdges);
+        el('path', { class: 'edge init', d: roundedPath(e.points, 7), 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
       const scope = inf.item.scope || null;
@@ -859,10 +841,8 @@
   };
 
   Diagram.prototype._init = function (parent, n, boxes) {
-    if (!boxes.has(n.key + '/init')) return;
-    const edge = this.geo.edges.find(e => e.source === n.key + '/init');
-    const marker = edge && initialMarker(boxes.get(edge.target));
-    if (marker) el('circle', { class: 'init-dot', cx: marker.x, cy: marker.y, r: marker.r, transform: marker.transform }, parent);
+    const b = boxes.get(n.key + '/init');
+    if (b) el('circle', { class: 'init-dot', cx: b.x + INIT_R, cy: b.y + INIT_R, r: INIT_R }, parent);
   };
 
   /* Dashed separators between orthogonal regions laid out in a row or column. */

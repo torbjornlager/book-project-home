@@ -29,30 +29,21 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
   const dots=collect(diagram.view,'init-dot'),paths=collect(diagram.view,'edge init');
   const edges=geo.edges.filter(e=>geo.info.get(e.id)?.type==='initEdge');
   assert.equal(dots.length,edges.length);assert.equal(paths.length,edges.length);
-  dots.forEach(dot=>assert.equal(Number(dot.attrs.r)*0.3,1.875,'Visible dot radius must be 30% of the previous size.'));
+  dots.forEach(dot=>{
+   assert.equal(Number(dot.attrs.r),5,'Restore the original five-pixel dot radius.');
+   assert.equal(dot.attrs.transform,undefined,'Initial dots must not be scaled or repositioned.');
+  });
   paths.forEach((path,index)=>{
-   assert(path.attrs.d.includes(' C'),'Initial arrow must be curved.');
-   assert.equal(path.attrs['marker-end'],'url(#arrow-init)','Initial arrows must use their larger arrowhead.');
+   const edge=edges[index],source=geo.boxes.get(edge.source);
+   assert.equal(path.attrs['marker-end'],'url(#arrow)','Use the standard unrotated arrowhead.');
+   assert.equal(path.attrs.transform,undefined,'Initial arrows must use their original layout coordinates.');
+   assert(!path.attrs.d.includes(' C'),'Initial arrows must not use the custom curved marker.');
    const numbers=path.attrs.d.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi).map(Number);
-   assert(numbers.every(Number.isFinite));
-   const target=geo.boxes.get(edges[index].target);
-   const corner=13-13/Math.SQRT2;
-   const end={x:target.x+corner,y:target.y+corner};
-   const dot=dots.find(d=>Number(d.attrs.cx)===target.x-24 && Number(d.attrs.cy)===target.y);
-   assert(dot,"Dot must sit to the left of the target, level with its top, in either layout direction.");
-   const transform='translate('+end.x+' '+end.y+') scale(0.3) translate('+(-end.x)+' '+(-end.y)+')';
-   assert.equal(path.attrs.transform,transform,'Curve must scale to 30% around its fixed contact point.');
-   assert.equal(dot.attrs.transform,transform,'Dot and curve must scale together.');
-   assert.deepEqual(numbers.slice(-2),[end.x,end.y],'Arrow must meet the rounded upper-left corner.');
-   const dotX=Number(dot.attrs.cx),dotY=Number(dot.attrs.cy),radius=Number(dot.attrs.r);
-   assert(Math.abs(Math.hypot(numbers[0]-dotX,numbers[1]-dotY)-radius)<1e-9,'Curve must leave the dot at its circumference.');
-   assert(numbers[0]>dotX && numbers[1]<dotY,'Curve must leave the upper-right side of the dot.');
-   const midpointY=(numbers[1]+3*numbers[3]+3*numbers[5]+numbers[7])/8;
-   assert(midpointY<dotY-radius,'Arch must rise above the top of the dot.');
-   assert(end.y-numbers[5]>end.x-numbers[4],'Arrowhead must turn down steeply into the corner.');
-   assert(Math.hypot(numbers[0]-end.x,numbers[1]-end.y)<=26,'Visible initial line must stay compact.');
+   assert.deepEqual(numbers.slice(0,2),[edge.points[0].x,edge.points[0].y],'Arrow must start on the original route.');
+   assert.deepEqual(numbers.slice(-2),[edge.points.at(-1).x,edge.points.at(-1).y],'Arrow must end on the original route.');
+   assert(dots.some(dot=>Number(dot.attrs.cx)===source.x+5 && Number(dot.attrs.cy)===source.y+5),'Dot must follow the original initial-node position.');
   });
   assert.equal(collect(diagram.view,'edge').length,1,'Ordinary transitions must still be drawn.');checks++;
  }
- console.log('Checked markers scaled to 30%, fixed corner contact points and unmodified layout geometry in '+checks+' layouts.');
+ console.log('Checked original larger markers, standard arrowheads, original routing and unmodified layout geometry in '+checks+' layouts.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
