@@ -639,7 +639,8 @@
     for (const [id, cls] of [['arrow', 'arrowhead'], ['arrow-init', 'arrowhead'], ['arrow-sel', 'arrowhead sel'], ['arrow-fired', 'arrowhead fired'], ['arrow-mute', 'arrowhead mute']]) {
       const size = id === 'arrow-init' ? 17 : 8.5;
       const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: size, markerHeight: size, orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse' }, defs);
-      el('path', { d: 'M0 0.8 L10 5 L0 9.2 z', class: cls }, m);
+      if (id === 'arrow-init') m.setAttribute('overflow', 'visible');
+      el('path', { d: 'M0 0.8 L10 5 L0 9.2 z', class: cls, transform: id === 'arrow-init' ? 'rotate(-15 10 5)' : null }, m);
     }
     this.view = el('g', {}, this.svg);
     this.tx = 20; this.ty = 20; this.k = 1;
