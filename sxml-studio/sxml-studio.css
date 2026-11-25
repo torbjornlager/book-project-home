@@ -78,6 +78,7 @@ body[data-view=source] .source-pane{flex:1 1 0}
 #inspector textarea{resize:vertical;min-height:34px;white-space:pre;overflow:auto;tab-size:4}
 #inspector input:focus,#inspector select:focus,#inspector textarea:focus{border-color:var(--accent)}
 #inspector input[readonly]{color:var(--muted)}
+#inspector input[type=radio]{width:16px;height:16px;padding:0;margin:0;justify-self:start;accent-color:var(--accent)}
 .section-title{font-size:calc(9px * var(--ui-font-scale,1));letter-spacing:1.3px;color:var(--muted);margin:16px 0 7px;display:flex;align-items:center;gap:8px}
 .section-title button{margin-left:auto;font-size:calc(10px * var(--ui-font-scale,1));padding:2px 7px;background:transparent;letter-spacing:0}
 .card{border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:8px;background:color-mix(in srgb,var(--editor) 55%,transparent)}

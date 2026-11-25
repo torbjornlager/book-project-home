@@ -694,7 +694,7 @@
   }
 
   function blank() {
-    return '<statechart version="0.2" initial="idle">\n    <state id="idle"/>\n</statechart>\n';
+    return '<statechart version="0.2" initial="state0">\n    <state id="state0"/>\n</statechart>\n';
   }
 
   global.SXML = {

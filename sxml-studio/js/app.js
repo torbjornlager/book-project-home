@@ -899,6 +899,21 @@ function selectBox(f, options, value, onchange) {
 }
 const field = (label, control, block) => h('div', { class: 'field' + (block ? ' block' : '') }, h('label', {}, label), control);
 
+function initialStateField(n) {
+  if (!['state', 'parallel'].includes(n.kind) || !n.parent) return null;
+  const eligible = ['statechart', 'state'].includes(n.parent.kind);
+  return h('div', { class: 'field' }, h('label', { for: 'state-initial' }, 'Initial state'),
+    h('input', { id: 'state-initial', type: 'radio', name: 'initial-state', 'data-f': 'is-initial', value: n.id,
+      checked: eligible && n.parent.initial === n.id,
+      disabled: !eligible || !!run.pid || run.starting,
+      title: eligible ? 'Make this the initial state of its parent' : 'Parallel regions are entered together',
+      onchange: ev => {
+        if (!eligible || !ev.target.checked) return;
+        edit(() => { SXML.setAttr(n.parent.el, 'initial', n.id); selEl = n.el; });
+      }
+    }));
+}
+
 function renderInspector() {
   const box = $('inspector');
   const scroll = box.scrollTop;
@@ -964,6 +979,8 @@ function stateInspector(box, n) {
   if (!root) {
     box.append(field('Type', selectBox('kind', [['state', 'state'], ['parallel', 'parallel'], ['final', 'final'], ['history', 'history']], n.kind,
       v => edit(() => { selEl = SXML.retag(model.doc, n.el, v); }))));
+    const initial = initialStateField(n);
+    if (initial) box.append(initial);
   }
   box.append(field('Id', input('id', n.id, v => edit(() => {
     if (root) SXML.setAttr(n.el, 'id', v);
