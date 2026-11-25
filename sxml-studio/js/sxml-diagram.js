@@ -636,8 +636,9 @@
     this.h = handlers || {};
     this.svg = el('svg', { class: 'chart', tabindex: 0, role: 'img', 'aria-label': 'Statechart diagram' }, host);
     const defs = el('defs', {}, this.svg);
-    for (const [id, cls] of [['arrow', 'arrowhead'], ['arrow-sel', 'arrowhead sel'], ['arrow-fired', 'arrowhead fired'], ['arrow-mute', 'arrowhead mute']]) {
-      const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 8.5, markerHeight: 8.5, orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse' }, defs);
+    for (const [id, cls] of [['arrow', 'arrowhead'], ['arrow-init', 'arrowhead'], ['arrow-sel', 'arrowhead sel'], ['arrow-fired', 'arrowhead fired'], ['arrow-mute', 'arrowhead mute']]) {
+      const size = id === 'arrow-init' ? 17 : 8.5;
+      const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: size, markerHeight: size, orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse' }, defs);
       el('path', { d: 'M0 0.8 L10 5 L0 9.2 z', class: cls }, m);
     }
     this.view = el('g', {}, this.svg);
@@ -668,8 +669,9 @@
     if (a.lineColor) style.setProperty('--edge', a.lineColor);
     else style.removeProperty('--edge');
     for (const marker of this.svg.querySelectorAll('marker')) {
-      marker.setAttribute('markerWidth', a.arrowSize);
-      marker.setAttribute('markerHeight', a.arrowSize);
+      const size = a.arrowSize * (marker.id === 'arrow-init' ? 2 : 1);
+      marker.setAttribute('markerWidth', size);
+      marker.setAttribute('markerHeight', size);
     }
   };
 
@@ -806,7 +808,7 @@
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
         const marker = initialMarker(boxes.get(e.target));
-        if (marker) el('path', { class: 'edge init', d: marker.path, transform: marker.transform, 'marker-end': 'url(#arrow)' }, gEdges);
+        if (marker) el('path', { class: 'edge init', d: marker.path, transform: marker.transform, 'marker-end': 'url(#arrow-init)' }, gEdges);
         continue;
       }
       const scope = inf.item.scope || null;

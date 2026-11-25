@@ -32,6 +32,7 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
   dots.forEach(dot=>assert.equal(Number(dot.attrs.r)*0.3,1.875,'Visible dot radius must be 30% of the previous size.'));
   paths.forEach((path,index)=>{
    assert(path.attrs.d.includes(' C'),'Initial arrow must be curved.');
+   assert.equal(path.attrs['marker-end'],'url(#arrow-init)','Initial arrows must use their larger arrowhead.');
    const numbers=path.attrs.d.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi).map(Number);
    assert(numbers.every(Number.isFinite));
    const target=geo.boxes.get(edges[index].target);
