@@ -591,23 +591,16 @@
 
   /* ---------- SVG helpers ---------- */
 
-  // Keep the layout's initial node and route intact. Only the visible marker
-  // is shortened, using the existing arrival point and direction at the state.
-  function initialMarker(points, direction) {
-    if (points.length < 2) return null;
-    const end = points[points.length - 1];
-    let i = points.length - 2;
-    while (i >= 0 && Math.hypot(end.x - points[i].x, end.y - points[i].y) < 0.01) i--;
-    const dx = i < 0 ? 0 : end.x - points[i].x, dy = i < 0 ? 0 : end.y - points[i].y;
-    const distance = Math.hypot(dx, dy);
-    const ux = distance ? dx / distance : direction === 'DOWN' ? 0 : 1;
-    const uy = distance ? dy / distance : direction === 'DOWN' ? 1 : 0;
+  // Anchor the visible marker to the target's upper-left corner, independently
+  // of ELK's initial node and route. This must never change layout geometry.
+  function initialMarker(target) {
+    if (!target) return null;
     const r = INIT_R * 1.25;
-    const length = Math.min(22, Math.max(1, distance - r));
-    const bend = Math.min(4, length / 5);
-    const point = (along, across) => ({ x: end.x - ux * along - uy * across, y: end.y - uy * along + ux * across });
-    const dot = point(length + r, -bend), start = point(length, -bend);
-    const c1 = point(length * 0.65, -bend * 2), c2 = point(length * 0.3, -bend * 1.75);
+    const corner = 13 - 13 / Math.SQRT2;
+    const end = isRound(target) ? exitPoint(target, -1, -1) : { x: target.x + corner, y: target.y + corner };
+    const dot = isRound(target) ? { x: end.x - 28, y: end.y - 4 } : { x: target.x - 24, y: target.y };
+    const start = { x: dot.x + r, y: dot.y };
+    const c1 = { x: start.x + 7, y: start.y - 3 }, c2 = { x: end.x - 7, y: end.y - 7 };
     return { ...dot, r, path: 'M' + start.x + ' ' + start.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + end.x + ' ' + end.y };
   }
 
@@ -811,7 +804,7 @@
       const inf = info.get(e.id);
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
-        const marker = initialMarker(e.points, this.direction);
+        const marker = initialMarker(boxes.get(e.target));
         if (marker) el('path', { class: 'edge init', d: marker.path, 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
@@ -864,7 +857,7 @@
   Diagram.prototype._init = function (parent, n, boxes) {
     if (!boxes.has(n.key + '/init')) return;
     const edge = this.geo.edges.find(e => e.source === n.key + '/init');
-    const marker = edge && initialMarker(edge.points, this.direction);
+    const marker = edge && initialMarker(boxes.get(edge.target));
     if (marker) el('circle', { class: 'init-dot', cx: marker.x, cy: marker.y, r: marker.r }, parent);
   };
 

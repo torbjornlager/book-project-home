@@ -34,11 +34,15 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
    assert(path.attrs.d.includes(' C'),'Initial arrow must be curved.');
    const numbers=path.attrs.d.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi).map(Number);
    assert(numbers.every(Number.isFinite));
-   const end=edges[index].points.at(-1);
-   assert.deepEqual(numbers.slice(-2),[end.x,end.y],'Arrival point must stay on the original state border.');
-   assert(Math.hypot(numbers[0]-end.x,numbers[1]-end.y)<=23,'Visible initial line must stay compact.');
+   const target=geo.boxes.get(edges[index].target);
+   const corner=13-13/Math.SQRT2;
+   const end={x:target.x+corner,y:target.y+corner};
+   const dot=dots.find(d=>Number(d.attrs.cx)===target.x-24 && Number(d.attrs.cy)===target.y);
+   assert(dot,"Dot must sit to the left of the target, level with its top, in either layout direction.");
+   assert.deepEqual(numbers.slice(-2),[end.x,end.y],'Arrow must meet the rounded upper-left corner.');
+   assert(Math.hypot(numbers[0]-end.x,numbers[1]-end.y)<=24,'Visible initial line must stay compact.');
   });
   assert.equal(collect(diagram.view,'edge').length,1,'Ordinary transitions must still be drawn.');checks++;
  }
- console.log('Checked curved markers, larger dots, compact lines, original arrival points and unmodified layout geometry in '+checks+' layouts.');
+ console.log('Checked curved markers, larger dots, compact lines, upper-left corner placement and unmodified layout geometry in '+checks+' layouts.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
