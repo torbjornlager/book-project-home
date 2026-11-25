@@ -29,6 +29,9 @@
 
   const ctx = document.createElement('canvas').getContext('2d');
   function width(text, font) { ctx.font = font; return Math.ceil(ctx.measureText(text).width); }
+  function emptyStateSize(id) {
+    return { width: Math.max(72, width(id || '(no id)', F_HEAD) + 30), height: HEAD_H + 20 };
+  }
   const one = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   const cut = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
 
@@ -92,7 +95,7 @@
     for (const d of n.defers) lines.push({ kw: 'defer', text: one(d.on) + (d.cond ? ' [' + one(d.cond) + ']' : ''), item: d });
     if (n.kind !== 'history') {
       for (const t of n.transitions) if (!t.to.length) {
-        const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ". " : "") + trigger(t), body = one(t.body);
+        const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ".\u2009" : "") + trigger(t), body = one(t.body);
         lines.push({ kw: trig ? '' : 'always', text: trig + (body ? (trig ? ' / ' : '/ ') + body : ''), item: t, internal: true });
       }
     }
@@ -108,7 +111,7 @@
   function edgeLabel(t, appearance) {
     const size = appearance.labelSize, lineHeight = size + 3;
     const font = F_MONO.replace('11px', size + 'px');
-    const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ". " : "") + trigger(t), body = one(t.body);
+    const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ".\u2009" : "") + trigger(t), body = one(t.body);
     let lines = [];
     if (trig && body && (trig + ' / ' + body).length <= MAX_LABEL) lines = [trig + ' / ' + body];
     else { if (trig) lines.push(trig); if (body) lines.push('/ ' + body); }
@@ -234,6 +237,7 @@
       }
       if (n.kind === 'statechart') return { id: n.key, children: kids, layoutOptions: Object.assign({ 'elk.padding': '[top=24,left=24,bottom=24,right=24]' }, inter) };
       if (!kids.length) {
+        if (!lines.length) return Object.assign({ id: n.key }, emptyStateSize(n.id));
         return { id: n.key, width: Math.max(72, headW, linesW), height: top + (lines.length ? 4 : 20) };
       }
       return {
@@ -1276,5 +1280,5 @@
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   };
 
-  global.SXMLDiagram = { Diagram, layout, trigger, editableTrigger, parseTrigger, doubleClickIntent, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
+  global.SXMLDiagram = { Diagram, layout, trigger, editableTrigger, parseTrigger, doubleClickIntent, emptyStateSize, spacingOptions, normalizeExperiments, experimentOptions, normalizeAppearance, APPEARANCE_DEFAULTS, canArrangeRegions };
 })(window);

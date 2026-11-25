@@ -671,8 +671,8 @@ async function extendFrom(key, dir, point) {
   go.setAttribute('on', uniqueEvent(model.doc));
   if (sb) {
     /* Exact placement: beside the source in the handle's direction, or at the drop point. */
-    // Empty states have a 26 px header and a 20 px body.
-    const W = 80, H = 46, gapX = 90, gapY = 70;
+    const { width: W, height: H } = SXMLDiagram.emptyStateSize(id);
+    const gapX = 90, gapY = 70;
     let x, y;
     if (point) { x = point.x - W / 2; y = point.y - H / 2; }
     else {
