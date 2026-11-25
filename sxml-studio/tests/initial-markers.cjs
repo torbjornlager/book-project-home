@@ -29,7 +29,7 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
   const dots=collect(diagram.view,'init-dot'),paths=collect(diagram.view,'edge init');
   const edges=geo.edges.filter(e=>geo.info.get(e.id)?.type==='initEdge');
   assert.equal(dots.length,edges.length);assert.equal(paths.length,edges.length);
-  dots.forEach(dot=>assert.equal(Number(dot.attrs.r),6.25,'Start dot must be 25% larger.'));
+  dots.forEach(dot=>assert.equal(Number(dot.attrs.r)*0.3,1.875,'Visible dot radius must be 30% of the previous size.'));
   paths.forEach((path,index)=>{
    assert(path.attrs.d.includes(' C'),'Initial arrow must be curved.');
    const numbers=path.attrs.d.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi).map(Number);
@@ -39,10 +39,13 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
    const end={x:target.x+corner,y:target.y+corner};
    const dot=dots.find(d=>Number(d.attrs.cx)===target.x-24 && Number(d.attrs.cy)===target.y);
    assert(dot,"Dot must sit to the left of the target, level with its top, in either layout direction.");
+   const transform='translate('+end.x+' '+end.y+') scale(0.3) translate('+(-end.x)+' '+(-end.y)+')';
+   assert.equal(path.attrs.transform,transform,'Curve must scale to 30% around its fixed contact point.');
+   assert.equal(dot.attrs.transform,transform,'Dot and curve must scale together.');
    assert.deepEqual(numbers.slice(-2),[end.x,end.y],'Arrow must meet the rounded upper-left corner.');
    assert(Math.hypot(numbers[0]-end.x,numbers[1]-end.y)<=24,'Visible initial line must stay compact.');
   });
   assert.equal(collect(diagram.view,'edge').length,1,'Ordinary transitions must still be drawn.');checks++;
  }
- console.log('Checked curved markers, larger dots, compact lines, upper-left corner placement and unmodified layout geometry in '+checks+' layouts.');
+ console.log('Checked markers scaled to 30%, fixed corner contact points and unmodified layout geometry in '+checks+' layouts.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

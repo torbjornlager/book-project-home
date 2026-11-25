@@ -601,7 +601,8 @@
     const dot = isRound(target) ? { x: end.x - 28, y: end.y - 4 } : { x: target.x - 24, y: target.y };
     const start = { x: dot.x + r, y: dot.y };
     const c1 = { x: start.x + 7, y: start.y - 3 }, c2 = { x: end.x - 7, y: end.y - 7 };
-    return { ...dot, r, path: 'M' + start.x + ' ' + start.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + end.x + ' ' + end.y };
+    const transform = 'translate(' + end.x + ' ' + end.y + ') scale(0.3) translate(' + (-end.x) + ' ' + (-end.y) + ')';
+    return { ...dot, r, transform, path: 'M' + start.x + ' ' + start.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + end.x + ' ' + end.y };
   }
 
   function el(name, attrs, parent, text) {
@@ -805,7 +806,7 @@
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
         const marker = initialMarker(boxes.get(e.target));
-        if (marker) el('path', { class: 'edge init', d: marker.path, 'marker-end': 'url(#arrow)' }, gEdges);
+        if (marker) el('path', { class: 'edge init', d: marker.path, transform: marker.transform, 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
       const scope = inf.item.scope || null;
@@ -858,7 +859,7 @@
     if (!boxes.has(n.key + '/init')) return;
     const edge = this.geo.edges.find(e => e.source === n.key + '/init');
     const marker = edge && initialMarker(boxes.get(edge.target));
-    if (marker) el('circle', { class: 'init-dot', cx: marker.x, cy: marker.y, r: marker.r }, parent);
+    if (marker) el('circle', { class: 'init-dot', cx: marker.x, cy: marker.y, r: marker.r, transform: marker.transform }, parent);
   };
 
   /* Dashed separators between orthogonal regions laid out in a row or column. */
