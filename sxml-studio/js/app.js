@@ -607,7 +607,6 @@ function editTransitionInPlace(t, anchor) {
   const where = label || (anchor && anchor.getBoundingClientRect ? anchor : diagram.boxRect(t.source.key, true));
   diagram.editInPlace(where, SXMLDiagram.editableTrigger(t), {
     label: 'Transition trigger and guard', placeholder: 'event [guard]', minWidth: 220,
-    hint: 'event [guard] · after 2 [guard] · [guard] alone is eventless',
     onCommit(value) {
       if (!live(t.el)) return;
       const next = SXMLDiagram.parseTrigger(value), el = t.el;
@@ -652,8 +651,8 @@ function stateAction(key, action) {
 function uniqueEvent(doc) {
   const used = new Set(Array.from(doc.getElementsByTagName('go')).map(g => g.getAttribute('on')));
   let i = 1;
-  while (used.has('new_event_' + i)) i++;
-  return 'new_event_' + i;
+  while (used.has('event_' + i)) i++;
+  return 'event_' + i;
 }
 
 /* A side handle of the selected state: create a sibling state next to it in
