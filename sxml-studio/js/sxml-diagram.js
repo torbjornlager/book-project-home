@@ -12,8 +12,7 @@
   const F_HEAD = '600 12.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
   const F_MONO = '11px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
   const F_NOTE = '10.5px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
-  const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 6.25;
-  const INIT_OFFSET = 24;
+  const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 5;
   const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 8;
 
   const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0 });
@@ -408,15 +407,7 @@
         for (const k of placed) { right = Math.max(right, rel.get(k)[0] - shift.get(k)[0] + size.get(k)[0]); y = Math.min(y, rel.get(k)[1] - shift.get(k)[1]); }
         for (const k of kids) if (!rel.has(k)) { rel.set(k, [right + 40 + shift.get(k)[0], y + shift.get(k)[1]]); y += size.get(k)[1] + 24; }
       } else for (const k of kids) { const c = boxes.get(k); rel.set(k, [c.x - b.x + shift.get(k)[0], c.y - b.y + shift.get(k)[1]]); }
-      // Initial markers follow their target, including when a saved state moves.
-      const init = kids.find(k => geo.info.get(k)?.type === 'init');
-      if (init) {
-        const edge = geo.edges.find(e => e.source === init), target = edge && rel.get(edge.target);
-        if (target) {
-          const s = shift.get(edge.target);
-          rel.set(init, [target[0] - s[0] - INIT_OFFSET - INIT_R, target[1] - s[1] - INIT_R]);
-        }
-      }
+      if (!apply) { size.set(p, [b.w, b.h]); shift.set(p, [0, 0]); return; }
       /* Regions of a parallel state stay in a tidy row or column, in the order
          of their saved positions, so dragging a region reorders it. */
       const pinf = geo.info.get(p);
@@ -453,6 +444,7 @@
     }
     fit(rootKey);
     geo.rel = rel; geo.shift = shift; geo.parentOf = meta.parent;
+    if (!apply) return offsetLabels(geo, saved);
     const abs = new Map([[rootKey, [0, 0]]]);
     (function place(p) {
       for (const k of meta.kids.get(p) || []) {
@@ -470,15 +462,6 @@
     const pairs = new Map();
     for (const e of geo.edges) if (e.source && e.target) { const id = [e.source, e.target].sort().join('|'); pairs.set(id, (pairs.get(id) || []).concat(e)); }
     for (const e of geo.edges) {
-      if (geo.info.get(e.id)?.type === 'initEdge') {
-        const s = next.get(e.source), t = next.get(e.target);
-        const x = s.x + INIT_R, y = s.y + INIT_R;
-        const corner = 13 - 13 / Math.SQRT2;
-        const end = isRound(t) ? exitPoint(t, -1, -1) : { x: t.x + corner, y: t.y + corner };
-        e.points = [{ x: x + INIT_R, y }, end];
-        e.path = 'M' + (x + INIT_R) + ' ' + y + ' C' + (x + 12) + ' ' + (y - 4) + ' ' + (end.x - 7) + ' ' + (end.y - 7) + ' ' + end.x + ' ' + end.y;
-        continue;
-      }
       if (!e.source || !e.target || (same(e.source) && same(e.target))) continue;
       const group = pairs.get([e.source, e.target].sort().join('|'));
       routeEdge(e, next.get(e.source), next.get(e.target), group.indexOf(e), group.length);
@@ -487,7 +470,7 @@
     let width = 0, height = 0;
     for (const b of next.values()) { width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24); }
     geo.width = width; geo.height = height;
-    geo.free = apply;
+    geo.free = true;
     return offsetLabels(geo, saved);
   }
 
@@ -808,7 +791,7 @@
       const inf = info.get(e.id);
       if (!inf || inf.type === 'chain' || e.points.length < 2) continue;
       if (inf.type === 'initEdge') {
-        el('path', { class: 'edge init', d: e.path, 'marker-end': 'url(#arrow)' }, gEdges);
+        el('path', { class: 'edge init', d: roundedPath(e.points, 7), 'marker-end': 'url(#arrow)' }, gEdges);
         continue;
       }
       const scope = inf.item.scope || null;
