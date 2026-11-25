@@ -599,8 +599,8 @@
     const corner = 13 - 13 / Math.SQRT2;
     const end = isRound(target) ? exitPoint(target, -1, -1) : { x: target.x + corner, y: target.y + corner };
     const dot = isRound(target) ? { x: end.x - 28, y: end.y - 4 } : { x: target.x - 24, y: target.y };
-    const start = { x: dot.x + r, y: dot.y };
-    const c1 = { x: start.x + 7, y: start.y - 3 }, c2 = { x: end.x - 7, y: end.y - 7 };
+    const start = { x: dot.x + r / Math.SQRT2, y: dot.y - r / Math.SQRT2 };
+    const c1 = { x: start.x + 6, y: start.y - 10 }, c2 = { x: end.x - 7, y: end.y - 16 };
     const transform = 'translate(' + end.x + ' ' + end.y + ') scale(0.3) translate(' + (-end.x) + ' ' + (-end.y) + ')';
     return { ...dot, r, transform, path: 'M' + start.x + ' ' + start.y + ' C' + c1.x + ' ' + c1.y + ' ' + c2.x + ' ' + c2.y + ' ' + end.x + ' ' + end.y };
   }

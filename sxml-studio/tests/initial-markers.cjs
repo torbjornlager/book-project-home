@@ -44,7 +44,13 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
    assert.equal(path.attrs.transform,transform,'Curve must scale to 30% around its fixed contact point.');
    assert.equal(dot.attrs.transform,transform,'Dot and curve must scale together.');
    assert.deepEqual(numbers.slice(-2),[end.x,end.y],'Arrow must meet the rounded upper-left corner.');
-   assert(Math.hypot(numbers[0]-end.x,numbers[1]-end.y)<=24,'Visible initial line must stay compact.');
+   const dotX=Number(dot.attrs.cx),dotY=Number(dot.attrs.cy),radius=Number(dot.attrs.r);
+   assert(Math.abs(Math.hypot(numbers[0]-dotX,numbers[1]-dotY)-radius)<1e-9,'Curve must leave the dot at its circumference.');
+   assert(numbers[0]>dotX && numbers[1]<dotY,'Curve must leave the upper-right side of the dot.');
+   const midpointY=(numbers[1]+3*numbers[3]+3*numbers[5]+numbers[7])/8;
+   assert(midpointY<dotY-radius,'Arch must rise above the top of the dot.');
+   assert(end.y-numbers[5]>end.x-numbers[4],'Arrowhead must turn down steeply into the corner.');
+   assert(Math.hypot(numbers[0]-end.x,numbers[1]-end.y)<=26,'Visible initial line must stay compact.');
   });
   assert.equal(collect(diagram.view,'edge').length,1,'Ordinary transitions must still be drawn.');checks++;
  }
