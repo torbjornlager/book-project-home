@@ -38,7 +38,7 @@
   function trigger(t) {
     let s = '';
     if (t.on != null) s = one(t.on);
-    else if (t.after != null) s = 'after ' + one(t.after) + 's';
+    else if (t.after != null) s = 'after ' + one(t.after);
     if (t.cond != null && one(t.cond)) s += (s ? ' ' : '') + '[' + one(t.cond) + ']';
     return s;
   }
