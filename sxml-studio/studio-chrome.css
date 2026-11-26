@@ -59,16 +59,16 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .field{grid-template-columns:66px 1fr;gap:12px;margin-bottom:11px}.field>label{font-size:calc(12px * var(--ui-font-scale,1))}
 #inspector input,#inspector select,#inspector textarea{font-size:calc(13px * var(--ui-font-scale,1));padding:8px 10px;border-radius:6px;background:var(--panel)}
 #inspector textarea{line-height:1.6}
-.ui-section{border-top:1px solid var(--line);margin-top:16px;padding-top:2px}
-.ui-section>summary{display:flex;align-items:center;gap:8px;min-height:44px;font-size:calc(13px * var(--ui-font-scale,1));cursor:pointer;list-style:none;font-weight:600}
+.ui-section{border-top:1px solid var(--line);margin-top:6px;padding-top:0}
+.ui-section>summary{display:flex;align-items:center;gap:6px;min-height:32px;font-size:calc(12px * var(--ui-font-scale,1));cursor:pointer;list-style:none;font-weight:600}
 .ui-section>summary::-webkit-details-marker{display:none}
 .ui-section>summary::after{content:'›';margin-left:auto;color:var(--muted);font-size:calc(18px * var(--ui-font-scale,1));transform:rotate(0deg)}
 .ui-section[open]>summary::after{transform:rotate(90deg)}
 .ui-section>summary>.ui-icon{width:16px;height:16px;color:var(--muted)}
 .ui-section>summary>button{margin-left:auto;border:0;background:transparent;padding:5px;min-width:28px;min-height:28px}
 .ui-section>summary:has(button)::after{margin-left:0}
-.ui-section-body{padding:0 0 10px}.ui-section-body .hint{font-size:calc(12px * var(--ui-font-scale,1))}
-#inspector .section-title{font-size:calc(10px * var(--ui-font-scale,1));letter-spacing:.6px;margin-top:20px}
+.ui-section-body{padding:0 0 4px}.ui-section-body .hint{font-size:calc(12px * var(--ui-font-scale,1))}
+#inspector .section-title{font-size:calc(10px * var(--ui-font-scale,1));letter-spacing:.6px;margin-top:10px}
 #inspector .section-title button{font-size:calc(11px * var(--ui-font-scale,1));min-height:28px;border:0}
 .card,.tools-card{border-radius:8px;background:var(--panel);box-shadow:none}
 .card-top{font-size:calc(12px * var(--ui-font-scale,1))}.insp-actions button{font-size:calc(12px * var(--ui-font-scale,1));min-height:34px}
@@ -107,7 +107,7 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 .structure-row .tree-toggle{width:22px;min-width:22px;padding:3px}
 .structure-row .tree-toggle .ui-icon{width:13px;height:13px}
 .tree-toggle>.ui-button-label{display:none}
-#inspector>.insp-actions{border-top:1px solid var(--line);padding-top:14px;margin-top:24px}
+#inspector>.insp-actions{border-top:1px solid var(--line);padding-top:6px;margin-top:10px!important}
 #inspector>.insp-actions button{border:0;color:var(--muted);font-size:calc(12px * var(--ui-font-scale,1))}
 #inspector>.insp-actions button:hover{color:var(--error)}
 .runtime-console{flex:none;border-top:1px solid var(--line);background:var(--panel)}
@@ -167,9 +167,14 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 .compact-state .field{grid-template-columns:calc(64px * var(--ui-font-scale,1)) minmax(0,1fr);gap:8px;margin-bottom:8px}
 .compact-state .field.block{grid-template-columns:minmax(0,1fr);gap:4px}
 #inspector.compact-state input,#inspector.compact-state select,#inspector.compact-state textarea{font-size:calc(13px * var(--ui-font-scale,1));padding:5px 8px;border-radius:5px;line-height:1.4;min-height:32px}
-#inspector.compact-state .state-heading input{font-size:calc(16px * var(--ui-font-scale,1));font-weight:600}
+#inspector.compact-state .state-heading input{font-family:inherit;font-size:calc(13px * var(--ui-font-scale,1));font-weight:var(--ui-font-weight,500)}
 .state-initial-option{display:flex;align-items:center;flex-direction:row-reverse;justify-content:flex-end;gap:7px;margin:0 0 12px;padding-left:calc(64px * var(--ui-font-scale,1) + 8px);font-size:calc(12px * var(--ui-font-scale,1));color:var(--muted)}
 .state-initial-option label{cursor:pointer}
 #inspector.compact-state input[type=radio]{min-height:0;width:16px;height:16px;padding:0;flex:none}
 @container inspector-pane (max-width:320px){.compact-state .field{grid-template-columns:minmax(0,1fr);gap:4px}.state-initial-option{padding-left:0}}
 @media(pointer:coarse){#inspector.compact-state input:not([type=radio]),#inspector.compact-state select{min-height:44px}.state-initial-option{min-height:44px}}
+
+#inspector .ui-section-body .card{padding:6px;margin-bottom:4px}
+#inspector .ui-section-body .card-top{margin-bottom:4px}
+#inspector .ui-section-body>.hint:last-child{margin-bottom:4px}
+@media(pointer:coarse){.ui-section>summary,.ui-section>summary>button{min-height:44px}}
