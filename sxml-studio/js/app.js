@@ -916,7 +916,7 @@ function input(f, value, onchange, extra) {
 }
 function area(f, value, onchange, rows) {
   const lines = String(value || '').split('\n').length;
-  return h('textarea', { 'data-f': f, value: value || '', rows: Math.max(rows || 1, Math.min(12, lines)), spellcheck: 'false', onchange: ev => onchange(ev.target.value) });
+  return h('textarea', { class: 'prolog-code', 'data-f': f, value: value || '', rows: Math.max(rows || 1, Math.min(12, lines)), spellcheck: 'false', onchange: ev => onchange(ev.target.value) });
 }
 function selectBox(f, options, value, onchange) {
   const s = h('select', { 'data-f': f, onchange: ev => onchange(ev.target.value) }, options.map(o => h('option', { value: o[0] }, o[1])));
@@ -1073,7 +1073,7 @@ function stateInspector(box, n) {
       box.append(h('div', { class: 'card' + (focusItem === d.key ? ' focus' : '') },
         h('div', { class: 'card-top' }, h('span', {}, '<defer>'), h('button', { class: 'mini', title: 'Remove', onclick: () => edit(() => { d.el.remove(); selEl = n.el; }) }, '×')),
         field('On', input(d.key + '/on', d.on, v => edit(() => SXML.setAttr(d.el, 'on', v)))),
-        field('If', input(d.key + '/if', d.cond, v => edit(() => SXML.setAttr(d.el, 'if', v)), { placeholder: 'true' }))));
+        field('If', input(d.key + '/if', d.cond, v => edit(() => SXML.setAttr(d.el, 'if', v)), { placeholder: 'true', class: 'prolog-code' }))));
     }
   }
   if (allow.includes('spawn')) {
@@ -1087,10 +1087,12 @@ function stateInspector(box, n) {
           for (const a of SXML.SPAWN_REQUIRED[v]) if (!s.el.hasAttribute(a)) s.el.setAttribute(a, a === 'children' ? '[]' : a === 'state' ? '0' : 'worker');
         }))));
       for (const a of SXML.SPAWN_REQUIRED[s.type] || []) {
-        card.append(field(a[0].toUpperCase() + a.slice(1), input(s.key + '/' + a, s.el.getAttribute(a), v => edit(() => SXML.setAttr(s.el, a, v)))));
+        card.append(field(a[0].toUpperCase() + a.slice(1), input(s.key + '/' + a, s.el.getAttribute(a), v => edit(() => SXML.setAttr(s.el, a, v)), { class: 'prolog-code' })));
       }
-      card.append(field('Options', input(s.key + '/options', s.el.getAttribute('options'), v => edit(() => SXML.setAttr(s.el, 'options', v)), { placeholder: '[monitor(true)]' })));
-      card.append(field(s.type === 'statechart' ? 'Nested SXML (kept in CDATA)' : 'Prolog source', area(s.key, s.body, v => edit(() => SXML.setScript(model.doc, s.el, v)), 3), true));
+      card.append(field('Options', input(s.key + '/options', s.el.getAttribute('options'), v => edit(() => SXML.setAttr(s.el, 'options', v)), { placeholder: '[monitor(true)]', class: 'prolog-code' })));
+      const body = area(s.key, s.body, v => edit(() => SXML.setScript(model.doc, s.el, v)), 3);
+      if (s.type === 'statechart') body.classList.remove('prolog-code');
+      card.append(field(s.type === 'statechart' ? 'Nested SXML (kept in CDATA)' : 'Prolog source', body, true));
       if (s.type === 'statechart' && s.body.trim()) card.append(h('div', { class: 'insp-actions' }, h('button', { onclick: () => openNested(s.key) }, 'Open nested chart ↗')));
       box.append(card);
     }
@@ -1149,7 +1151,7 @@ function transitionInspector(box, t) {
   box.append(h('div', {class: 'field transition-trigger'}, h('label', {for: 'transition-trigger-mode'}, 'Trigger'), triggerControls));
   if (ui.guard || t.cond != null) {
     const condition = input('if', t.cond, value => edit(() => SXML.setAttr(t.el, 'if', value)),
-      {id: 'transition-guard', placeholder: 'Prolog goal', 'aria-label': 'Guard condition', disabled: readOnly});
+      {id: 'transition-guard', class: 'prolog-code', placeholder: 'Prolog goal', 'aria-label': 'Guard condition', disabled: readOnly});
     box.append(h('div', {class: 'field'}, h('label', {for: 'transition-guard'}, 'Guard'), condition));
   }
   const guardVisible = ui.guard || t.cond != null;
