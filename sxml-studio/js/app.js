@@ -254,6 +254,7 @@ function restoreAppearance() {
     }
   } catch (e) { console.warn('Could not restore diagram appearance:', e); }
 }
+diagram.appearanceTheme = SXMLUI.preferences.theme;
 restoreAppearance();
 function syncAppearanceControls() {
   const a = diagram.appearance;
@@ -261,7 +262,9 @@ function syncAppearanceControls() {
     $('appearance-' + key).value = a[key];
     $('appearance-' + key + '-value').textContent = key === 'labelOpacity' ? Math.round(a[key] * 100) + '%' : a[key] + ' px';
   }
-  for (const key of ['headerColor', 'activeHeaderColor']) $('appearance-' + key).value = a[key];
+  const dark = SXMLUI.preferences.theme === 'dark';
+  $('appearance-headerColor').value = a[dark ? 'darkHeaderColor' : 'headerColor'];
+  $('appearance-activeHeaderColor').value = a[dark ? 'darkActiveHeaderColor' : 'activeHeaderColor'];
   $('appearance-theme-color').checked = !a.lineColor;
   $('appearance-color').disabled = !a.lineColor;
   const themeColor = getComputedStyle(diagram.svg).getPropertyValue('--edge').trim();
@@ -305,10 +308,16 @@ function changeAppearance(settings) {
   } else if (!appearanceTimer) $('appearance-status').textContent = '';
 }
 for (const key of APPEARANCE_RANGES) $('appearance-' + key).oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { [key]: Number(e.target.value) }));
-for (const key of ['headerColor', 'activeHeaderColor']) $('appearance-' + key).oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { [key]: e.target.value }));
+for (const key of ['headerColor', 'activeHeaderColor']) $('appearance-' + key).oninput = e => {
+  const property = SXMLUI.preferences.theme === 'dark' ? (key === 'headerColor' ? 'darkHeaderColor' : 'darkActiveHeaderColor') : key;
+  changeAppearance(Object.assign({}, diagram.appearance, { [property]: e.target.value }));
+};
 $('appearance-color').oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.value }));
 $('appearance-theme-color').onchange = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.checked ? null : $('appearance-color').value }));
-$('appearance-reset').onclick = () => changeAppearance(SXMLDiagram.APPEARANCE_DEFAULTS);
+$('appearance-reset').onclick = () => {
+  const keep = SXMLUI.preferences.theme === 'dark' ? ['headerColor', 'activeHeaderColor'] : ['darkHeaderColor', 'darkActiveHeaderColor'];
+  changeAppearance(Object.assign({}, SXMLDiagram.APPEARANCE_DEFAULTS, Object.fromEntries(keep.map(key => [key, diagram.appearance[key]]))));
+};
 syncAppearanceControls();
 
 const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
@@ -1743,6 +1752,8 @@ $('clear').onclick = () => $('log').replaceChildren();
 $('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
 function updateUI(settings) {
   const preferences = SXMLUI.apply(settings);
+  diagram.appearanceTheme = preferences.theme;
+  diagram.applyAppearance(diagram.appearance);
   $('ui-font-size').value = preferences.fontSize;
   $('ui-font-size-value').textContent = preferences.fontSize + '%';
   $('ui-font-weight').value = preferences.fontWeight;

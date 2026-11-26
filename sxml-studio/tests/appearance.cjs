@@ -35,6 +35,23 @@ assert.equal(vars['--active-stroke'], 'hsl(210.00 100.00% 56.00%)', 'Pale blue m
 D.Diagram.prototype.applyAppearance.call(fake, {activeHeaderColor: '#eeeeee'});
 assert.equal(vars['--active-stroke'], 'hsl(0.00 0.00% 56.00%)', 'Neutral selections must remain neutral.');
 assert(markers.every(m => Number(m.attrs.markerWidth) === (m.attrs.id === 'arrow-fired' ? 10.625 : 8.5)));
+// Dark defaults use independent stored colours and brighter highlights.
+fake.appearanceTheme = 'dark';
+D.Diagram.prototype.applyAppearance.call(fake, {headerColor: '#abcdef', activeHeaderColor: '#ddeeff'});
+assert.equal(vars['--state-header'], '#2b343a');
+assert.equal(vars['--state-header-active'], '#203f34');
+assert.equal(vars['--state-header-text'], '#dce5e3');
+assert.equal(vars['--state-header-active-text'], '#dce5e3');
+assert.equal(vars['--active-stroke'], '#76c7a4');
+const bothPalettes = fake.appearance;
+D.Diagram.prototype.applyAppearance.call(fake, {...bothPalettes, darkHeaderColor: '#303030', darkActiveHeaderColor: '#182a40'});
+assert.equal(vars['--state-header'], '#303030');
+assert.equal(vars['--state-header-active'], '#182a40');
+assert.notEqual(vars['--active-stroke'], '#76c7a4');
+fake.appearanceTheme = 'light';
+D.Diagram.prototype.applyAppearance.call(fake, fake.appearance);
+assert.equal(vars['--state-header'], '#abcdef');
+assert.equal(vars['--state-header-active'], '#ddeeff');
 function state(id, kind='state', children=[], initial='') { return {id,kind,key:kind==='statechart'?'#root':id,children,initial,datamodels:[],spawns:[],onentry:[],onexit:[],defers:[],transitions:[]}; }
 const a=state('a'),b=state('b'),chart=state('','statechart',[a,b],'a');
 const edge={key:'a/go0',source:a,to:['b'],on:'long_event(Value)',body:'write(result)'};
