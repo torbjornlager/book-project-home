@@ -208,33 +208,12 @@ function positionLayoutPopover() {
   popover.style.left = Math.max(12, Math.min(button.left, window.innerWidth - panel.width - 12)) + 'px';
   popover.style.top = Math.max(12, Math.min(button.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
 }
-function showLayoutTab(name, focus = false) {
-  for (const tab of ['spacing', 'styling']) {
-    const selected = tab === name;
-    $('layout-' + tab).hidden = !selected;
-    $('layout-tab-' + tab).setAttribute('aria-selected', String(selected));
-    $('layout-tab-' + tab).tabIndex = selected ? 0 : -1;
-  }
-  $('layout-popover').scrollTop = 0;
-  if (focus) $('layout-tab-' + name).focus();
-  requestAnimationFrame(positionLayoutPopover);
-}
-for (const name of ['spacing', 'styling']) {
-  const tab = $('layout-tab-' + name);
-  tab.onclick = () => showLayoutTab(name);
-  tab.onkeydown = event => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    event.preventDefault();
-    const next = event.key === 'Home' ? 'spacing' : event.key === 'End' ? 'styling' : name === 'spacing' ? 'styling' : 'spacing';
-    showLayoutTab(next, true);
-  };
-}
 $('layout-popover').addEventListener('toggle', event => {
   if (event.newState === 'open') {
     syncSpacingControls();
     syncAppearanceControls();
     showSpacingSize();
-    showLayoutTab('spacing');
+    requestAnimationFrame(positionLayoutPopover);
   }
 });
 window.addEventListener('resize', positionLayoutPopover);

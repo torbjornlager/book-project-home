@@ -13,6 +13,7 @@
     plus: 'M12 5v14 M5 12h14', minus: 'M5 12h14',
     fit: 'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5 M8 8h8v8H8z',
     focus: 'M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5',
+    extras: 'M6.5 12a1.5 1.5 0 1 1-3 0a1.5 1.5 0 1 1 3 0 M13.5 12a1.5 1.5 0 1 1-3 0a1.5 1.5 0 1 1 3 0 M20.5 12a1.5 1.5 0 1 1-3 0a1.5 1.5 0 1 1 3 0',
     palette: 'M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-4c-1-1 0-2 1-2h2a4 4 0 0 0 4-4c0-4-4-8-9-8z M7 10h.01 M10 7h.01 M15 7h.01 M18 10h.01',
     file: 'M14 3H5v18h14V8z M14 3v5h5 M8 12h8 M8 16h5',
     folder: 'M3 7V5h7l2 3h9v12H3z',
@@ -47,6 +48,7 @@
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     for (const [key, value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',class:'ui-icon'})) svg.setAttribute(key,value);
     const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',paths[name] || paths.state); svg.append(path);
+    if (name === 'extras') { path.setAttribute('fill', 'currentColor'); path.setAttribute('stroke', 'none'); }
     const arrowheads = {transition: 'M15 3L21 7L15 11Z', 'flow-right': 'M10 12.5L16 16.5L10 20.5Z', 'flow-down': 'M13.5 10L17.5 16L21.5 10Z'};
     if (arrowheads[name]) {
       const head = document.createElementNS(svg.namespaceURI, 'path');
@@ -54,7 +56,7 @@
     }
     return svg;
   }
-  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
+  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'extras','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
   const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;

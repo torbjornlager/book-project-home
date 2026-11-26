@@ -139,9 +139,6 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .spacing-popover h3{margin:0 0 10px;font-size:calc(13px * var(--ui-font-scale,1))}
 .spacing-popover .spacing-control{margin:12px 0}
 .spacing-popover button{font-size:calc(11px * var(--ui-font-scale,1));padding:4px 8px}
-.layout-tabs{display:flex;margin:0 0 14px;border-bottom:1px solid var(--line)}
-.layout-tabs button{flex:1;border:0;border-radius:0;background:transparent;color:var(--muted);padding:8px 12px}
-.layout-tabs button[aria-selected=true]{color:var(--accent);box-shadow:inset 0 -2px var(--accent)}
 .spacing-popover .hint,#spacing-status{font-size:calc(11px * var(--ui-font-scale,1));color:var(--muted);line-height:1.5;margin:10px 0 0}
 
 .layout-options label{display:block;margin:12px 0 4px}
