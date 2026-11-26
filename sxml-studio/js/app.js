@@ -352,7 +352,7 @@ const PANEL_STORAGE = 'trinity-sxml-studio.panels.v1';
 const panelWidths = {};
 try {
   const saved = JSON.parse(localStorage.getItem(PANEL_STORAGE));
-  for (const [name, min, max] of [['left', 120, 340], ['right', 280, 640]]) {
+  for (const [name, min, max] of [['left', 240, 340], ['right', 280, 640]]) {
     const value = saved && saved[name];
     if (typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max) panelWidths[name] = value;
   }
@@ -367,7 +367,7 @@ function applyPanelWidths() {
   // Fit a smaller window without overwriting the user's preferred widths.
   const available = root.clientWidth - 280;
   right = Math.max(280, Math.min(right, available - left));
-  left = Math.max(120, Math.min(left, available - right));
+  left = Math.max(240, Math.min(left, available - right));
   if (panelWidths.left != null || left !== parseFloat(styles.getPropertyValue('--left'))) root.style.setProperty('--left', left + 'px');
   if (panelWidths.right != null || right !== parseFloat(styles.getPropertyValue('--right'))) root.style.setProperty('--right', right + 'px');
   $('left-divider').setAttribute('aria-valuenow', left);
@@ -1768,7 +1768,7 @@ $('theme').onchange = event => updateUI(Object.assign({}, SXMLUI.preferences, { 
 updateUI(SXMLUI.preferences);
 
 /* resizable panes */
-for (const [id, property, direction, min, max] of [['left-divider', '--left', 1, 120, 340], ['right-divider', '--right', -1, 280, 640]]) {
+for (const [id, property, direction, min, max] of [['left-divider', '--left', 1, 240, 340], ['right-divider', '--right', -1, 280, 640]]) {
   const divider = $(id); let start = 0, width = 0;
   const get = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(property));
   const resize = delta => {

@@ -13,7 +13,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .brand>span{color:var(--muted)}.experiment{display:none}.top-actions{gap:8px}
 .engine{padding:6px 10px;border:1px solid var(--line);border-radius:20px}
 .panel-toggle{display:none}
-.studio{grid-template-columns:var(--left) 5px minmax(260px,1fr) 5px var(--right)}
+.studio{grid-template-columns:minmax(240px,var(--left)) 5px minmax(260px,1fr) 5px var(--right)}
 .workspace .panel-heading,.workspace-title,.workspace-note{display:none}
 .workspace-tabs{display:flex;align-items:center;padding:8px;gap:4px;min-height:52px;border-bottom:1px solid var(--line);flex:none}
 .workspace-tabs button{flex:1;min-width:0;height:35px;border:0;background:transparent;font-size:calc(13px * var(--ui-font-scale,1));color:var(--muted)}
@@ -32,7 +32,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 #files .file-row.active>button:first-child{color:var(--accent);font-weight:600;background:transparent}
 #files .file-row>button:first-child .ui-button-label{overflow:hidden;text-overflow:ellipsis}
 #files button::before{display:none}#files .file-remove{width:30px}
-.file-actions{padding:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.file-actions{padding:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
 .file-actions button{font-size:calc(12px * var(--ui-font-scale,1));padding:8px;justify-content:flex-start;min-height:36px;border-color:var(--line);background:transparent}
 .editor-tabs{height:52px;background:var(--panel);padding:0 16px;gap:9px}
 .file-icon{border:1px solid var(--line);padding:3px 5px;border-radius:4px;font-size:calc(9px * var(--ui-font-scale,1));letter-spacing:.3px}
@@ -142,3 +142,6 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 /* Whole tool groups wrap into left-aligned rows when space is limited. */
 .chart-toolbar{height:auto;min-height:66px;gap:2.5mm;flex-wrap:wrap;justify-content:flex-start;align-content:flex-start;overflow:visible}
 .chart-toolbar .toolbar-group{display:flex;align-items:center;flex:none;flex-wrap:wrap;max-width:100%;gap:2px;padding:3px;border:1px solid color-mix(in srgb,var(--muted) 45%,var(--line));border-radius:10px;background:var(--panel);box-shadow:0 1px 3px #152b3b08}
+
+.file-actions button{min-width:0;white-space:normal}
+.file-actions .ui-button-label{overflow-wrap:anywhere}

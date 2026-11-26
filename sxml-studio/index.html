@@ -17,17 +17,17 @@
 <script defer src="js/sxml-diagram.js?v=20261126-dark-palette"></script>
 <script defer src="js/studio-model.js?v=20261124-split3"></script>
 <script defer src="js/studio-chrome.js?v=20261126-return-arrows"></script>
-<script defer src="js/app.js?v=20261126-dark-palette"></script>
+<script defer src="js/app.js?v=20261126-workspace-width"></script>
 <script defer src="js/studio-tools.js?v=20261124-split3"></script>
 <link rel="stylesheet" href="studio-tools.css?v=20261126-saturated-highlights">
-<link rel="stylesheet" href="studio-chrome.css?v=20261126-toolbar-wrap">
+<link rel="stylesheet" href="studio-chrome.css?v=20261126-workspace-width">
 </head>
 <body class="light" data-view="diagram" data-layout="horizontal">
 <script src="js/ui-preferences.js"></script>
 <header class="topbar"><div class="brand"><a class="brand-home" href="https://trinity.elfenbenstornet.se" aria-label="Trinity homepage" title="Trinity homepage"><img class="brand-mark" src="img/spider-agent.png" width="42" height="42" alt=""></a><span>Trinity <strong>SXML Studio</strong></span></div><span class="experiment">STATECHART EDITOR</span><div class="top-actions"><span class="engine"><i></i> SWI-Prolog · WASM</span></div></header>
 <main class="studio">
 <aside class="workspace"><div class="panel-heading">EXPLORER <span>LOCAL WORKSPACE</span></div><div class="workspace-title">⌄ &nbsp; SXML CODE</div><details class="structure-panel" open><summary>Chart structure</summary><label for="structure-search" class="sr-label">Search states, events and Prolog</label><input id="structure-search" type="search" placeholder="Search chart…"><div id="structure-tree"></div></details><div id="files" role="group" aria-label="Example statecharts"></div><div class="file-actions"><button id="new">New statechart</button><button id="open">Open .xml file</button><input id="file-input" type="file" accept=".xml,.sxml,.statechart,.txt" hidden><button id="save">Save source</button><button id="export" title="Save the drawing as an SVG file">Save diagram</button></div><div class="workspace-note"><span class="note-mark">↗</span><p>Draw, edit and run SXML statecharts.</p><p>The interpreter runs here, in your browser. No native node is needed.</p><a href="https://github.com/torbjornlager/swi-wasm-node" target="_blank" rel="noreferrer">About the runtime ↗</a></div></aside>
-<div class="divider" id="left-divider" role="separator" aria-label="Resize workspace" aria-orientation="vertical" aria-valuemin="120" aria-valuemax="340" tabindex="0"></div>
+<div class="divider" id="left-divider" role="separator" aria-label="Resize workspace" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="340" tabindex="0"></div>
 <section class="editor-pane" aria-label="Statechart editor">
 <div class="editor-tabs"><span class="file-icon">SXML</span><span id="filename">untitled.xml</span><span id="dirty" aria-label="Unsaved changes"></span><div class="view-switch" role="group" aria-label="View"><button data-view="source">Source</button><button data-view="split" aria-haspopup="menu" aria-controls="split-menu" title="Split view: choose stacked or side by side">Split</button><button data-view="diagram">Diagram</button></div></div>
 <div class="editor-content">
