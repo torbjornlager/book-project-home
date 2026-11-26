@@ -225,3 +225,5 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #layout-title::before{content:'⠿';color:var(--muted);font-size:16px;line-height:1}
 #layout-title.dragging{cursor:grabbing}
 #layout-title:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opacity:.8}
