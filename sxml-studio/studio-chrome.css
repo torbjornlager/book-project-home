@@ -53,7 +53,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .side-tabs{height:52px;padding:6px 8px;gap:3px;align-items:center;border-top:0;background:var(--panel)}
 .side-tabs button{min-height:38px;border-radius:6px;padding:7px 10px;font-size:calc(12px * var(--ui-font-scale,1));gap:6px}
 .side-tabs button[aria-selected=true]{box-shadow:none;background:var(--accent-bg);color:var(--accent)}
-.side-tabs .ui-icon{width:17px;height:17px}#tab-settings{margin-left:auto;width:34px;padding:7px}#run-badge{font-size:calc(9px * var(--ui-font-scale,1));padding:1px 4px;background:var(--raised)}
+.side-tabs .ui-icon{width:17px;height:17px}#tab-settings{margin-left:auto;width:44px;min-width:44px;padding:7px}#tab-settings .ui-icon{width:28px;height:28px}#run-badge{font-size:calc(9px * var(--ui-font-scale,1));padding:1px 4px;background:var(--raised)}
 #inspector{padding:20px 16px}.insp-head{margin-bottom:18px}.insp-title{font-size:calc(19px * var(--ui-font-scale,1))}.insp-kind{font-size:calc(10px * var(--ui-font-scale,1));padding:3px 6px;border:1px solid var(--line);border-radius:4px;letter-spacing:.6px}
 .insp-path{margin-bottom:18px;font-size:calc(12px * var(--ui-font-scale,1))}
 .field{grid-template-columns:66px 1fr;gap:12px;margin-bottom:11px}.field>label{font-size:calc(12px * var(--ui-font-scale,1))}
