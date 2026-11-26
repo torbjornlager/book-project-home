@@ -650,9 +650,9 @@ function stateAction(key, action) {
 
 function uniqueEvent(doc) {
   const used = new Set(Array.from(doc.getElementsByTagName('go')).map(g => g.getAttribute('on')));
-  let i = 1;
-  while (used.has('event_' + i)) i++;
-  return 'event_' + i;
+  let i = 0;
+  while (used.has('e' + i)) i++;
+  return 'e' + i;
 }
 
 /* A side handle of the selected state: create a sibling state next to it in

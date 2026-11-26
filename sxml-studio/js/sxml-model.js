@@ -558,11 +558,11 @@
   }
 
   function addState(doc, parentEl, kind) {
-    const base = { state: 'state', parallel: 'parallel', final: 'final', history: 'h' }[kind];
+    const base = { state: 's', parallel: 'p', final: 'f', history: 'h' }[kind];
     const el = doc.createElement(kind);
-    let id = base;
-    if (kind !== 'history') { let i = 1; while (doc.querySelector('[id="' + base + i + '"]')) i++; id = base + i; }
-    el.setAttribute('id', uniqueId(doc, id));
+    let i = 0;
+    while (doc.querySelector('[id="' + base + i + '"]')) i++;
+    el.setAttribute('id', base + i);
     const hadStates = Array.from(parentEl.children).some(k => ['state', 'parallel', 'final'].includes(k.localName));
     insertChild(parentEl, el);
     if (kind === 'history') {
@@ -694,7 +694,7 @@
   }
 
   function blank() {
-    return '<statechart version="0.2" initial="state0">\n    <state id="state0"/>\n</statechart>\n';
+    return '<statechart version="0.2" initial="s0">\n    <state id="s0"/>\n</statechart>\n';
   }
 
   global.SXML = {

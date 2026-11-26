@@ -88,7 +88,9 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   A graphical edit rewrites only the lines it concerns: every
   untouched element, comment and blank line keeps its source text exactly.
   Undo/Redo covers both.
-- Editing: add state / parallel / final / history inside the selection, use the
+- Editing: add state / parallel / final / history inside the selection. Default labels
+  are `s0`, `s1`, … for states, `p0`, `p1`, … for parallel states, `f0`, `f1`, …
+  for final states, `h0`, `h1`, … for history states, and `e0`, `e1`, … for events. Use the
   Transition tool (key T) to connect states, and edit in the Inspector. Transition
   order determines priority. Renaming a state updates references; Delete removes
   it together with transitions that target it.
@@ -103,7 +105,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - A selected state shows a handle on each side and a small floating toolbar
   (rename, add child, new transition, zoom to, Inspector, delete). Click a handle
   to add a sibling state with a transition to it (placeholder event
-  `new_event_N`), then name the event on the canvas. Drag a handle onto a state
+  `e0`, `e1`, …), then name the event on the canvas. Drag a handle onto a state
   to connect to it, or onto empty space to place the new state there. The new
   state is placed exactly beside its source, or where it was dropped.
 - Layout: a chart without saved positions is laid out automatically by ELK
