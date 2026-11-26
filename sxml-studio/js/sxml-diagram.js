@@ -357,7 +357,7 @@
       ].filter(([key, active]) => extra && active.includes(extra[key]));
       if (!controls.length) throw originalError;
       // ELK 0.12.1 rejects some nested-chart and zero-gap combinations.
-      // Disable the fewest experimental controls that recover a valid drawing.
+      // Disable the fewest layout options that recover a valid drawing.
       for (let count = 1; count <= controls.length; count++) {
         for (let mask = 1; mask < (1 << controls.length); mask++) {
           const disabled = controls.filter((_, i) => mask & (1 << i));
@@ -367,7 +367,7 @@
           try {
             const geo = await layoutOnce(model, direction, options);
             geo.fallbackNotes = disabled.map(control => control[3]);
-            console.warn('ELK layout experiment fallback:', geo.fallbackNotes.join(' '), originalError);
+            console.warn('ELK layout fallback:', geo.fallbackNotes.join(' '), originalError);
             return geo;
           } catch (_) { /* Try another combination, then surface the original error. */ }
         }

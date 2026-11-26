@@ -130,7 +130,7 @@ try {
 const EXPERIMENTS_STORAGE = 'trinity-sxml-studio.layout-experiments.v1';
 try {
   diagram.layoutExperiments = SXMLDiagram.normalizeExperiments(JSON.parse(localStorage.getItem(EXPERIMENTS_STORAGE)));
-} catch (e) { console.warn('Could not restore layout experiments:', e); }
+} catch (e) { console.warn('Could not restore layout preferences:', e); }
 
 function syncSpacingControls() {
   for (const axis of ['horizontal', 'vertical']) {
@@ -158,7 +158,7 @@ function changeSpacing() {
       await diagram.setModel(model, { preserveViewport: true });
       if (generation === spacingGeneration) showSpacingSize();
     } catch (e) {
-      if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply layout. Try resetting the experiments or spacing.';
+      if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply layout. Try resetting the layout or spacing.';
       console.warn('Spacing layout failed:', e);
       requestAnimationFrame(positionLayoutPopover);
     }
@@ -185,7 +185,7 @@ for (const [pop, btn] of [['spacing-h-popover', 'spacing-h-toggle'], ['spacing-v
 }
 function saveLayoutExperiments() {
   try { localStorage.setItem(EXPERIMENTS_STORAGE, JSON.stringify(diagram.layoutExperiments)); }
-  catch (e) { console.warn('Could not save layout experiments:', e); }
+  catch (e) { console.warn('Could not save layout preferences:', e); }
   changeSpacing();
 }
 for (const key of ['compaction', 'labels', 'order', 'loops', 'alignment', 'effort', 'padding', 'sides']) $('layout-' + key).onchange = e => {
@@ -193,7 +193,7 @@ for (const key of ['compaction', 'labels', 'order', 'loops', 'alignment', 'effor
   diagram.layoutExperiments = SXMLDiagram.normalizeExperiments(Object.assign({}, diagram.layoutExperiments, { [key]: e.target.value }));
   saveLayoutExperiments();
 };
-$('layout-experiments-reset').onclick = () => {
+$('layout-reset').onclick = () => {
   if (run.pid || run.starting) return;
   diagram.layoutExperiments = SXMLDiagram.normalizeExperiments();
   saveLayoutExperiments();
@@ -238,7 +238,6 @@ $('layout-popover').addEventListener('toggle', event => {
   }
 });
 window.addEventListener('resize', positionLayoutPopover);
-$('layout-spacing').querySelector('details').addEventListener('toggle', positionLayoutPopover);
 
 const APPEARANCE_STORAGE = 'trinity-sxml-studio.appearance.v1';
 const APPEARANCE_RANGES = ['lineWidth', 'arrowSize', 'borderWidth', 'labelSize', 'labelOpacity'];
@@ -464,7 +463,7 @@ function updateChrome() {
     $(id).disabled = !!run.pid || run.starting || arranged();
     $(id).title = (id === 'spacing-h-toggle' ? 'Horizontal' : 'Vertical') + ' spacing' + (arranged() ? ' · applies to automatic layout: use Auto layout first' : '');
   }
-  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-experiments-reset']) $(id).disabled = !!run.pid || run.starting;
+  for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
   const regionControl = $('inspector').querySelector('[data-f="region-arrangement"]');
   if (regionControl) regionControl.disabled = !!run.pid || run.starting;

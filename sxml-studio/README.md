@@ -62,7 +62,7 @@ in this browser; spacing controls are disabled while a chart is running. Nested
 states, routing and label clearance can limit compaction or change the arrangement,
 so a smaller spacing value does not guarantee a proportionally smaller chart.
 
-The Layout tab also contains **Layout experiments**: post-compaction to shorten
+The Layout tab contains controls for post-compaction to shorten
 edges, space-efficient transition-label placement, and a preference for SXML
 state/transition order. Additional controls adjust self-loop clearance (0–40 px),
 straight versus balanced state placement, and layout effort (1, 7 or 20). Higher
@@ -71,10 +71,10 @@ padding can be compact, normal or roomy, preserving the heading and action
 compartments. Transition labels can use automatic side selection or a consistent
 side (above/below for horizontal flow, right/left for vertical flow). Defaults retain
 the existing layout behaviour. These
-preferences are remembered separately, and **Reset experiments** restores them
+preferences are remembered separately, and **Reset layout** restores them
 without changing spacing. They change only the drawing, not the source or
-transition priority. If the bundled ELK rejects an experimental combination,
-Studio retries with the unsupported experiment disabled and reports the fallback
+transition priority. If the bundled ELK rejects a combination of layout options,
+Studio retries with the unsupported option disabled and reports the fallback
 beside the diagram dimensions.
 Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 

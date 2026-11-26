@@ -142,14 +142,11 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .layout-tabs{display:flex;margin:0 0 14px;border-bottom:1px solid var(--line)}
 .layout-tabs button{flex:1;border:0;border-radius:0;background:transparent;color:var(--muted);padding:8px 12px}
 .layout-tabs button[aria-selected=true]{color:var(--accent);box-shadow:inset 0 -2px var(--accent)}
-.layout-actions{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .spacing-popover .hint,#spacing-status{font-size:calc(11px * var(--ui-font-scale,1));color:var(--muted);line-height:1.5;margin:10px 0 0}
 
-.layout-experiments{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
-.layout-experiments summary{cursor:pointer;color:var(--muted)}
-.layout-experiments label{display:block;margin:12px 0 4px}
-.layout-experiments select{width:100%;padding:5px 6px;background:var(--editor);border:1px solid var(--line);border-radius:4px;font:inherit}
-.layout-experiments button{margin-top:10px}
+.layout-options label{display:block;margin:12px 0 4px}
+.layout-options select{width:100%;padding:5px 6px;background:var(--editor);border:1px solid var(--line);border-radius:4px;font:inherit}
+.layout-options button{margin-top:10px}
 
 #spacing-status{white-space:pre-line}
 
