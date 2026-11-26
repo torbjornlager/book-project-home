@@ -95,7 +95,7 @@
     for (const d of n.defers) lines.push({ kw: 'defer', text: one(d.on) + (d.cond ? ' [' + one(d.cond) + ']' : ''), item: d });
     if (n.kind !== 'history') {
       for (const t of n.transitions) if (!t.to.length) {
-        const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ".\u2009" : "") + trigger(t), body = one(t.body);
+        const trig = (t.source.transitions.length > 1 ? (t.index + 1) + "." : "") + trigger(t), body = one(t.body);
         lines.push({ kw: trig ? '' : 'always', text: trig + (body ? (trig ? ' / ' : '/ ') + body : ''), item: t, internal: true });
       }
     }
@@ -111,7 +111,7 @@
   function edgeLabel(t, appearance) {
     const size = appearance.labelSize, lineHeight = size + 3;
     const font = F_MONO.replace('11px', size + 'px');
-    const trig = (t.source.transitions.length > 1 ? (t.index + 1) + ".\u2009" : "") + trigger(t), body = one(t.body);
+    const trig = (t.source.transitions.length > 1 ? (t.index + 1) + "." : "") + trigger(t), body = one(t.body);
     let lines = [];
     if (trig && body && (trig + ' / ' + body).length <= MAX_LABEL) lines = [trig + ' / ' + body];
     else { if (trig) lines.push(trig); if (body) lines.push('/ ' + body); }

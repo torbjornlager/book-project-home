@@ -38,7 +38,7 @@ function state(id, kind = 'state') {
     target.transitions = [go, {...go, key: id + '/go1', on: 'event_2', index: 1}];
     model.transitions = target.transitions;
     const numbered = await D.layout(model, 'RIGHT');
-    assert.equal(numbered.info.get(go.key + '>0').label.full, '1.\u2009event_1', 'Numbered labels must use a thin space.');
+    assert.equal(numbered.info.get(go.key + '>0').label.full, '1.event_1', 'Numbered labels must have no space after the dot.');
   }
   console.log('Checked measured sizes, alignment in all four directions, and compact numbering for short and long state ids.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
