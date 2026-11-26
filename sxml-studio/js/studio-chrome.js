@@ -128,15 +128,16 @@
     run.onclick=()=>{startChart();if(matchMedia('(max-width:860px)').matches){document.body.dataset.drawer='inspector';document.getElementById('toggle-inspector').setAttribute('aria-pressed','true');}};
     const stop=document.createElement('button');stop.id='toolbar-stop';stop.type='button';stop.dataset.icon='stop';stop.textContent='Stop';stop.title='Stop chart';stop.setAttribute('aria-label','Stop chart');stop.disabled=true;
     stop.onclick=()=>haltChart();
-    const runSeparator=document.createElement('span');runSeparator.className='tool-sep';runSeparator.setAttribute('aria-hidden','true');
-    document.getElementById('redo').after(runSeparator,run,stop);
+    const runGroup=document.createElement('div'); runGroup.className='toolbar-group'; runGroup.setAttribute('role','group'); runGroup.setAttribute('aria-label','Run controls');
+    runGroup.append(run,stop);
+    document.getElementById('toolbar-group-edit').after(runGroup);
     for(const [id,label,name] of [['toggle-workspace','Files & structure','folder'],['toggle-inspector','Inspector panels','inspect']]) {
       const b=document.createElement('button'); b.id=id; b.type='button'; b.dataset.icon=name; b.textContent=label; b.className='panel-toggle compact-action'; b.setAttribute('aria-pressed','false');
       b.onclick=()=>{ const side=id==='toggle-workspace'?'workspace':'inspector'; const open=document.body.dataset.drawer===side; document.body.dataset.drawer=open?'':side; for(const t of actions.querySelectorAll('.panel-toggle'))t.setAttribute('aria-pressed',String(t===b&&!open));}; actions.append(b);
     }
     const focus=document.createElement('button'); focus.id='canvas-focus'; focus.type='button'; focus.textContent='Focus canvas'; focus.setAttribute('aria-pressed','false');
     focus.onclick=()=>{const active=document.body.dataset.focus!=='true';document.body.dataset.focus=String(active);document.body.dataset.drawer='';focus.setAttribute('aria-pressed',String(active));window.dispatchEvent(new Event('resize'));};
-    document.querySelector('.chart-toolbar').append(focus);
+    document.getElementById('toolbar-group-view').append(focus);
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.body.dataset.drawer='';for(const b of actions.querySelectorAll('.panel-toggle'))b.setAttribute('aria-pressed','false');} if((e.metaKey||e.ctrlKey)&&e.key==='.'){e.preventDefault();focus.click();}});
     decorate(document); inspector(document.getElementById('inspector')); syncRun();
   }

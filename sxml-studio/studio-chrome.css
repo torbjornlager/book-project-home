@@ -138,3 +138,7 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 @media(max-width:1100px){body[data-drawer=workspace] .drawer-dismiss{display:block}}
 @media(max-width:860px){body[data-drawer=inspector] .drawer-dismiss{display:block}.drawer-dismiss{top:58px}}
 @media(pointer:coarse){.top-actions button,.side-tabs button{min-height:40px;min-width:40px}#files .file-remove{opacity:1;pointer-events:auto;width:34px}}
+
+/* Framed tool groups retain their spacing when the toolbar scrolls. */
+.chart-toolbar{height:66px;min-height:66px;gap:5mm}
+.chart-toolbar .toolbar-group{display:flex;align-items:center;flex:none;gap:2px;padding:3px;border:1px solid color-mix(in srgb,var(--muted) 45%,var(--line));border-radius:10px;background:var(--panel);box-shadow:0 1px 3px #152b3b08}
