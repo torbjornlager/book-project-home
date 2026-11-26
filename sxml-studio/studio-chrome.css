@@ -220,3 +220,8 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #settings .appearance-color{margin:6px 0;gap:4px 8px;min-height:28px}
 #settings .appearance-theme{font-size:calc(11px * var(--ui-font-scale,1));gap:5px}
 @media(pointer:coarse){#settings button,#settings select{min-height:44px}#settings .spacing-control input{height:32px}#settings .appearance-color input[type=color]{height:36px}}
+
+#layout-title{display:flex;align-items:center;gap:7px;cursor:grab;touch-action:none;user-select:none;border-radius:3px}
+#layout-title::before{content:'⠿';color:var(--muted);font-size:16px;line-height:1}
+#layout-title.dragging{cursor:grabbing}
+#layout-title:focus-visible{outline:2px solid var(--accent);outline-offset:3px}

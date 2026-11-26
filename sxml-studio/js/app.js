@@ -200,14 +200,52 @@ $('layout-reset').onclick = () => {
 };
 syncSpacingControls();
 
+let layoutPopoverPosition = null;
 function positionLayoutPopover() {
   const popover = $('layout-popover');
   if (!popover.matches(':popover-open')) return;
   const button = $('layout-toggle').getBoundingClientRect();
   const panel = popover.getBoundingClientRect();
-  popover.style.left = Math.max(12, Math.min(button.left, window.innerWidth - panel.width - 12)) + 'px';
-  popover.style.top = Math.max(12, Math.min(button.bottom + 6, window.innerHeight - panel.height - 12)) + 'px';
+  const desired = layoutPopoverPosition || { x: button.left, y: button.bottom + 6 };
+  const x = Math.max(12, Math.min(desired.x, window.innerWidth - panel.width - 12));
+  const y = Math.max(12, Math.min(desired.y, window.innerHeight - panel.height - 12));
+  popover.style.left = x + 'px';
+  popover.style.top = y + 'px';
+  if (layoutPopoverPosition) layoutPopoverPosition = { x, y };
 }
+function enableLayoutDragging() {
+  const heading = $('layout-title'), popover = $('layout-popover');
+  let drag = null;
+  heading.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !event.isPrimary) return;
+    const panel = popover.getBoundingClientRect();
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: panel.left, top: panel.top };
+    heading.setPointerCapture(event.pointerId);
+    heading.classList.add('dragging');
+    event.preventDefault();
+  });
+  heading.addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    layoutPopoverPosition = { x: drag.left + event.clientX - drag.x, y: drag.top + event.clientY - drag.y };
+    positionLayoutPopover();
+  });
+  const end = event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    drag = null;
+    heading.classList.remove('dragging');
+    if (heading.hasPointerCapture(event.pointerId)) heading.releasePointerCapture(event.pointerId);
+  };
+  for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) heading.addEventListener(name, end);
+  heading.addEventListener('keydown', event => {
+    const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (!directions[event.key]) return;
+    event.preventDefault();
+    const panel = popover.getBoundingClientRect(), step = event.shiftKey ? 40 : 10;
+    layoutPopoverPosition = { x: panel.left + directions[event.key][0] * step, y: panel.top + directions[event.key][1] * step };
+    positionLayoutPopover();
+  });
+}
+enableLayoutDragging();
 $('layout-popover').addEventListener('toggle', event => {
   if (event.newState === 'open') {
     syncSpacingControls();
