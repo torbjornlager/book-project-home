@@ -159,3 +159,17 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 
 .query-pane{container-type:inline-size;container-name:inspector-pane}
 @container inspector-pane (max-width:320px){.compact-transition .field{grid-template-columns:minmax(0,1fr);gap:4px}}
+
+/* State identity is edited once; parent context stays quiet above it. */
+#inspector.compact-state{padding:12px 14px}
+.compact-state .insp-path{margin:0 0 8px;font-size:calc(11px * var(--ui-font-scale,1));color:var(--muted)}
+.compact-state .insp-path button{border:0;background:transparent;color:var(--muted);padding:0;font:inherit;white-space:normal}
+.compact-state .field{grid-template-columns:calc(64px * var(--ui-font-scale,1)) minmax(0,1fr);gap:8px;margin-bottom:8px}
+.compact-state .field.block{grid-template-columns:minmax(0,1fr);gap:4px}
+#inspector.compact-state input,#inspector.compact-state select,#inspector.compact-state textarea{font-size:calc(13px * var(--ui-font-scale,1));padding:5px 8px;border-radius:5px;line-height:1.4;min-height:32px}
+#inspector.compact-state .state-heading input{font-size:calc(16px * var(--ui-font-scale,1));font-weight:600}
+.state-initial-option{display:flex;align-items:center;flex-direction:row-reverse;justify-content:flex-end;gap:7px;margin:0 0 12px;padding-left:calc(64px * var(--ui-font-scale,1) + 8px);font-size:calc(12px * var(--ui-font-scale,1));color:var(--muted)}
+.state-initial-option label{cursor:pointer}
+#inspector.compact-state input[type=radio]{min-height:0;width:16px;height:16px;padding:0;flex:none}
+@container inspector-pane (max-width:320px){.compact-state .field{grid-template-columns:minmax(0,1fr);gap:4px}.state-initial-option{padding-left:0}}
+@media(pointer:coarse){#inspector.compact-state input:not([type=radio]),#inspector.compact-state select{min-height:44px}.state-initial-option{min-height:44px}}

@@ -928,7 +928,7 @@ const field = (label, control, block) => h('div', { class: 'field' + (block ? ' 
 function initialStateField(n) {
   if (!['state', 'parallel'].includes(n.kind) || !n.parent) return null;
   const eligible = ['statechart', 'state'].includes(n.parent.kind);
-  return h('div', { class: 'field' }, h('label', { for: 'state-initial' }, 'Initial state'),
+  return h('div', { class: 'state-initial-option' }, h('label', { for: 'state-initial' }, 'Initial in parent'),
     h('input', { id: 'state-initial', type: 'radio', name: 'initial-state', 'data-f': 'is-initial', value: n.id,
       checked: eligible && n.parent.initial === n.id,
       disabled: !eligible || !!run.pid || run.starting,
@@ -947,6 +947,7 @@ function renderInspector() {
   if (!model) return;
   const entry = entryFor(selEl) || model.root;
   box.classList.toggle('compact-transition', entry.kind === 'go');
+  box.classList.toggle('compact-state', entry.kind !== 'go');
   if (entry.kind === 'go') transitionInspector(box, entry);
   else stateInspector(box, ownerNode(entry));
   box.scrollTop = scroll;
@@ -1001,18 +1002,19 @@ function summary(t) {
 
 function stateInspector(box, n) {
   const root = n.kind === 'statechart';
-  box.append(h('div', { class: 'insp-head' }, h('span', { class: 'insp-kind' }, n.kind), h('span', { class: 'insp-title' }, root ? n.id : n.id || '(no id)')));
-  if (!root) box.append(pathOf(n));
+  const path = pathOf(n.parent, true);
+  if (path.childElementCount) box.append(path);
+  const id = input('id', n.id, v => edit(() => {
+    if (root) SXML.setAttr(n.el, 'id', v);
+    else if (v && !/\s/.test(v)) SXML.renameState(model.doc, n.el, v);
+  }), { id: 'state-id', 'aria-label': root ? 'Statechart id' : 'State id', placeholder: root ? 'statechart_actor' : 'State id' });
+  box.append(h('div', { class: 'state-heading field' }, h('label', { for: 'state-id' }, 'Id'), id));
   if (!root) {
     box.append(field('Type', selectBox('kind', [['state', 'state'], ['parallel', 'parallel'], ['final', 'final'], ['history', 'history']], n.kind,
       v => edit(() => { selEl = SXML.retag(model.doc, n.el, v); }))));
     const initial = initialStateField(n);
     if (initial) box.append(initial);
   }
-  box.append(field('Id', input('id', n.id, v => edit(() => {
-    if (root) SXML.setAttr(n.el, 'id', v);
-    else if (v && !/\s/.test(v)) SXML.renameState(model.doc, n.el, v);
-  }), root ? { placeholder: 'statechart_actor' } : {})));
   if (root) box.append(field('Version', input('version', n.el.getAttribute('version'), v => edit(() => SXML.setAttr(n.el, 'version', v)))));
   if (n.kind === 'parallel') {
     const saved = model.layout && model.layout[n.key] && model.layout[n.key]['@regions'];
@@ -1038,7 +1040,7 @@ function stateInspector(box, n) {
   if ((root || n.kind === 'state') && (kids.length || n.initial)) {
     const opts = kids.map(c => [c.id, c.id]);
     if (!kids.some(c => c.id === n.initial)) opts.unshift([n.initial, n.initial ? n.initial + ' (missing)' : '(choose)']);
-    box.append(field('Initial', selectBox('initial', opts, n.initial, v => edit(() => SXML.setAttr(n.el, 'initial', v)))));
+    box.append(field('Starts in', selectBox('initial', opts, n.initial, v => edit(() => SXML.setAttr(n.el, 'initial', v)))));
   }
   if (n.kind === 'history') {
     box.append(field('History', selectBox('htype', [['shallow', 'shallow — immediate children'], ['deep', 'deep — full configuration']], n.htype,
