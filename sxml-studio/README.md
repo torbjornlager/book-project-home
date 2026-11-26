@@ -37,8 +37,9 @@ are remembered across reloads; diagram text has its own **Appearance → Style**
 The toolbar’s **Appearance ▾** button opens a panel with **Layout** and **Style** tabs.
 It opens on Layout each time. **Style** includes state header colours (`#f5f5f5`
 by default) and active state header colours (green by default). Header text uses
-black or white to stay readable. Active state borders follow the selected active
-header colour; the incoming transition uses a stronger shade and a thicker line. **Style** also adjusts transition thickness and colour,
+black or white to stay readable. The selected active colour fills headers and the whole body of atomic states.
+Active borders and incoming transitions share a darker shade of that colour.
+Incoming transitions are twice the normal thickness, with arrowheads 25% larger. **Style** also adjusts transition thickness and colour,
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser

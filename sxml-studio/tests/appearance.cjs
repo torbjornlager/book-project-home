@@ -15,14 +15,14 @@ assert.deepEqual(D.normalizeAppearance({lineWidth: Infinity, labelSize: 1000, li
 assert.equal(D.normalizeAppearance({lineColor: '#AABBCC'}).lineColor, '#aabbcc');
 assert.equal(D.normalizeAppearance({headerColor: '#ABCDEF'}).headerColor, '#abcdef');
 assert.equal(D.normalizeAppearance({activeHeaderColor: 'invalid'}).activeHeaderColor, D.APPEARANCE_DEFAULTS.activeHeaderColor);
-const vars = {}, markers = Array.from({length: 4}, () => ({attrs: {}, setAttribute(k,v) {this.attrs[k] = String(v);}}));
+const vars = {}, markers = ['arrow', 'arrow-sel', 'arrow-fired', 'arrow-mute'].map(id => ({attrs: {id}, getAttribute(k) {return this.attrs[k];}, setAttribute(k,v) {this.attrs[k] = String(v);}}));
 const fake = {svg: {style: {setProperty: (k,v) => vars[k] = String(v), removeProperty: k => delete vars[k]}, querySelectorAll: () => markers}};
 D.Diagram.prototype.applyAppearance.call(fake, {lineWidth: 4, arrowSize: 16, lineColor: '#f012ab', borderWidth: 3.5, labelSize: 18, labelOpacity: 0});
 assert.equal(vars['--edge'], '#f012ab');
 assert.equal(vars['--transition-width'], '4');
 assert.equal(vars['--transition-label-size'], '18px');
 assert.equal(vars['--transition-label-opacity'], '0');
-assert(markers.every(m => m.attrs.markerWidth === '16' && m.attrs.markerHeight === '16'));
+assert(markers.every(m => Number(m.attrs.markerWidth) === (m.attrs.id === 'arrow-fired' ? 20 : 16) && m.attrs.markerWidth === m.attrs.markerHeight));
 D.Diagram.prototype.applyAppearance.call(fake, D.APPEARANCE_DEFAULTS);
 assert(!Object.hasOwn(vars, '--edge'));
 assert.equal(vars['--state-header'], '#f5f5f5');
@@ -30,7 +30,7 @@ assert.equal(vars['--state-header-active'], '#e6f3ee');
 D.Diagram.prototype.applyAppearance.call(fake, {headerColor: '#000000', activeHeaderColor: '#ffffff'});
 assert.equal(vars['--state-header-text'], '#ffffff');
 assert.equal(vars['--state-header-active-text'], '#000000');
-assert(markers.every(m => m.attrs.markerWidth === '8.5'));
+assert(markers.every(m => Number(m.attrs.markerWidth) === (m.attrs.id === 'arrow-fired' ? 10.625 : 8.5)));
 function state(id, kind='state', children=[], initial='') { return {id,kind,key:kind==='statechart'?'#root':id,children,initial,datamodels:[],spawns:[],onentry:[],onexit:[],defers:[],transitions:[]}; }
 const a=state('a'),b=state('b'),chart=state('','statechart',[a,b],'a');
 const edge={key:'a/go0',source:a,to:['b'],on:'long_event(Value)',body:'write(result)'};

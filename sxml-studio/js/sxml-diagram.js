@@ -670,8 +670,9 @@
     if (a.lineColor) style.setProperty('--edge', a.lineColor);
     else style.removeProperty('--edge');
     for (const marker of this.svg.querySelectorAll('marker')) {
-      marker.setAttribute('markerWidth', a.arrowSize);
-      marker.setAttribute('markerHeight', a.arrowSize);
+      const size = a.arrowSize * (marker.getAttribute('id') === 'arrow-fired' ? 1.25 : 1);
+      marker.setAttribute('markerWidth', size);
+      marker.setAttribute('markerHeight', size);
     }
   };
 
