@@ -771,10 +771,10 @@
         if (n.onentry.length) el('title', {}, grp, n.onentry.map(e => 'entry / ' + one(e.body)).join('\n'));
         return;
       }
-      el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
-      {
-        el('path', { class: 'state-header', d: 'M' + b.x + ' ' + (b.y + HEAD_H) + 'V' + (b.y + 13) + 'Q' + b.x + ' ' + b.y + ' ' + (b.x + 13) + ' ' + b.y + 'H' + (b.x + b.w - 13) + 'Q' + (b.x + b.w) + ' ' + b.y + ' ' + (b.x + b.w) + ' ' + (b.y + 13) + 'V' + (b.y + HEAD_H) + 'Z' }, grp);
-      }
+      el('rect', { class: 'state-fill', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
+      el('path', { class: 'state-header', d: 'M' + b.x + ' ' + (b.y + HEAD_H) + 'V' + (b.y + 13) + 'A13 13 0 0 1 ' + (b.x + 13) + ' ' + b.y + 'H' + (b.x + b.w - 13) + 'A13 13 0 0 1 ' + (b.x + b.w) + ' ' + (b.y + 13) + 'V' + (b.y + HEAD_H) + 'Z' }, grp);
+      // Paint the outline above both fills so even thick borders remain intact.
+      el('rect', { class: 'shape', style: 'fill:none', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
       el('text', { class: 'name', x: b.x + b.w / 2, y: b.y + 17.5, 'text-anchor': 'middle' }, grp, n.id || '(no id)');
       el('line', { class: 'rule', x1: b.x, y1: b.y + HEAD_H, x2: b.x + b.w, y2: b.y + HEAD_H }, grp);
       inf.lines.forEach((l, i) => {
