@@ -15,7 +15,7 @@
   const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 5;
   const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 8;
 
-  const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0, headerColor: '#e5e7eb', activeHeaderColor: '#e6f3ee' });
+  const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0, headerColor: '#f5f5f5', activeHeaderColor: '#e6f3ee' });
   function normalizeAppearance(settings = {}) {
     settings = settings || {};
     const number = (key, min, max) => typeof settings[key] === 'number' && Number.isFinite(settings[key]) && settings[key] >= min && settings[key] <= max ? settings[key] : APPEARANCE_DEFAULTS[key];

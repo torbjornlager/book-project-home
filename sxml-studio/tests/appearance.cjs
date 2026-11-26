@@ -25,7 +25,7 @@ assert.equal(vars['--transition-label-opacity'], '0');
 assert(markers.every(m => m.attrs.markerWidth === '16' && m.attrs.markerHeight === '16'));
 D.Diagram.prototype.applyAppearance.call(fake, D.APPEARANCE_DEFAULTS);
 assert(!Object.hasOwn(vars, '--edge'));
-assert.equal(vars['--state-header'], '#e5e7eb');
+assert.equal(vars['--state-header'], '#f5f5f5');
 assert.equal(vars['--state-header-active'], '#e6f3ee');
 D.Diagram.prototype.applyAppearance.call(fake, {headerColor: '#000000', activeHeaderColor: '#ffffff'});
 assert.equal(vars['--state-header-text'], '#ffffff');

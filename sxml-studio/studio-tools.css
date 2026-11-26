@@ -26,7 +26,6 @@
 .test-result{white-space:pre-wrap;font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere}
 .test-result.fail{color:var(--error)}
 svg.chart .state.covered>.shape,svg.chart .transition.covered .edge{stroke:#8a63c7;stroke-width:2.5}
-svg.chart .state.active>.shape{stroke:var(--accent)}
 @media(max-width:700px){.structure-panel{max-height:230px}.diagram-notes{max-width:180px}#debug-tools{max-height:none}}
 #inspector>[data-f=studio-description],#inspector>[data-f^=studio-note]{width:100%;padding:8px;background:var(--editor);color:var(--fg);border:1px solid var(--line);border-radius:4px;margin:5px 0;font:inherit}
 .move-preview,.checkpoint-preview{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
