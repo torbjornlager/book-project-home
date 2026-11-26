@@ -35,7 +35,9 @@ and trace output. **Reset fonts** restores 100% and Medium (the default). These 
 are remembered across reloads; diagram text has its own **Appearance → Style** controls.
 
 The toolbar’s **Appearance ▾** button opens a panel with **Layout** and **Style** tabs.
-It opens on Layout each time. **Style** adjusts transition thickness and colour,
+It opens on Layout each time. **Style** includes state header colours (light gray
+by default) and active state header colours (green by default). Header text uses
+black or white to stay readable. **Style** also adjusts transition thickness and colour,
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser

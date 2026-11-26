@@ -249,6 +249,7 @@ function syncAppearanceControls() {
     $('appearance-' + key).value = a[key];
     $('appearance-' + key + '-value').textContent = key === 'labelOpacity' ? Math.round(a[key] * 100) + '%' : a[key] + ' px';
   }
+  for (const key of ['headerColor', 'activeHeaderColor']) $('appearance-' + key).value = a[key];
   $('appearance-theme-color').checked = !a.lineColor;
   $('appearance-color').disabled = !a.lineColor;
   const themeColor = getComputedStyle(diagram.svg).getPropertyValue('--edge').trim();
@@ -292,6 +293,7 @@ function changeAppearance(settings) {
   } else if (!appearanceTimer) $('appearance-status').textContent = '';
 }
 for (const key of APPEARANCE_RANGES) $('appearance-' + key).oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { [key]: Number(e.target.value) }));
+for (const key of ['headerColor', 'activeHeaderColor']) $('appearance-' + key).oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { [key]: e.target.value }));
 $('appearance-color').oninput = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.value }));
 $('appearance-theme-color').onchange = e => changeAppearance(Object.assign({}, diagram.appearance, { lineColor: e.target.checked ? null : $('appearance-color').value }));
 $('appearance-reset').onclick = () => changeAppearance(SXMLDiagram.APPEARANCE_DEFAULTS);

@@ -15,11 +15,13 @@
   const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 5;
   const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 8;
 
-  const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0 });
+  const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0, headerColor: '#e5e7eb', activeHeaderColor: '#e6f3ee' });
   function normalizeAppearance(settings = {}) {
     settings = settings || {};
     const number = (key, min, max) => typeof settings[key] === 'number' && Number.isFinite(settings[key]) && settings[key] >= min && settings[key] <= max ? settings[key] : APPEARANCE_DEFAULTS[key];
+    const color = key => typeof settings[key] === 'string' && /^#[0-9a-f]{6}$/i.test(settings[key]) ? settings[key].toLowerCase() : APPEARANCE_DEFAULTS[key];
     return {
+      headerColor: color('headerColor'), activeHeaderColor: color('activeHeaderColor'),
       lineWidth: number('lineWidth', 0.5, 4),
       lineColor: typeof settings.lineColor === 'string' && /^#[0-9a-f]{6}$/i.test(settings.lineColor) ? settings.lineColor.toLowerCase() : null,
       arrowSize: number('arrowSize', 5, 16), borderWidth: number('borderWidth', 0.5, 3.5),
@@ -650,6 +652,16 @@
   Diagram.prototype.applyAppearance = function (settings) {
     this.appearance = normalizeAppearance(settings);
     const a = this.appearance, style = this.svg.style;
+    for (const [key, variable] of [['headerColor', '--state-header'], ['activeHeaderColor', '--state-header-active']]) {
+      const color = a[key];
+      style.setProperty(variable, color);
+      const rgb = color.slice(1).match(/../g).map(hex => {
+        const v = parseInt(hex, 16) / 255;
+        return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      const luminance = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+      style.setProperty(variable + '-text', luminance > 0.179 ? '#000000' : '#ffffff');
+    }
     style.setProperty('--transition-width', a.lineWidth);
     style.setProperty('--state-border-width', a.borderWidth);
     style.setProperty('--transition-label-size', a.labelSize + 'px');
@@ -760,7 +772,7 @@
         return;
       }
       el('rect', { class: 'shape', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
-      if (n.compound || n.kind === 'parallel') {
+      {
         el('path', { class: 'state-header', d: 'M' + b.x + ' ' + (b.y + HEAD_H) + 'V' + (b.y + 13) + 'Q' + b.x + ' ' + b.y + ' ' + (b.x + 13) + ' ' + b.y + 'H' + (b.x + b.w - 13) + 'Q' + (b.x + b.w) + ' ' + b.y + ' ' + (b.x + b.w) + ' ' + (b.y + 13) + 'V' + (b.y + HEAD_H) + 'Z' }, grp);
       }
       el('text', { class: 'name', x: b.x + b.w / 2, y: b.y + 17.5, 'text-anchor': 'middle' }, grp, n.id || '(no id)');
