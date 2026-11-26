@@ -54,7 +54,7 @@
     }
     return svg;
   }
-  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
+  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
   const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;

@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const context = {XMLSerializer: class {}}; context.window = context;
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/sxml-model.js'), 'utf8'), context);
+const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
+vm.runInNewContext(app.match(/function setTransitionTrigger\(el, mode, value\) \{[\s\S]*?\n\}/)[0], context);
+const el = {attrs: {to: 'a b', on: 'reset', if: 'ready(X)'}, textContent: 'writeln(done)',
+  setAttribute(k,v) {this.attrs[k]=v;}, removeAttribute(k) {delete this.attrs[k];}};
+context.setTransitionTrigger(el, 'after', '0.5');
+assert.equal(el.attrs.after, '0.5'); assert(!('on' in el.attrs));
+context.setTransitionTrigger(el, 'event', 'start(Job)');
+assert.equal(el.attrs.on, 'start(Job)'); assert(!('after' in el.attrs));
+context.setTransitionTrigger(el, 'always', '');
+assert(!('on' in el.attrs)); assert(!('after' in el.attrs));
+context.setTransitionTrigger(el, 'after', '0');
+assert.equal(el.attrs.after, '0', 'Zero-second transitions must remain timed transitions.');
+assert.equal(el.attrs.to, 'a b', 'Mode changes must preserve multiple targets.');
+assert.equal(el.attrs.if, 'ready(X)', 'Mode changes must preserve guards.');
+assert.equal(el.textContent, 'writeln(done)', 'Mode changes must preserve action bodies.');
+console.log('Checked exclusive trigger modes, fractional/zero delays, and preservation of guards, actions and multiple targets.');

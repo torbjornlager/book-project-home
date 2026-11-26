@@ -946,6 +946,7 @@ function renderInspector() {
   box.replaceChildren();
   if (!model) return;
   const entry = entryFor(selEl) || model.root;
+  box.classList.toggle('compact-transition', entry.kind === 'go');
   if (entry.kind === 'go') transitionInspector(box, entry);
   else stateInspector(box, ownerNode(entry));
   box.scrollTop = scroll;
@@ -955,13 +956,13 @@ function renderInspector() {
   window.SXMLChrome?.inspector(box);
 }
 
-function pathOf(n) {
+function pathOf(n, compact = false) {
   const parts = [];
-  for (let p = n; p; p = p.parent) parts.unshift(p);
+  for (let p = n; p; p = p.parent) if (!compact || p.kind !== 'statechart') parts.unshift(p);
   const out = h('div', { class: 'insp-path' });
   parts.forEach((p, i) => {
     if (i) out.append(' › ');
-    out.append(h('a', { onclick: () => select(p.key, { reveal: true }) }, p.kind === 'statechart' ? 'statechart' : p.id || '(no id)'));
+    out.append(h(compact ? 'button' : 'a', { type: compact ? 'button' : null, onclick: () => select(p.key, { reveal: true }) }, p.kind === 'statechart' ? 'statechart' : p.id || '(no id)'));
   });
   return out;
 }
@@ -1096,31 +1097,89 @@ function stateInspector(box, n) {
   if (!root) box.append(h('div', { class: 'insp-actions', style: 'margin-top:18px' }, h('button', { class: 'danger', onclick: removeSelected }, 'Delete ' + n.kind)));
 }
 
-function transitionInspector(box, t) {
-  const n = t.source;
-  box.append(h('div', { class: 'insp-head' }, h('span', { class: 'insp-kind' }, 'transition'), h('span', { class: 'insp-title' }, (n.id || 'statechart') + (t.to.length ? ' → ' + t.to.join(' ') : ' (stay)'))));
-  box.append(pathOf(n));
-  const ids = h('datalist', { id: 'state-ids' }, model.nodes.filter(x => x.id).map(x => h('option', { value: x.id })));
-  box.append(ids);
-  box.append(field('To', input('to', t.to.join(' '), v => edit(() => SXML.setAttr(t.el, 'to', v.split(/\s+/).filter(Boolean).join(' '))), { list: 'state-ids', placeholder: 'none — stay in ' + (n.id || 'place') })));
-  box.append(field('On', input('on', t.on, v => edit(() => { SXML.setAttr(t.el, 'on', v); if (v) t.el.removeAttribute('after'); }), { placeholder: 'event pattern, e.g. start(Job)' })));
-  box.append(field('If', input('if', t.cond, v => edit(() => SXML.setAttr(t.el, 'if', v)), { placeholder: 'guard goal · default true' })));
-  box.append(field('After', input('after', t.after, v => edit(() => { SXML.setAttr(t.el, 'after', v); if (v) t.el.removeAttribute('on'); }), { placeholder: 'seconds · instead of an event', inputmode: 'decimal' })));
-  box.append(field('Action · Prolog goal run when the transition is taken', area('body', t.body, v => edit(() => SXML.setScript(model.doc, t.el, v)), 3), true));
-  const kind = t.on != null ? 'Triggered by an event that unifies with the pattern.' : t.after != null ? 'Fires ' + t.after + ' s after its source state is entered; cancelled on exit.' : 'Eventless: taken as soon as its guard holds.';
-  box.append(h('p', { class: 'hint' }, kind + (t.to.length ? (t.to.length === 1 && t.to[0] === n.id ? ' Targets its own source, so the state is exited and re-entered.' : '') : ' Without a target the action runs and no state is exited or entered.')));
-  if (n.kind !== 'history') {
-    box.append(h('div', { class: 'section-title' }, 'PRIORITY AMONG TRANSITIONS OF ' + (n.id || 'ROOT').toUpperCase()));
-    n.transitions.forEach((x, i) => {
-      const row = h('div', { class: 'trow' },
-        h('button', { class: 'tsum', onclick: () => select(x.key, { reveal: false }) }, (i + 1) + '. ', summary(x)),
-        h('button', { class: 'mini', title: 'Higher priority', disabled: i === 0, onclick: () => edit(() => SXML.move(x.el, -1)) }, '↑'),
-        h('button', { class: 'mini', title: 'Lower priority', disabled: i === n.transitions.length - 1, onclick: () => edit(() => SXML.move(x.el, 1)) }, '↓'));
-      if (x === t) row.firstChild.style.borderColor = 'var(--blue)';
-      box.append(row);
-    });
+const transitionInspectorState = new WeakMap();
+
+function setTransitionTrigger(el, mode, value) {
+  if (mode === 'event') {
+    SXML.setAttr(el, 'on', value);
+    el.removeAttribute('after');
+  } else if (mode === 'after') {
+    SXML.setAttr(el, 'after', value);
+    el.removeAttribute('on');
+  } else {
+    el.removeAttribute('on');
+    el.removeAttribute('after');
   }
-  box.append(h('div', { class: 'insp-actions' }, h('button', { class: 'danger', onclick: removeSelected }, 'Delete transition')));
+}
+
+function transitionInspector(box, t) {
+  const n = t.source, readOnly = !!run.pid || run.starting;
+  let ui = transitionInspectorState.get(t.el);
+  if (!ui) {
+    ui = {event: t.on || '', after: t.after || '', guard: t.cond != null, actions: !!t.body.trim(), priority: false};
+    transitionInspectorState.set(t.el, ui);
+  }
+  const path = pathOf(n.parent, true);
+  if (path.childElementCount) box.append(path);
+  const ids = h('datalist', {id: 'state-ids'}, model.nodes.filter(x => x.id).map(x => h('option', {value: x.id})));
+  const target = input('to', t.to.join(' '), value => edit(() => SXML.setAttr(t.el, 'to', value.split(/\s+/).filter(Boolean).join(' '))),
+    {id: 'transition-target', list: 'state-ids', placeholder: 'Stay in ' + (n.id || 'place'), 'aria-label': 'Transition target', disabled: readOnly});
+  box.append(ids, h('div', {class: 'transition-heading'}, h('span', {class: 'transition-source'}, n.id || 'statechart'),
+    h('span', {class: 'transition-arrow', 'aria-hidden': 'true'}, '→'), target));
+
+  const mode = t.on != null ? 'event' : t.after != null ? 'after' : 'always';
+  const triggerMode = selectBox('trigger-mode', [['event', 'Event'], ['after', 'After'], ['always', 'Always']], mode, next => edit(() => {
+    const value = next === 'event' ? ui.event || uniqueEvent(model.doc) : next === 'after' ? ui.after || '1' : '';
+    setTransitionTrigger(t.el, next, value);
+  }));
+  triggerMode.id = 'transition-trigger-mode';
+  triggerMode.setAttribute('aria-label', 'Trigger type'); triggerMode.disabled = readOnly;
+  const triggerControls = h('div', {class: 'transition-trigger-controls'}, triggerMode);
+  if (mode !== 'always') {
+    const value = input(mode === 'event' ? 'on' : 'after', mode === 'event' ? t.on : t.after, next => {
+      ui[mode] = next;
+      edit(() => setTransitionTrigger(t.el, mode, next));
+    }, {placeholder: mode === 'event' ? 'Event pattern' : 'Seconds', inputmode: mode === 'after' ? 'decimal' : 'text',
+      'aria-label': mode === 'event' ? 'Event pattern' : 'Delay in seconds', disabled: readOnly});
+    triggerControls.append(value);
+    if (mode === 'after') triggerControls.append(h('span', {class: 'transition-unit'}, 's'));
+  }
+  box.append(h('div', {class: 'field transition-trigger'}, h('label', {for: 'transition-trigger-mode'}, 'Trigger'), triggerControls));
+  if (ui.guard || t.cond != null) {
+    const condition = input('if', t.cond, value => edit(() => SXML.setAttr(t.el, 'if', value)),
+      {id: 'transition-guard', placeholder: 'Prolog goal', 'aria-label': 'Guard condition', disabled: readOnly});
+    box.append(h('div', {class: 'field'}, h('label', {for: 'transition-guard'}, 'Guard'), condition));
+  }
+  const guardVisible = ui.guard || t.cond != null;
+  box.append(h('div', {class: 'transition-option-row'}, h('button', {type: 'button', class: 'transition-optional',
+    disabled: readOnly, 'aria-label': guardVisible ? 'Remove guard' : 'Add guard', 'aria-expanded': String(guardVisible),
+    onclick: () => {
+      if (guardVisible) edit(() => { ui.guard = false; SXML.setAttr(t.el, 'if', ''); });
+      else { ui.guard = true; renderInspector(); $('transition-guard')?.focus(); }
+    }}, guardVisible ? '− Guard' : '+ Guard')));
+
+  const action = area('body', t.body, value => edit(() => SXML.setScript(model.doc, t.el, value)), 2);
+  action.setAttribute('aria-label', 'Transition actions'); action.placeholder = 'Prolog goals'; action.disabled = readOnly;
+  const actions = h('details', {class: 'transition-section', open: ui.actions,
+    ontoggle: event => { ui.actions = event.target.open; }}, h('summary', {}, 'Actions'), action);
+  box.append(actions);
+
+  if (n.kind !== 'history' && n.transitions.length > 1) {
+    const priority = h('details', {class: 'transition-section', open: ui.priority,
+      ontoggle: event => { ui.priority = event.target.open; }},
+      h('summary', {}, 'Priority ' + (t.index + 1) + ' of ' + n.transitions.length));
+    n.transitions.forEach((x, i) => {
+      priority.append(h('div', {class: 'trow'},
+        h('button', {class: 'tsum', 'aria-current': x === t ? 'true' : null, onclick: () => select(x.key, {reveal: false})}, (i + 1) + '.', summary(x)),
+        h('button', {class: 'mini', title: 'Higher priority', 'aria-label': 'Higher priority', disabled: readOnly || i === 0, onclick: () => edit(() => SXML.move(x.el, -1))}, '↑'),
+        h('button', {class: 'mini', title: 'Lower priority', 'aria-label': 'Lower priority', disabled: readOnly || i === n.transitions.length - 1, onclick: () => edit(() => SXML.move(x.el, 1))}, '↓')));
+    });
+    box.append(priority);
+  }
+  const explanation = 'Earlier matching handlers in a state have priority; child handlers precede ancestor handlers.';
+  box.append(h('div', {class: 'transition-footer'},
+    h('span', {title: explanation}, n.transitions.length > 1 && n.kind !== 'history' ? 'Transition' : 'Transition · Priority ' + (t.index + 1) + ' of ' + n.transitions.length),
+    h('button', {type: 'button', class: 'transition-delete', 'data-icon': 'trash', 'aria-label': 'Delete transition', disabled: readOnly, onclick: removeSelected}, 'Delete')));
 }
 
 /* ---------- live run ---------- */
@@ -1142,6 +1201,8 @@ function logRow(cls, parts) {
 const bold = t => { const b = document.createElement('b'); b.textContent = t; return b; };
 
 function runControls() {
+  const triggerMode = $('transition-trigger-mode');
+  if (triggerMode && triggerMode.disabled !== (!!run.pid || run.starting)) renderInspector();
   const badge = $('run-badge');
   badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
   badge.classList.toggle('live', !!run.pid && !run.done);

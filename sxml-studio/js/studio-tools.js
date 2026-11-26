@@ -51,9 +51,6 @@ window.studioTools = (() => {
   function inspector(entry) {
     const box = $('inspector');
     if (entry.kind !== 'statechart' && (entry.compound || entry.kind === 'parallel')) box.append(button(diagram.collapsed.has(entry.key) ? 'Expand children' : 'Collapse children', () => toggle(entry)));
-    if (entry.kind === 'go') {
-      box.append(h('div', {class: 'section-title'}, 'PRIORITY'), hint('Source order ' + (entry.index + 1) + ' of ' + entry.source.transitions.length + '. Earlier matching handlers in this state have priority. Child handlers are considered before ancestor handlers.'));
-    }
     if (SXML.isState(entry)) structuralEditing(box, entry);
   }
   function notes() {

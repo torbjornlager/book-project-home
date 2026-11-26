@@ -176,6 +176,12 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 The workspace opens in **Diagram** view. The canvas toolbar uses SVG icons with
 tooltips and accessible names; **Split** and **Source** remain available beside
 the filename. **Files** and **Structure** are separate tabs in the left panel.
+The transition Inspector puts the target beside the source state and uses one
+trigger selector: Event, After (seconds), or Always. Guard and Actions are
+optional; existing guards and action bodies stay visible. Multiple transition
+targets remain editable as space-separated IDs. Priority ordering is available
+in an expandable section.
+
 The Inspector groups data, actions and advanced tools into
 expandable sections. The right panel contains Inspector, Run and Settings.
 In Run, event inputs come first, followed by the timeline. Raw traces and query
