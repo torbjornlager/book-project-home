@@ -32,12 +32,6 @@
     if (!comment) return '';
     try { const value = JSON.parse(comment.data.replace(/^\s*<description>/, '')); return typeof value === 'string' ? value : ''; } catch (_) { return ''; }
   }
-  function setDescription(doc, el, text) {
-    const old = Array.from(el.childNodes).find(n => n.nodeType === 8 && /^\s*<description>/.test(n.data));
-    if (!text) { if (old) old.remove(); return; }
-    const body = ' <description> ' + JSON.stringify(text).replace(/-/g, '\\u002d').replace(/</g, '\\u003c') + ' ';
-    if (old) old.data = body; else el.insertBefore(doc.createComment(body), el.firstChild);
-  }
   function duplicate(doc, el) {
     const copy = el.cloneNode(true), used = new Set(Array.from(doc.querySelectorAll('[id]')).map(e => e.getAttribute('id'))), ids = new Map();
     for (const state of [copy, ...copy.querySelectorAll('state,parallel,final,history')]) {
@@ -70,5 +64,5 @@
       SXML.setLayout(doc, layout);
     }
   }
-  global.SXMLStudio = {metadata, setMetadata, candidates, description, setDescription, duplicate, reparent};
+  global.SXMLStudio = {metadata, setMetadata, candidates, description, duplicate, reparent};
 })(typeof window === 'undefined' ? globalThis : window);

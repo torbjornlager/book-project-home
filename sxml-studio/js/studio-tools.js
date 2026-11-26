@@ -1,4 +1,4 @@
-/* Navigation, observed execution history, event palette and checkpoints. */
+/* Navigation, observed execution history and event palette. */
 'use strict';
 window.studioTools = (() => {
   let file = null, history = [], cursor = -1, paused = false, speed = 260;
@@ -7,7 +7,6 @@ window.studioTools = (() => {
   const button = (text, action, attrs = {}) => h('button', Object.assign({type: 'button', onclick: action}, attrs), text);
   const hint = text => h('p', {class: 'hint'}, text);
   function data() { return SXMLStudio.metadata(model.doc); }
-  function changeMetadata(fn) { edit(() => { const value = data(); fn(value); SXMLStudio.setMetadata(model.doc, value); }); }
   function refreshLayout() { return diagram.setModel(model, {preserveViewport: true}); }
   function navigate(entry) {
     const owner = ownerNode(entry);
@@ -50,21 +49,8 @@ window.studioTools = (() => {
     refreshLayout(); tree(); renderInspector();
   }
   function inspector(entry) {
-    const box = $('inspector'), meta = data();
-    const description = area('studio-description', SXMLStudio.description(entry.el), value => edit(() => SXMLStudio.setDescription(model.doc, entry.el, value)), 2);
-    description.setAttribute('aria-label', 'Description for ' + (entry.id || entry.key));
-    box.append(h('div', {class: 'section-title'}, 'DESCRIPTION'), description);
+    const box = $('inspector');
     if (entry.kind !== 'statechart' && (entry.compound || entry.kind === 'parallel')) box.append(button(diagram.collapsed.has(entry.key) ? 'Expand children' : 'Collapse children', () => toggle(entry)));
-    if (entry === model.root) {
-      box.append(h('div', {class: 'section-title'}, 'DIAGRAM NOTES'));
-      meta.notes.forEach((note, i) => {
-        const control = area('studio-note-' + i, note, value => changeMetadata(m => { m.notes[i] = value; }), 2);
-        control.setAttribute('aria-label', 'Diagram note ' + (i + 1));
-        box.append(control, button('Remove note', () => changeMetadata(m => m.notes.splice(i, 1))));
-      });
-      box.append(button('Add note', () => changeMetadata(m => m.notes.push('New note'))));
-      checkpoints(box);
-    }
     if (entry.kind === 'go') {
       box.append(h('div', {class: 'section-title'}, 'PRIORITY'), hint('Source order ' + (entry.index + 1) + ' of ' + entry.source.transitions.length + '. Earlier matching handlers in this state have priority. Child handlers are considered before ancestor handlers.'));
     }
@@ -116,39 +102,6 @@ window.studioTools = (() => {
     box.append(h('details', {class: 'tools-card'}, h('summary', {}, 'Move to another parent'), field('Parent', control), preview,
       button('Apply move', () => edit(() => { SXMLStudio.reparent(model.doc, entry.el, destination.el); selEl = entry.el; }), {disabled: !!run.pid})));
   }
-  const CHECKPOINTS = 'trinity-sxml-studio.checkpoints.v1.';
-  function checkpointKey() {
-    const program = programs[current];
-    if (!program.workspaceId) { program.workspaceId = crypto.randomUUID(); saveExplorer(); }
-    return CHECKPOINTS + program.workspaceId;
-  }
-  function savedCheckpoints() {
-    try { const values = JSON.parse(localStorage.getItem(checkpointKey()) || '[]'); return Array.isArray(values) ? values.filter(v => typeof v.name === 'string' && typeof v.source === 'string') : []; }
-    catch (_) { return []; }
-  }
-  function checkpoints(box) {
-    const saved = savedCheckpoints(), result = h('pre', {class: 'checkpoint-preview'}), name = input('checkpoint-name', '', () => {}, {placeholder: 'Checkpoint name', 'aria-label': 'Checkpoint name'});
-    box.append(h('div', {class: 'section-title'}, 'CHECKPOINTS'), hint('Versions are stored in this browser. Export them to keep a portable copy.'), name,
-      h('div', {class: 'tools-actions'}, button('Save checkpoint', () => {
-        try { const values = savedCheckpoints(); values.unshift({name: name.value.trim() || 'Checkpoint ' + (values.length + 1), date: new Date().toISOString(), source: editor.getValue()}); localStorage.setItem(checkpointKey(), JSON.stringify(values.slice(0, 30))); renderInspector(); }
-        catch (_) { status('Could not save checkpoint: browser storage is full or unavailable'); }
-      }), button('Export checkpoints', () => download('sxml-checkpoints.json', JSON.stringify(saved, null, 2), 'application/json'))),
-      h('label', {}, 'Import checkpoints ', h('input', {type: 'file', accept: '.json,application/json', onchange: async e => {
-        try { const values = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(values) || values.some(v => !v || typeof v.name !== 'string' || typeof v.source !== 'string')) throw new Error('Invalid checkpoint file'); localStorage.setItem(checkpointKey(), JSON.stringify([...values, ...saved].slice(0, 30))); renderInspector(); }
-        catch (error) { status(error.message); }
-      }})));
-    for (const item of saved) box.append(h('div', {class: 'tools-card'}, h('strong', {}, item.name), hint(item.date || ''), h('div', {class: 'tools-actions'},
-      button('Preview / compare', () => {
-        const currentLines = editor.getValue().split('\n'), old = item.source.split('\n');
-        let prefix = 0, end = 0;
-        while (prefix < Math.min(old.length, currentLines.length) && old[prefix] === currentLines[prefix]) prefix++;
-        while (end < Math.min(old.length, currentLines.length) - prefix && old[old.length - 1 - end] === currentLines[currentLines.length - 1 - end]) end++;
-        result.textContent = prefix === old.length && prefix === currentLines.length ? 'Source is identical.' : 'Checkpoint compared with current source at line ' + (prefix + 1) + ':\n' + old.slice(prefix, old.length - end).map(l => '− ' + l).join('\n') + '\n' + currentLines.slice(prefix, currentLines.length - end).map(l => '+ ' + l).join('\n');
-      }), button('Restore', () => { if (run.node) stopRun('Stopped to restore checkpoint'); editor.setValue(item.source); clearTimeout(parseTimer); reparse(); }, {}),
-      button('Open copy', () => { programs.push({name: item.name + '.xml', source: item.source}); renderFiles(); selectFile(programs.length - 1); }, {}))));
-    box.append(result);
-  }
-
   const actorKey = pid => String(pid || '').split('@')[0].replace(/[\s'"()]/g, '');
   function registerActors() {
     if (run.pid) actors.set(actorKey(run.pid), null);

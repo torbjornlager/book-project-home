@@ -176,7 +176,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 The workspace opens in **Diagram** view. The canvas toolbar uses SVG icons with
 tooltips and accessible names; **Split** and **Source** remain available beside
 the filename. **Files** and **Structure** are separate tabs in the left panel.
-The Inspector groups data, actions, descriptions and advanced tools into
+The Inspector groups data, actions and advanced tools into
 expandable sections. The right panel contains Inspector, Run and Settings.
 In Run, event inputs come first, followed by the timeline. Raw traces and query
 shortcuts are under **Trace & queries**, which opens automatically on errors.
@@ -197,11 +197,9 @@ and never changes the XML or execution semantics.
 Transition labels show their source-order number when a state has multiple
 handlers. The Inspector explains priority; identical event patterns following
 an unconditional handler receive a warning. Arbitrary Prolog pattern overlap
-is not inferred. Each state or transition can have a description, stored as an
-XML comment inside that element, so it follows renaming, movement and copying.
-Chart-level plain-text notes appear at the lower left of the canvas and are
-stored in a trailing `<studio>` comment. They are currently fixed-position
-overlays rather than draggable diagram nodes.
+is not inferred. Existing descriptions and diagram notes embedded in XML remain
+readable in diagram tooltips and overlays, but the Inspector no longer provides
+Description, Notes or Checkpoint controls.
 
 **Duplicate subtree** creates fresh IDs and rewrites internal `initial` and
 `to` references; references outside the copied subtree stay external. Prolog
@@ -210,11 +208,6 @@ code is copied verbatim: state IDs embedded in goals are not rewritten.
 plus validation results, before Apply move. Existing target IDs stay the same;
 ancestor event handlers and entry/exit behavior may change. Moving a subtree
 clears positional layout hints while retaining region arrangements.
-
-The root Inspector provides up to 30 named **Checkpoints** per file, including
-source comparison, restore, open as a copy, and JSON export/import. Restoring
-is undoable. Checkpoints live in browser storage and retain their identity
-when a file is renamed; use export to keep an independent copy.
 
 The **Run** tab includes an execution timeline with pause, previous/next,
 speed, and follow-live controls. Selecting an observation displays its recorded
@@ -243,7 +236,7 @@ swipl -q -g "load_files(['tests/live-datamodel.pl','tests/studio-runtime.pl']),r
 - `js/sxml-diagram.js` layout (ELK layered, hierarchical) and SVG drawing
 - `js/app.js`          explorer, editor, inspector, run panel
 - `js/studio-model.js` metadata and subtree edits
-- `js/studio-tools.js` structure tree, timeline, event palette, checkpoints
+- `js/studio-tools.js` structure tree, timeline and event palette
 - `runtime/`           swi-wasm-node at 82aac08 (worker, host, statechart
                        interpreter, SXML schema) with swipl-wasm 8.2.5.
                        `runtime/wasm/shared_db.pl` holds the facts that

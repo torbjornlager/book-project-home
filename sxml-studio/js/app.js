@@ -1094,7 +1094,6 @@ function stateInspector(box, n) {
   }
 
   if (!root) box.append(h('div', { class: 'insp-actions', style: 'margin-top:18px' }, h('button', { class: 'danger', onclick: removeSelected }, 'Delete ' + n.kind)));
-  if (root && model.description) box.append(h('div', { class: 'section-title' }, 'ABOUT THIS CHART'), h('p', { class: 'about' }, model.description.replace(/\n(?!\n)/g, ' ').replace(/\n /g, '\n\n')));
 }
 
 function transitionInspector(box, t) {

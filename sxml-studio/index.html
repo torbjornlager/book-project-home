@@ -15,11 +15,11 @@
 <script defer src="vendor/elk.bundled.js"></script>
 <script defer src="js/sxml-model.js?v=20261126-layout-controls"></script>
 <script defer src="js/sxml-diagram.js?v=20261126-remove-scenarios"></script>
-<script defer src="js/studio-model.js?v=20261126-remove-scenarios"></script>
-<script defer src="js/studio-chrome.js?v=20261126-remove-scenarios"></script>
-<script defer src="js/app.js?v=20261126-remove-scenarios"></script>
-<script defer src="js/studio-tools.js?v=20261126-remove-scenarios"></script>
-<link rel="stylesheet" href="studio-tools.css?v=20261126-remove-scenarios">
+<script defer src="js/studio-model.js?v=20261126-inspector-cog"></script>
+<script defer src="js/studio-chrome.js?v=20261126-inspector-cog"></script>
+<script defer src="js/app.js?v=20261126-inspector-cog"></script>
+<script defer src="js/studio-tools.js?v=20261126-inspector-cog"></script>
+<link rel="stylesheet" href="studio-tools.css?v=20261126-inspector-cog">
 <link rel="stylesheet" href="studio-chrome.css?v=20261126-settings-icon">
 </head>
 <body class="light" data-view="diagram" data-layout="horizontal">
@@ -43,7 +43,7 @@
 </section>
 <div class="divider" id="right-divider" role="separator" aria-label="Resize side panel" aria-orientation="vertical" aria-valuemin="280" aria-valuemax="640" tabindex="0"></div>
 <section class="query-pane" aria-label="Inspector, run and settings">
-<div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-settings" aria-label="Settings" title="Settings" aria-selected="false" aria-controls="settings" tabindex="-1"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 3-.6 2.3-1.4.8-2.3-.6-2.5 4.3 1.7 1.7v1.6l-1.7 1.7 2.5 4.3 2.3-.6 1.4.8.6 2.4h5l.6-2.4 1.4-.8 2.3.6 2.5-4.3-1.7-1.7v-1.6l1.7-1.7-2.5-4.3-2.3.6-1.4-.8L14.5 3z"/><circle cx="12" cy="12.3" r="3"/></svg></button></div>
+<div class="result-tabs side-tabs" role="tablist" aria-label="Side panel"><button role="tab" id="tab-inspector" aria-selected="true" aria-controls="inspector">Inspector</button><button role="tab" id="tab-run" aria-selected="false" aria-controls="run" tabindex="-1">Run <span id="run-badge">idle</span></button><button role="tab" id="tab-settings" aria-label="Settings" title="Settings" aria-selected="false" aria-controls="settings" tabindex="-1"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.391 8.939 L19.762 10.065 L22.045 10.229 L22.045 13.771 L19.762 13.935 L19.391 15.061 L18.857 16.120 L20.355 17.850 L17.850 20.355 L16.120 18.857 L15.061 19.391 L13.935 19.762 L13.771 22.045 L10.229 22.045 L10.065 19.762 L8.939 19.391 L7.880 18.857 L6.150 20.355 L3.645 17.850 L5.143 16.120 L4.609 15.061 L4.238 13.935 L1.955 13.771 L1.955 10.229 L4.238 10.065 L4.609 8.939 L5.143 7.880 L3.645 6.150 L6.150 3.645 L7.880 5.143 L8.939 4.609 L10.065 4.238 L10.229 1.955 L13.771 1.955 L13.935 4.238 L15.061 4.609 L16.120 5.143 L17.850 3.645 L20.355 6.150 L18.857 7.880 Z M15.4 12a3.4 3.4 0 1 0-6.8 0a3.4 3.4 0 1 0 6.8 0"/></svg></button></div>
 <div id="inspector" class="side-view" role="tabpanel" aria-labelledby="tab-inspector"></div>
 <div id="run" class="side-view run-view" role="tabpanel" aria-labelledby="tab-run" hidden>
 <div id="debug-tools"></div>

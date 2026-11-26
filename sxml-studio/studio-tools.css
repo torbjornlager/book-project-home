@@ -22,7 +22,6 @@
 .event-row input{min-width:0;flex:1}.event-row button{padding:6px 8px}
 .event-owner{font-size:11px;color:var(--muted)}
 @media(max-width:700px){.structure-panel{max-height:230px}.diagram-notes{max-width:180px}#debug-tools{max-height:none}}
-#inspector>[data-f=studio-description],#inspector>[data-f^=studio-note]{width:100%;padding:8px;background:var(--editor);color:var(--fg);border:1px solid var(--line);border-radius:4px;margin:5px 0;font:inherit}
-.move-preview,.checkpoint-preview{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
+.move-preview{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
 
 .structure-panel summary,#debug-tools{font-size:calc(13px * var(--ui-font-scale,1))}

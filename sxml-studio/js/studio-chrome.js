@@ -30,7 +30,7 @@
     edit: 'M4 16v4h4L20 8l-4-4z M13 7l4 4',
     code: 'M8 6l-6 6 6 6 M16 6l6 6-6 6 M14 3l-4 18',
     split: 'M3 4h18v16H3z M12 4v16', diagram: 'M3 4h7v6H3z M14 14h7v6h-7z M10 7h7v7',
-    settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M9 3l-1 3-3 1-2 5 2 5 3 1 1 3h6l1-3 3-1 2-5-2-5-3-1-1-3z',
+    settings: 'M19.391 8.939 L19.762 10.065 L22.045 10.229 L22.045 13.771 L19.762 13.935 L19.391 15.061 L18.857 16.120 L20.355 17.850 L17.850 20.355 L16.120 18.857 L15.061 19.391 L13.935 19.762 L13.771 22.045 L10.229 22.045 L10.065 19.762 L8.939 19.391 L7.880 18.857 L6.150 20.355 L3.645 17.850 L5.143 16.120 L4.609 15.061 L4.238 13.935 L1.955 13.771 L1.955 10.229 L4.238 10.065 L4.609 8.939 L5.143 7.880 L3.645 6.150 L6.150 3.645 L7.880 5.143 L8.939 4.609 L10.065 4.238 L10.229 1.955 L13.771 1.955 L13.935 4.238 L15.061 4.609 L16.120 5.143 L17.850 3.645 L20.355 6.150 L18.857 7.880 Z M15.4 12a3.4 3.4 0 1 0-6.8 0a3.4 3.4 0 1 0 6.8 0',
     upload: 'M12 16V3 M7 8l5-5 5 5 M4 17v4h16v-4',
     clock: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M12 7v5l3 2',
     move: 'M12 2v20 M2 12h20 M8 6l4-4 4 4 M8 18l4 4 4-4 M6 8l-4 4 4 4 M18 8l4 4-4 4',
@@ -55,7 +55,7 @@
     return svg;
   }
   const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
-  const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Add note':'plus','Remove note':'trash','Save checkpoint':'plus','Export checkpoints':'download','Preview / compare':'code','Restore':'restart','Open copy':'copy','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
+  const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;
     for (const b of root.querySelectorAll('button')) {
@@ -87,7 +87,7 @@
   function inspector(root) {
     if (!root || root.querySelector('.ui-section')) { decorate(root); return; }
     const headings = [...root.querySelectorAll(':scope > .section-title')];
-    const names = {'DATAMODEL · PROLOG SOURCE':['Data','code'],'ENTRY ACTIONS':['Entry actions','play'],'EXIT ACTIONS':['Exit actions','stop'],'DEFERRED EVENTS':['Deferred events','clock'],'SPAWNED ACTORS':['Actors','structure'],'ABOUT THIS CHART':['About this chart','info'],'DESCRIPTION':['Description','edit'],'DIAGRAM NOTES':['Notes','file'],'CHECKPOINTS':['Checkpoints','clock'],'SUBCHART':['Subchart tools','copy']};
+    const names = {'DATAMODEL · PROLOG SOURCE':['Data','code'],'ENTRY ACTIONS':['Entry actions','play'],'EXIT ACTIONS':['Exit actions','stop'],'DEFERRED EVENTS':['Deferred events','clock'],'SPAWNED ACTORS':['Actors','structure'],'SUBCHART':['Subchart tools','copy']};
     for (const heading of headings) {
       const key=[...heading.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
       if (!names[key]) continue;
@@ -98,7 +98,7 @@
       for(const b of [...heading.querySelectorAll('button')]) summary.append(b);
       details.append(summary); heading.before(details); heading.remove();
       const content=document.createElement('div'); content.className='ui-section-body'; content.append(...elements); details.append(content);
-      details.open=sectionState.has(key)?sectionState.get(key):meaningful && !['SUBCHART','CHECKPOINTS'].includes(key);
+      details.open=sectionState.has(key)?sectionState.get(key):meaningful && key !== 'SUBCHART';
       if (content.querySelector('.focus')) details.open=true;
       summary.addEventListener('click',e=>{if(!e.target.closest('button')) setTimeout(()=>sectionState.set(key,details.open),0);});
     }
