@@ -241,8 +241,20 @@ window.addEventListener('resize', positionLayoutPopover);
 
 const APPEARANCE_STORAGE = 'trinity-sxml-studio.appearance.v1';
 const APPEARANCE_RANGES = ['lineWidth', 'arrowSize', 'borderWidth', 'labelSize', 'labelOpacity'];
-try { diagram.applyAppearance(JSON.parse(localStorage.getItem(APPEARANCE_STORAGE))); }
-catch (e) { console.warn('Could not restore diagram appearance:', e); }
+function restoreAppearance() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(APPEARANCE_STORAGE));
+    const migrate = saved && !saved.headerColorDefaultVersion &&
+      typeof saved.headerColor === 'string' && saved.headerColor.toLowerCase() === '#e5e7eb';
+    if (migrate) saved.headerColor = '#f5f5f5';
+    diagram.applyAppearance(saved);
+    if (migrate) {
+      try { localStorage.setItem(APPEARANCE_STORAGE, JSON.stringify(Object.assign({}, saved, { headerColorDefaultVersion: 2 }))); }
+      catch (e) { console.warn('Could not save migrated appearance:', e); }
+    }
+  } catch (e) { console.warn('Could not restore diagram appearance:', e); }
+}
+restoreAppearance();
 function syncAppearanceControls() {
   const a = diagram.appearance;
   for (const key of APPEARANCE_RANGES) {
@@ -256,7 +268,7 @@ function syncAppearanceControls() {
   $('appearance-color').value = a.lineColor || (/^#[0-9a-f]{6}$/i.test(themeColor) ? themeColor : '#9fb1b4');
 }
 function saveAppearance() {
-  try { localStorage.setItem(APPEARANCE_STORAGE, JSON.stringify(diagram.appearance)); }
+  try { localStorage.setItem(APPEARANCE_STORAGE, JSON.stringify(Object.assign({}, diagram.appearance, { headerColorDefaultVersion: 2 }))); }
   catch (e) { console.warn('Could not save diagram appearance:', e); }
 }
 let appearanceTimer = null, appearanceGeneration = 0;
