@@ -51,6 +51,9 @@ transparent to solid, including highlighted labels; the text itself stays opaque
 Active compound and parallel states highlight their headers with the same green
 background as active atomic states, while keeping their child areas neutral.
 
+Toolbar blocks have 2.5 mm gaps and wrap onto left-aligned rows when space is
+limited, keeping every block visible.
+
 The canvas toolbar has **Auto layout** (wand icon) and **Horizontal spacing** /
 **Vertical spacing** buttons (arrows between bars); each spacing button opens a
 slider (0–100%, default 50%) with **Reset to 50%**. The **Direction** button
