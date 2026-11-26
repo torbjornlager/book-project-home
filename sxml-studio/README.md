@@ -35,7 +35,7 @@ and trace output. **Reset fonts** restores 100% and Medium (the default). These 
 are remembered across reloads; diagram text has its own **Appearance → Style** controls.
 
 The toolbar’s **Appearance ▾** button opens a panel with **Layout** and **Style** tabs.
-It opens on Layout each time, with **Direction** at the top. **Style** adjusts transition thickness and colour,
+It opens on Layout each time. **Style** adjusts transition thickness and colour,
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser
@@ -49,7 +49,9 @@ background as active atomic states, while keeping their child areas neutral.
 
 The canvas toolbar has **Auto layout** (wand icon) and **Horizontal spacing** /
 **Vertical spacing** buttons (arrows between bars); each spacing button opens a
-slider (0–100%, default 50%) with **Reset to 50%**. Spacing tunes the automatic
+slider (0–100%, default 50%) with **Reset to 50%**. The **Direction** button
+immediately after vertical spacing switches between horizontal and vertical flow;
+its icon shows the direction to switch to. Spacing tunes the automatic
 layout, so it is disabled while positions are saved: use Auto layout first.
 **Reset** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable

@@ -39,6 +39,8 @@
     menu: 'M4 6h16 M4 12h16 M4 18h16',
     splitrows: 'M3 4h18v16H3z M3 12h18',
     wand: 'M4 20L15 9 M13 7l4 4 M17 3v3 M15.5 4.5h3 M20 9v3 M18.5 10.5h3 M9 3v2 M8 4h2',
+    'flow-right': 'M3 5h5v5H3z M16 14h5v5h-5z M5.5 10v6.5H13 M10 13.5l3 3-3 3',
+    'flow-down': 'M4 3h5v5H4z M15 16h5v5h-5z M9 5.5h8.5V13 M14.5 10l3 3 3-3',
     hspace: 'M4 4v16 M20 4v16 M8 12h8 M10.5 9.5L8 12l2.5 2.5 M13.5 9.5L16 12l-2.5 2.5',
     vspace: 'M4 4h16 M4 20h16 M12 8v8 M9.5 10.5L12 8l2.5 2.5 M9.5 13.5L12 16l2.5-2.5'
   };

@@ -399,8 +399,12 @@ function adopt(doc, text, opts) {
   focusItem = entry.owner && entry.kind !== 'go' ? entry.key : null;
   diagram.direction = model.layout && model.layout['@direction'] === 'DOWN' ? 'DOWN' : 'RIGHT';
   syncSplitOrientation();
-  $('direction').textContent = diagram.direction === 'RIGHT' ? 'Direction ↓' : 'Direction →';
-  $('direction').title = diagram.direction === 'RIGHT' ? 'Arrange the diagram vertically' : 'Arrange the diagram horizontally';
+  const directionButton = $('direction');
+  directionButton.dataset.icon = diagram.direction === 'RIGHT' ? 'flow-down' : 'flow-right';
+  directionButton.title = diagram.direction === 'RIGHT' ? 'Arrange the diagram vertically' : 'Arrange the diagram horizontally';
+  directionButton.setAttribute('aria-label', directionButton.title);
+  directionButton.dataset.originalAria = directionButton.title;
+  if (window.SXMLChrome) SXMLChrome.decorate(directionButton.parentNode);
   showProblems(model.problems);
   diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
   if (programs[current].parent) writeBack(programs[current], text);
