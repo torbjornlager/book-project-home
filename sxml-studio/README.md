@@ -171,14 +171,13 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   buttons; `$Pid` stands for the running chart. Clicking a transition while
   the chart runs sends its event.
 
-## Navigation, debugging and scenarios
+## Navigation and debugging
 
 The workspace opens in **Diagram** view. The canvas toolbar uses SVG icons with
 tooltips and accessible names; **Split** and **Source** remain available beside
 the filename. **Files** and **Structure** are separate tabs in the left panel.
 The Inspector groups data, actions, descriptions and advanced tools into
-expandable sections. Tests lead with saved scenarios and results; JSON editing,
-path suggestions and import/export are available in expandable sections.
+expandable sections. The right panel contains Inspector, Run and Settings.
 In Run, event inputs come first, followed by the timeline. Raw traces and query
 shortcuts are under **Trace & queries**, which opens automatically on errors.
 
@@ -232,42 +231,6 @@ that a guard will succeed. Guard outcomes come from actual runtime evaluation;
 inspection never evaluates them again. Trace records identify the compiled
 handler and originating actor, including inline charts with shared state IDs.
 
-The **Tests** tab records events sent through the palette or diagram and lets
-you review and save the resulting scenario. Recording starts a fresh chart;
-finish recording to edit its name and expectations. A scenario is JSON:
-
-```json
-{
-  "name": "GCD",
-  "steps": [
-    {
-      "event": "integers([25,10,15,30])",
-      "states": ["stop"],
-      "facts": [{"owner": "#root", "clause": "int(5)."}]
-    }
-  ]
-}
-```
-
-State assertions require the listed states to be active after the event. Fact
-assertions compare stored clause text exactly, without executing rules; the
-owner is `#root` or a state ID. Snapshots retain the existing 40-clause limit.
-Each replay starts a fresh browser engine and waits for the chart to acknowledge
-completion of each submitted event before checking assertions. A failed assertion
-stops that scenario and reports the step. Run all continues with the next saved
-scenario. Cancel tests disposes the engine. Scenarios (up to 200 steps each)
-travel with the XML and can also be exported/imported as JSON.
-
-Coverage marks observed states and transitions in purple. This is observed
-execution coverage, not proof that every behavior has been tested. Candidate
-path generation offers up to 40 structural paths of at most six events, starting
-at the root initial state. It does not solve Prolog guards, expand parallel or
-nested configurations, or synthesize delayed/eventless behavior. Substitute
-concrete event values and add assertions before using suggestions as tests.
-Timers use real time, and asynchronous actors are not made deterministic by
-scenario replay. Recording captures palette/diagram sends, not arbitrary shell
-queries or independently arriving actor messages.
-
 For regression checks, run each `tests/*.cjs` file with Node, and:
 
 ```sh
@@ -279,8 +242,8 @@ swipl -q -g "load_files(['tests/live-datamodel.pl','tests/studio-runtime.pl']),r
 - `js/sxml-model.js`   parse, validate, edit, serialise
 - `js/sxml-diagram.js` layout (ELK layered, hierarchical) and SVG drawing
 - `js/app.js`          explorer, editor, inspector, run panel
-- `js/studio-model.js` metadata, subtree edits, scenarios and structural paths
-- `js/studio-tools.js` structure tree, timeline, event palette, tests, checkpoints
+- `js/studio-model.js` metadata and subtree edits
+- `js/studio-tools.js` structure tree, timeline, event palette, checkpoints
 - `runtime/`           swi-wasm-node at 82aac08 (worker, host, statechart
                        interpreter, SXML schema) with swipl-wasm 8.2.5.
                        `runtime/wasm/shared_db.pl` holds the facts that

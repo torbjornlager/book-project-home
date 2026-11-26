@@ -1,11 +1,9 @@
-/* Navigation, observed execution history and executable scenario tooling. */
+/* Navigation, observed execution history, event palette and checkpoints. */
 'use strict';
 window.studioTools = (() => {
   let file = null, history = [], cursor = -1, paused = false, speed = 260;
-  let recording = null, testing = false, replayToken = 0, lastSource = null;
+  let sendGeneration = 0, lastSource = null, timelineOpen = true;
   const drafts = new Map(), actors = new Map();
-  let coverage = false;
-  const visited = new Set(), fired = new Set();
   const button = (text, action, attrs = {}) => h('button', Object.assign({type: 'button', onclick: action}, attrs), text);
   const hint = text => h('p', {class: 'hint'}, text);
   function data() { return SXMLStudio.metadata(model.doc); }
@@ -82,12 +80,10 @@ window.studioTools = (() => {
     if (file !== programs[current]) { fileChanged(); file = programs[current]; }
     const source = editor.getValue();
     if (lastSource != null && source !== lastSource) {
-      history = []; cursor = -1; visited.clear(); fired.clear(); recording = null;
-      if (testing) { replayToken++; testing = false; speed = 260; }
+      history = []; cursor = -1; sendGeneration++;
     }
     lastSource = source;
-    diagram.coveredStates = coverage ? visited : new Set(); diagram.coveredTransitions = coverage ? fired : new Set();
-    tree(); notes(); renderInspector(); tests();
+    tree(); notes(); renderInspector();
   }
   function selection(entry) {
     let changed = false;
@@ -96,11 +92,9 @@ window.studioTools = (() => {
     tree();
   }
   function fileChanged() {
-    replayToken++; testing = false; recording = null;
+    sendGeneration++;
     file = programs[current]; lastSource = null; history = []; cursor = -1; paused = false;
-    scenarioDraft = ''; resultText = ''; resultFailed = false;
-    diagram.collapsed.clear(); visited.clear(); fired.clear(); actors.clear(); drafts.clear();
-    diagram.coveredStates = new Set(); diagram.coveredTransitions = new Set();
+    diagram.collapsed.clear(); actors.clear(); drafts.clear();
   }
 
   function structuralEditing(box, entry) {
@@ -150,8 +144,8 @@ window.studioTools = (() => {
         while (prefix < Math.min(old.length, currentLines.length) && old[prefix] === currentLines[prefix]) prefix++;
         while (end < Math.min(old.length, currentLines.length) - prefix && old[old.length - 1 - end] === currentLines[currentLines.length - 1 - end]) end++;
         result.textContent = prefix === old.length && prefix === currentLines.length ? 'Source is identical.' : 'Checkpoint compared with current source at line ' + (prefix + 1) + ':\n' + old.slice(prefix, old.length - end).map(l => '− ' + l).join('\n') + '\n' + currentLines.slice(prefix, currentLines.length - end).map(l => '+ ' + l).join('\n');
-      }), button('Restore', () => { if (run.node) stopRun('Stopped to restore checkpoint'); editor.setValue(item.source); clearTimeout(parseTimer); reparse(); }, {disabled: testing}),
-      button('Open copy', () => { programs.push({name: item.name + '.xml', source: item.source}); renderFiles(); selectFile(programs.length - 1); }, {disabled: testing}))));
+      }), button('Restore', () => { if (run.node) stopRun('Stopped to restore checkpoint'); editor.setValue(item.source); clearTimeout(parseTimer); reparse(); }, {}),
+      button('Open copy', () => { programs.push({name: item.name + '.xml', source: item.source}); renderFiles(); selectFile(programs.length - 1); }, {}))));
     box.append(result);
   }
 
@@ -194,26 +188,20 @@ window.studioTools = (() => {
   function played(item) {
     if (item.type !== 'trace' || scope(item) === false) return;
     const t = termOf(item.text), s = snapshot(), chartScope = scope(item);
-    if (t.name === 'configuration') {
-      const m = chartScope ? model.nested.get(chartScope) : model;
-      for (const id of listOf(t.args[0] || '[]')) { const n = m.byId.get(id); if (n) visited.add(n.key); }
-    }
-    if (t.name === 'transition_fired') for (const key of run.fired) fired.add(key);
     if (['configuration', 'transition_fired', 'external_event', 'internal_event', 'datamodel_snapshot', 'guard_result', 'macrostep_complete', 'unmatched', 'deferred'].includes(t.name)) {
       history.push({text: (chartScope ? model.nested.get(chartScope).title + ': ' : '') + item.text, term: t, snapshot: s});
       if (history.length > 1000) history.shift();
       cursor = history.length - 1;
     }
-    diagram.coveredStates = coverage ? visited : new Set(); diagram.coveredTransitions = coverage ? fired : new Set();
     diagram._paint();
     renderTimeline();
     if (t.name === 'macrostep_complete' && !chartScope) renderPalette();
   }
   function controls() { registerActors(); renderDebug(); }
-  function stopped() { paused = false; actors.clear(); }
+  function stopped() { paused = false; actors.clear(); sendGeneration++; }
   function newRun() {
     history = []; cursor = -1; paused = false; actors.clear();
-    if (!testing) { visited.clear(); fired.clear(); }
+    sendGeneration++;
   }
   function inspect(index) {
     if (!history.length) return;
@@ -244,9 +232,9 @@ window.studioTools = (() => {
     box.scrollTop = !paused && end ? box.scrollHeight : scroll;
     const state = $('playback-state');
     if (state) state.textContent = paused ? 'Viewing observation ' + (cursor + 1) + (run.pid ? ' · interpreter continues running' : ' · engine stopped') : 'Following live trace';
-    if ($('timeline-pause')) { $('timeline-pause').disabled = !history.length || testing; $('timeline-pause').textContent = paused ? 'Follow live' : 'Pause playback'; }
-    if ($('timeline-previous')) $('timeline-previous').disabled = cursor <= 0 || testing;
-    if ($('timeline-next')) $('timeline-next').disabled = testing || (!run.queue.length && cursor >= history.length - 1);
+    if ($('timeline-pause')) { $('timeline-pause').disabled = !history.length; $('timeline-pause').textContent = paused ? 'Follow live' : 'Pause playback'; }
+    if ($('timeline-previous')) $('timeline-previous').disabled = cursor <= 0;
+    if ($('timeline-next')) $('timeline-next').disabled = (!run.queue.length && cursor >= history.length - 1);
     window.SXMLChrome?.decorate($('debug-tools'));
   }
   function renderPalette() {
@@ -257,7 +245,7 @@ window.studioTools = (() => {
     if (!run.pid || run.done) { box.append(hint('Run the chart to discover event handlers.')); return; }
     for (const t of SXMLStudio.candidates(model, run.active)) {
       const input = h('input', {value: drafts.get(t.key) ?? t.on, 'aria-label': 'Concrete event for ' + t.source.id + ' handler ' + (t.index + 1), oninput: e => drafts.set(t.key, e.target.value)});
-      const row = h('div', {class: 'event-row'}, input, button('Send', () => safeSend(input.value), {disabled: run.busy || testing || paused, class: 'compact-action', title: 'Send concrete event'}));
+      const row = h('div', {class: 'event-row'}, input, button('Send', () => safeSend(input.value), {disabled: run.busy || paused, class: 'compact-action', title: 'Send concrete event'}));
       box.append(h('div', {class: 'event-owner'}, t.source.id + ' #' + (t.index + 1) + (t.cond ? ' · if ' + t.cond : '')), row);
     }
     if (!box.children.length) box.append(hint('No event handlers in the active configuration.'));
@@ -270,8 +258,8 @@ window.studioTools = (() => {
       h('summary', {}, SXMLChrome.icon('clock'), 'Execution timeline'),
       h('div', {class:'ui-section-body'},
         h('div', {class:'playback-toolbar'},
-          button(paused ? 'Follow live' : 'Pause playback', () => paused ? resume() : inspect(history.length - 1), {id:'timeline-pause', class:'compact-action', disabled:!history.length || testing}),
-          button('Previous', () => inspect(cursor - 1), {id:'timeline-previous', class:'compact-action', disabled:cursor <= 0 || testing}),
+          button(paused ? 'Follow live' : 'Pause playback', () => paused ? resume() : inspect(history.length - 1), {id:'timeline-pause', class:'compact-action', disabled:!history.length}),
+          button('Previous', () => inspect(cursor - 1), {id:'timeline-previous', class:'compact-action', disabled:cursor <= 0}),
           button('Next', () => {
             if (cursor < history.length - 1) inspect(cursor + 1);
             else if (run.queue.length) {
@@ -279,7 +267,7 @@ window.studioTools = (() => {
               while (run.queue.length) { const item = run.queue.shift(); play(item); played(item); if (history.at(-1) !== last) break; }
               paused = true; renderDebug();
             }
-          }, {id:'timeline-next', class:'compact-action', disabled:testing || (!run.queue.length && cursor >= history.length - 1)}),
+          }, {id:'timeline-next', class:'compact-action', disabled:(!run.queue.length && cursor >= history.length - 1)}),
           h('label', {class:'sr-label', for:'playback-speed'}, 'Playback speed'),
           selectBox('playback-speed', [['650','Slow'],['260','Normal'],['0','Instant']], String(speed), value => {speed=Number(value);})),
         h('p', {id:'playback-state', class:'hint'}), h('div', {id:'timeline-list', class:'timeline-list'}),
@@ -291,130 +279,30 @@ window.studioTools = (() => {
     renderTimeline(); $('timeline-list').scrollTop=scroll; renderPalette();
     window.SXMLChrome?.decorate(box);
   }
-  async function settled(token = replayToken) {
+  async function settled(token = sendGeneration) {
     const deadline = Date.now() + 15000;
     while (run.busy || run.queue.length || run.timer) {
-      if (token !== replayToken) throw new Error('Scenario cancelled');
+      if (token !== sendGeneration) throw new Error('Chart changed while sending the event');
       if (Date.now() > deadline) throw new Error('Timed out waiting for trace playback');
       await new Promise(resolve => setTimeout(resolve, 15));
     }
-    if (token !== replayToken) throw new Error('Scenario cancelled');
+    if (token !== sendGeneration) throw new Error('Chart changed while sending the event');
   }
   async function send(text) {
     if (run.busy || !run.pid || paused || run.done) return;
     text = text.trim().replace(/\.\s*$/, ''); if (!text) return;
     // read_term_from_atom plus ground/1 validates concrete data before sending it.
     // The reserved worker request acknowledges completion of this exact macrostep.
-    const token = replayToken;
+    const token = sendGeneration;
     const answer = await runGoal("read_term_from_atom(" + quoteAtom(text) + ", Event, []), ground(Event), self(From), make_ref(Ref), $Pid ! '$studio_step'(From, Ref, Event), receive({Ref-studio_done -> true}, [timeout(10), on_timeout(throw(studio_step_timeout))])");
     await settled(token);
     if (!answer || answer.type !== 'success') throw new Error('Event failed; provide a concrete Prolog term and check the trace.');
-    if (recording && !testing) { const s = snapshot(); recording.steps.push({event: text, states: s.active.slice()}); tests(); }
     return snapshot();
   }
-  function showError(error) { resultText = error.message; resultFailed = true; status(error.message); const box = $('test-result'); if (box) { box.classList.add('fail'); box.textContent = error.message; } }
+  function showError(error) { status(error.message); }
   async function safeSend(text) { try { return await send(text); } catch (error) { showError(error); } }
-  let scenarioDraft = '', resultText = '', resultFailed = false, scenarioEditorOpen = false, timelineOpen = true;
-  async function record() {
-    if (testing || !model || $('chart').classList.contains('stale')) return;
-    const token = replayToken;
-    try {
-      history = []; visited.clear(); fired.clear(); paused = false;
-      await startChart(); await settled(token);
-      if (!run.pid) throw new Error('The chart did not start');
-      recording = {name: 'Recorded scenario', steps: []}; tests();
-    } catch (error) { if (token === replayToken) showError(error); }
-  }
-  function saveDraft() {
-    let scenario;
-    try { scenario = JSON.parse(scenarioDraft); if (!SXMLStudio.validScenario(scenario)) throw new Error('Use a name and up to 200 steps with event, optional states, and optional facts.'); }
-    catch (error) { showError(error); return; }
-    if (run.node) stopRun('Stopped to save scenario');
-    changeMetadata(meta => {
-      const index = meta.scenarios.findIndex(s => s.name === scenario.name);
-      if (index < 0) meta.scenarios.push(scenario); else meta.scenarios[index] = scenario;
-    });
-  }
-  async function replay(scenarios) {
-    if (testing || !model || !scenarios.length) return;
-    testing = true; recording = null; paused = false;
-    const token = ++replayToken, oldSpeed = speed; speed = 0;
-    visited.clear(); fired.clear(); resultText = ''; resultFailed = false; tests(); runControls();
-    try {
-      for (const scenario of scenarios) {
-        if (token !== replayToken) throw new Error('Scenario cancelled');
-        history = []; cursor = -1;
-        const start = startChart(); showSide('tests'); await start; await settled(token);
-        if (!run.pid) throw new Error('The chart did not start');
-        let passed = true;
-        for (let i = 0; i < scenario.steps.length; i++) {
-          if (token !== replayToken) throw new Error('Scenario cancelled');
-          const step = scenario.steps[i], s = await send(step.event);
-          if (!s) throw new Error('Cannot send step ' + (i + 1) + ': chart has completed or stopped');
-          const errors = SXMLStudio.assertions(step, s);
-          if (errors.length) {
-            passed = false; resultFailed = true;
-            resultText += scenario.name + ' · step ' + (i + 1) + ' FAILED\n' + errors.join('\n') + '\n';
-            tests(); break;
-          }
-          resultText += scenario.name + ' · step ' + (i + 1) + ' passed\n'; tests();
-        }
-        resultText += scenario.name + (passed ? ' PASSED\n' : ' FAILED\n'); tests();
-        if (run.node) stopRun('Scenario complete');
-      }
-    } catch (error) { if (token === replayToken) { resultFailed = true; resultText += error.message + '\n'; if (run.node) stopRun('Scenario failed'); } }
-    finally {
-      if (token === replayToken) { testing = false; speed = oldSpeed; tests(); runControls(); }
-    }
-  }
-  function tests() {
-    const box=$('tests'); if(!model || !box) return;
-    const meta=data();
-    const section=(title,icon,...content)=>h('details',{class:'ui-section'},h('summary',{},SXMLChrome.icon(icon),title),h('div',{class:'ui-section-body'},...content));
-    if(!scenarioDraft) scenarioDraft=JSON.stringify({name:'My scenario',steps:[{event:SXMLStudio.paths(model,1,1)[0]?.[0]?.event || 'start',states:[],facts:[]}]},null,2);
-    const recordButton=button(recording?'Finish recording':'Record fresh run',()=>{
-      if(recording){scenarioDraft=JSON.stringify(recording,null,2);recording=null;scenarioEditorOpen=true;tests();}
-      else record();
-    },{disabled:testing, 'data-icon':recording?'stop':'record'});
-    box.replaceChildren(h('div',{class:'panel-intro'},h('h3',{},'Scenarios'),SXMLChrome.icon('test')),
-      h('div',{class:'tools-actions'},recordButton,button('Run all saved',()=>replay(meta.scenarios),{class:'primary',disabled:testing || !meta.scenarios.length}),
-        button('Cancel tests',()=>{replayToken++;testing=false;speed=260;if(run.node)stopRun('Tests cancelled');tests();runControls();},{class:'compact-action',disabled:!testing})),
-      recording?hint('Recording · '+recording.steps.length+' event'+(recording.steps.length===1?'':'s')):h('span',{hidden:true}),
-      h('div',{id:'test-result',class:'test-result'+(resultFailed?' fail':''),role:'status'},resultText));
-    for(const scenario of meta.scenarios) box.append(h('div',{class:'tools-card scenario-card'},SXMLChrome.icon('test'),
-      h('div',{class:'scenario-card-copy'},h('strong',{},scenario.name),hint(scenario.steps.length+' event'+(scenario.steps.length===1?'':'s'))),
-      h('div',{class:'tools-actions'},button('Replay',()=>replay([scenario]),{class:'compact-action',disabled:testing,title:'Replay '+scenario.name}),
-        button('Edit',()=>{scenarioDraft=JSON.stringify(scenario,null,2);scenarioEditorOpen=true;tests();},{class:'compact-action',title:'Edit '+scenario.name}),
-        button('Remove',()=>changeMetadata(m=>{m.scenarios=m.scenarios.filter(s=>s.name!==scenario.name);}),{class:'compact-action',disabled:testing || !!run.pid,title:'Remove '+scenario.name}))));
-    if(!meta.scenarios.length)box.append(h('div',{class:'empty-scenarios'},SXMLChrome.icon('test'),'Record a run to create your first scenario.'));
-    const stateTotal=[model,...model.nested.values()].reduce((n,m)=>n+m.nodes.filter(s=>s!==m.root).length,0);
-    const transitionTotal=[model,...model.nested.values()].reduce((n,m)=>n+m.transitions.length,0);
-    box.append(h('div',{class:'coverage-strip'},h('label',{},h('input',{type:'checkbox',checked:coverage,onchange:e=>{coverage=e.target.checked;diagram.coveredStates=coverage?visited:new Set();diagram.coveredTransitions=coverage?fired:new Set();diagram._paint();}}),'Show coverage in purple'),
-      hint(visited.size+' / '+stateTotal+' states · '+fired.size+' / '+transitionTotal+' transitions')));
-    const editorSection=section('Scenario editor','code',
-      h('label',{for:'scenario-json'},'Event sequence and assertions'),
-      h('textarea',{id:'scenario-json',value:scenarioDraft,disabled:testing,spellcheck:'false',oninput:e=>scenarioDraft=e.target.value}),
-      h('div',{class:'tools-actions'},button('Save scenario',saveDraft,{class:'primary',disabled:testing}),button('Replay draft',()=>{
-        try{const s=JSON.parse(scenarioDraft);if(!SXMLStudio.validScenario(s))throw new Error('Invalid scenario');replay([s]);}catch(error){showError(error);}
-      },{disabled:testing})));
-    editorSection.open=scenarioEditorOpen;
-    editorSection.querySelector('summary').onclick=()=>setTimeout(()=>{scenarioEditorOpen=editorSection.open;},0);
-    box.append(editorSection);
-    const paths=section('Suggested paths','transition',hint('Structural suggestions: up to six events. Replace variables with concrete values and add assertions. Guards, timers and nested configurations are checked during replay.'));
-    SXMLStudio.paths(model).forEach((steps,i)=>paths.lastChild.append(button(steps.map(s=>s.event).join(' → '),()=>{
-      scenarioDraft=JSON.stringify({name:'Candidate path '+(i+1),steps:steps.map(s=>({event:s.event,states:[]}))},null,2);scenarioEditorOpen=true;tests();
-    },{class:'path-suggestion',disabled:testing,'data-icon':'transition'})));
-    if(paths.lastChild.children.length===1)paths.lastChild.append(hint('Record a run to capture this chart’s behavior.'));
-    box.append(paths,section('Import and export','folder',button('Export saved',()=>download('sxml-scenarios.json',JSON.stringify(meta.scenarios,null,2),'application/json')),
-      h('label',{for:'scenario-import'},'Import scenarios (.json)'),h('input',{id:'scenario-import',type:'file',accept:'.json,application/json',disabled:testing || !!run.pid,onchange:async e=>{
-        try{const values=JSON.parse(await e.target.files[0].text());if(!Array.isArray(values)||!values.every(SXMLStudio.validScenario))throw new Error('Invalid scenario file');changeMetadata(m=>{for(const s of values){m.scenarios=m.scenarios.filter(old=>old.name!==s.name);m.scenarios.push(s);}});}
-        catch(error){showError(error);}
-      }})),section('How scenarios work','info',hint('Every replay starts a fresh engine. Each step sends a concrete Prolog event, then checks active states and stored clauses. Fact owners are #root or a state ID. Rules are never executed for assertions. Timers use real time.'),
-      hint('Recording captures sends from the event palette and diagram. Coverage describes observed execution, including inline charts.')));
-    window.SXMLChrome?.decorate(box);
-  }
   $('structure-search').oninput = tree;
-  const api = {adopt, selection, inspector, tests, controls, stopped, newRun, fileChanged, scope, played, send: safeSend, paused: () => paused, speed: () => speed, testing: () => testing};
+  const api = {adopt, selection, inspector, controls, stopped, newRun, fileChanged, scope, played, send: safeSend, paused: () => paused, speed: () => speed};
   if (model) adopt();
   return api;
 })();

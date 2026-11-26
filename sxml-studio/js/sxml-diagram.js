@@ -658,7 +658,6 @@
     this.appearance = normalizeAppearance();
     this.liveDatamodels = new Map();
     this.collapsed = new Set();
-    this.coveredStates = new Set(); this.coveredTransitions = new Set();
     this.applyAppearance(this.appearance);
     this.seq = 0;
     this.userMoved = false;
@@ -910,7 +909,6 @@
       g.classList.toggle('selected', k === sel);
       const activeBelow = !!(n && this.collapsed?.has(k) && infDescendants(n).some(c => act?.has(c.id)));
       g.classList.toggle('active', !!(n && n.id && act && act.has(n.id)) || activeBelow);
-      g.classList.toggle('covered', !!this.coveredStates?.has(k));
       const label = g.querySelector('.collapse-status');
       if (label) label.textContent = '+ ' + n.children.length + ' children' + (activeBelow ? ' · active inside' : '');
     }
@@ -921,7 +919,6 @@
     }
     for (const [k, parts] of this.edgeEls) for (const g of parts) {
       const s = k === sel, f = this.fired.has(k);
-      g.classList.toggle('covered', !!this.coveredTransitions?.has(k));
       g.classList.toggle('selected', s);
       g.classList.toggle('fired', f);
       const p = g.querySelector('.edge');

@@ -1149,7 +1149,7 @@ function runControls() {
   updateChrome();
   window.studioTools?.controls();
   window.SXMLChrome?.decorate(document.querySelector('.query-pane'));
-  window.SXMLChrome?.syncRun({live: !!run.pid, runDisabled: run.starting || run.busy || !!window.studioTools?.testing(), stopDisabled: !run.node || run.starting});
+  window.SXMLChrome?.syncRun({live: !!run.pid, runDisabled: run.starting || run.busy, stopDisabled: !run.node || run.starting});
 }
 
 function cancelInput() {
@@ -1465,7 +1465,7 @@ function renderSuggestions() {
 /* ---------- side panel, files, chrome ---------- */
 
 function showSide(name) {
-  for (const v of ['inspector', 'run', 'tests', 'settings']) {
+  for (const v of ['inspector', 'run', 'settings']) {
     $(v).hidden = v !== name;
     $('tab-' + v).setAttribute('aria-selected', String(v === name));
     $('tab-' + v).tabIndex = v === name ? 0 : -1;
@@ -1473,7 +1473,6 @@ function showSide(name) {
 }
 $('tab-inspector').onclick = () => showSide('inspector');
 $('tab-run').onclick = () => showSide('run');
-$('tab-tests').onclick = () => { showSide('tests'); window.studioTools?.tests(); };
 $('tab-settings').onclick = () => showSide('settings');
 
 function renderFiles() {

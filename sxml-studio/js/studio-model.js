@@ -1,21 +1,15 @@
-/* Editor metadata and bounded, structural path suggestions. No Prolog is run here. */
+/* Editor metadata, descriptions and structural edits. */
 (function (global) {
   'use strict';
   const marker = /^\s*<studio>/;
   function metadata(doc) {
     const comment = Array.from(doc.childNodes).find(n => n.nodeType === 8 && marker.test(n.data));
-    if (!comment) return { descriptions: {}, notes: [], scenarios: [] };
+    if (!comment) return { descriptions: {}, notes: [] };
     try {
       const data = JSON.parse(comment.data.replace(marker, ''));
-      return { descriptions: data.descriptions && typeof data.descriptions === 'object' ? data.descriptions : {},
-        notes: Array.isArray(data.notes) ? data.notes.filter(n => typeof n === 'string') : [],
-        scenarios: Array.isArray(data.scenarios) ? data.scenarios.filter(validScenario) : [] };
-    } catch (_) { return { descriptions: {}, notes: [], scenarios: [] }; }
-  }
-  function validScenario(s) {
-    return s && typeof s.name === 'string' && Array.isArray(s.steps) && s.steps.length <= 200 && s.steps.every(step =>
-      step && typeof step.event === 'string' && (!step.states || (Array.isArray(step.states) && step.states.every(x => typeof x === 'string'))) &&
-      (!step.facts || (Array.isArray(step.facts) && step.facts.every(f => f && typeof f.owner === 'string' && typeof f.clause === 'string'))));
+      return { ...data, descriptions: data.descriptions && typeof data.descriptions === 'object' ? data.descriptions : {},
+        notes: Array.isArray(data.notes) ? data.notes.filter(n => typeof n === 'string') : [] };
+    } catch (_) { return { descriptions: {}, notes: [] }; }
   }
   function setMetadata(doc, value) {
     const comment = Array.from(doc.childNodes).find(n => n.nodeType === 8 && marker.test(n.data));
@@ -32,33 +26,6 @@
       for (const t of n.transitions) if (t.on != null) result.push(t);
     }
     return result;
-  }
-  function paths(model, maxDepth = 6, maxPaths = 40) {
-    // Structural suggestions only: hierarchy/parallel configurations and arbitrary
-    // Prolog guards require the real interpreter plus user-supplied concrete terms.
-    const queue = [{id: model.root.initial, steps: [], visited: new Set()}], result = [];
-    while (queue.length && result.length < maxPaths) {
-      const p = queue.shift(), node = model.byId.get(p.id);
-      if (!node || p.steps.length >= maxDepth || p.visited.has(p.id)) continue;
-      const seen = new Set(p.visited).add(p.id);
-      for (const t of node.transitions) {
-        if (t.on == null || !t.to.length) continue;
-        const next = {id: t.to[0], steps: [...p.steps, {event: t.on, transition: t.key}], visited: seen};
-        result.push(next.steps);
-        if (result.length >= maxPaths) break;
-        queue.push(next);
-      }
-    }
-    return result;
-  }
-  function assertions(step, snapshot) {
-    const errors = [];
-    for (const state of step.states || []) if (!snapshot.active.includes(state)) errors.push('Expected active state ' + state);
-    for (const fact of step.facts || []) {
-      const dm = snapshot.facts.find(d => !d.scope && d.owner === fact.owner);
-      if (!dm || !dm.facts.includes(fact.clause)) errors.push('Missing clause in ' + fact.owner + ': ' + fact.clause);
-    }
-    return errors;
   }
   function description(el) {
     const comment = Array.from(el.childNodes).find(n => n.nodeType === 8 && /^\s*<description>/.test(n.data));
@@ -103,5 +70,5 @@
       SXML.setLayout(doc, layout);
     }
   }
-  global.SXMLStudio = {metadata, setMetadata, validScenario, candidates, paths, assertions, description, setDescription, duplicate, reparent};
+  global.SXMLStudio = {metadata, setMetadata, candidates, description, setDescription, duplicate, reparent};
 })(typeof window === 'undefined' ? globalThis : window);

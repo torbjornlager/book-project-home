@@ -11,8 +11,7 @@ paths, export/import, embed, generate flow, Inspector, VS Code extension).*
 SXML Studio already matches or exceeds Stately in several places that matter
 for the book: a real interpreter (SWI-Prolog in WASM) instead of a
 guard-blind simulator, a source-preserving two-way XML editor, an execution
-timeline, live datamodel snapshots, recorded scenarios with assertions,
-observed coverage, structural path suggestions, checkpoints, collapsible
+timeline, live datamodel snapshots, checkpoints, collapsible
 compound states and a structure tree with search.
 
 The biggest gaps are in **authoring speed on the canvas** (copy/paste, quick
@@ -37,7 +36,7 @@ and are ranked low or excluded.
 | Descriptions | Per-element description comments |
 | Notes | Chart-level notes (fixed position) |
 | Version history | Checkpoints (browser storage, compare, restore, export) |
-| Generate test paths | Scenarios with assertions, replay, coverage, candidate paths |
+| Generate test paths | Not included |
 | Autolayout | ELK layout, Auto, direction, spacing and layout experiments |
 | Light/dark, zoom, fit, pan | Settings, toolbar, drag-to-pan |
 | Code panel, import from code | Split view; the XML *is* the code |

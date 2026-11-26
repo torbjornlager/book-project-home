@@ -25,7 +25,6 @@
     back: 'M15 5l-7 7 7 7', next: 'M9 5l7 7-7 7',
     up: 'M5 15l7-7 7 7', down: 'M5 9l7 7 7-7',
     restart: 'M3 10a9 9 0 1 1 2 8 M3 4v6h6',
-    test: 'M9 3h6 M10 3v6L4 19q-1 2 2 2h12q3 0 2-2L14 9V3 M8 14h8',
     check: 'M5 12l4 4L19 6', close: 'M6 6l12 12 M18 6L6 18',
     copy: 'M8 8h12v13H8z M16 8V3H3v13h5',
     edit: 'M4 16v4h4L20 8l-4-4z M13 7l4 4',
@@ -55,8 +54,8 @@
     }
     return svg;
   }
-  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-tests':'test','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
-  const labels = {'Record fresh run':'record','Finish recording':'stop','Run all saved':'play','Cancel tests':'close','Edit':'edit','Replay':'play','Remove':'trash','Save scenario':'check','Replay draft':'play','Export saved':'download','Send':'play','Duplicate subtree':'copy','Apply move':'move','Add note':'plus','Remove note':'trash','Save checkpoint':'plus','Export checkpoints':'download','Preview / compare':'code','Restore':'restart','Open copy':'copy','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
+  const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
+  const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Add note':'plus','Remove note':'trash','Save checkpoint':'plus','Export checkpoints':'download','Preview / compare':'code','Restore':'restart','Open copy':'copy','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;
     for (const b of root.querySelectorAll('button')) {
