@@ -6,7 +6,7 @@
     parallel: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z M12 7v2 M12 11v2 M12 15v2',
     final: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     history: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M9 8v8 M15 8v8 M9 12h6',
-    transition: 'M4 17V9a2 2 0 0 1 2-2h14 M15 2l5 5-5 5',
+    transition: 'M4 18V9a2 2 0 0 1 2-2h10',
     trash: 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',
     undo: 'M9 5l-5 5 5 5 M4 10h10a6 6 0 0 1 6 6v3',
     redo: 'M15 5l5 5-5 5 M20 10H10a6 6 0 0 0-6 6v3',
@@ -39,15 +39,21 @@
     menu: 'M4 6h16 M4 12h16 M4 18h16',
     splitrows: 'M3 4h18v16H3z M3 12h18',
     wand: 'M4 20L15 9 M13 7l4 4 M17 3v3 M15.5 4.5h3 M20 9v3 M18.5 10.5h3 M9 3v2 M8 4h2',
-    'flow-right': 'M3 5h5v5H3z M16 14h5v5h-5z M5.5 10v6.5H13 M10 13.5l3 3-3 3',
-    'flow-down': 'M4 3h5v5H4z M15 16h5v5h-5z M9 5.5h8.5V13 M14.5 10l3 3 3-3',
+    'flow-right': 'M3 5h5v5H3z M16 14h5v5h-5z M5.5 10v6.5H12',
+    'flow-down': 'M4 3h5v5H4z M15 16h5v5h-5z M9 5.5h8.5V12',
     hspace: 'M4 4v16 M20 4v16 M8 12h8 M10.5 9.5L8 12l2.5 2.5 M13.5 9.5L16 12l-2.5 2.5',
     vspace: 'M4 4h16 M4 20h16 M12 8v8 M9.5 10.5L12 8l2.5 2.5 M9.5 13.5L12 16l2.5-2.5'
   };
   function icon(name) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     for (const [key, value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',class:'ui-icon'})) svg.setAttribute(key,value);
-    const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',paths[name] || paths.state); svg.append(path); return svg;
+    const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',paths[name] || paths.state); svg.append(path);
+    const arrowheads = {transition: 'M15 3L21 7L15 11Z', 'flow-right': 'M10 12.5L16 16.5L10 20.5Z', 'flow-down': 'M13.5 10L17.5 16L21.5 10Z'};
+    if (arrowheads[name]) {
+      const head = document.createElementNS(svg.namespaceURI, 'path');
+      head.setAttribute('d', arrowheads[name]); head.setAttribute('fill', 'currentColor'); head.setAttribute('stroke', 'none'); svg.append(head);
+    }
+    return svg;
   }
   const ids = {'new':'plus','open':'folder','save':'download','export':'image','tool-connect':'transition','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'palette','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-inspector':'inspect','tab-run':'play','tab-tests':'test','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
   const labels = {'Record fresh run':'record','Finish recording':'stop','Run all saved':'play','Cancel tests':'close','Edit':'edit','Replay':'play','Remove':'trash','Save scenario':'check','Replay draft':'play','Export saved':'download','Send':'play','Duplicate subtree':'copy','Apply move':'move','Add note':'plus','Remove note':'trash','Save checkpoint':'plus','Export checkpoints':'download','Preview / compare':'code','Restore':'restart','Open copy':'copy','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
