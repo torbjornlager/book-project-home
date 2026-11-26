@@ -182,3 +182,25 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 /* Use the interface typeface for metadata; reserve monospace for Prolog editors. */
 #inspector input,#inspector select,#inspector textarea,#inspector .tsum,#inspector .move-preview{font-family:inherit}
 #inspector .prolog-code{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
+
+/* Keep Run controls together, with compact rows and readable interface text. */
+.run-view{overflow:auto}
+#run #debug-tools{padding:8px 14px;flex:none;min-height:0;overflow:visible}
+#run .debug-heading{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;gap:6px;margin:0 0 6px}
+#run .hint{font-size:calc(11px * var(--ui-font-scale,1));line-height:1.4;margin:4px 0 6px}
+#run .event-owner{margin-top:6px}
+#run .event-row{padding:2px 0 4px;gap:4px}
+#run input,#run select{font-family:inherit;font-size:calc(12px * var(--ui-font-scale,1));line-height:1.4;padding:5px 8px;min-height:32px}
+#run .event-row button{width:32px;min-width:32px;height:32px;min-height:32px;padding:6px!important}
+#run .playback-toolbar{margin:2px 0;gap:3px}
+#run .playback-toolbar select{min-height:30px}
+#run .timeline-list{max-height:180px;margin:4px 0 4px 6px;padding-left:6px}
+#run .timeline-list button{min-height:26px;padding:3px 5px;font-family:inherit}
+#run .runtime-console>summary{min-height:32px;padding:6px 14px;font-size:calc(12px * var(--ui-font-scale,1));gap:6px}
+#run .queries{padding:0 14px}
+#run .queries .section-title{margin:6px 0 4px}
+#run .log-title{padding:5px 14px;font-family:inherit}
+#run .log-title input{min-height:0;padding:0}
+#run .log{padding:6px 14px;font-family:inherit;line-height:1.4}
+#run .log code,#run .log .goal,#run .log .answer,#run #suggestions button{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
+@media(pointer:coarse){#run .ui-section>summary,#run .runtime-console>summary,#run button,#run input:not([type=checkbox]),#run select{min-height:44px}#run .event-row button{height:44px;width:44px;min-width:44px}}

@@ -1507,7 +1507,7 @@ function play(item) {
     return false;
   }
   if (t.name === 'microstep') return false;
-  if (t.name === 'execution') { logRow('trace', '  run ' + item.text.slice(10, -1)); return false; }
+  if (t.name === 'execution') { logRow('trace', ['  run ', h('code', {}, item.text.slice(10, -1))]); return false; }
   if (t.name === 'unmatched') { logRow('trace', ['  unmatched ', bold(item.text.slice(10, -1))]); return false; }
   logRow('trace', '  ' + item.text);
   return false;
