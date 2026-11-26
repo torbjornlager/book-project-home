@@ -30,6 +30,10 @@ assert.equal(vars['--state-header-active'], '#e6f3ee');
 D.Diagram.prototype.applyAppearance.call(fake, {headerColor: '#000000', activeHeaderColor: '#ffffff'});
 assert.equal(vars['--state-header-text'], '#ffffff');
 assert.equal(vars['--state-header-active-text'], '#000000');
+D.Diagram.prototype.applyAppearance.call(fake, {activeHeaderColor: '#ddeeff'});
+assert.equal(vars['--active-stroke'], 'hsl(210.00 100.00% 56.00%)', 'Pale blue must darken without losing its hue or saturation.');
+D.Diagram.prototype.applyAppearance.call(fake, {activeHeaderColor: '#eeeeee'});
+assert.equal(vars['--active-stroke'], 'hsl(0.00 0.00% 56.00%)', 'Neutral selections must remain neutral.');
 assert(markers.every(m => Number(m.attrs.markerWidth) === (m.attrs.id === 'arrow-fired' ? 10.625 : 8.5)));
 function state(id, kind='state', children=[], initial='') { return {id,kind,key:kind==='statechart'?'#root':id,children,initial,datamodels:[],spawns:[],onentry:[],onexit:[],defers:[],transitions:[]}; }
 const a=state('a'),b=state('b'),chart=state('','statechart',[a,b],'a');

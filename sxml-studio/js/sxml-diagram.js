@@ -29,6 +29,20 @@
     };
   }
 
+  // Keep the selected hue and saturation when darkening pastel fills.
+  function activeStrokeColor(color) {
+    const [r, g, b] = color.slice(1).match(/../g).map(hex => parseInt(hex, 16) / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+    const lightness = (max + min) / 2;
+    let hue = 0, saturation = 0;
+    if (delta) {
+      saturation = delta / (1 - Math.abs(2 * lightness - 1));
+      hue = max === r ? ((g - b) / delta + 6) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+      hue *= 60;
+    }
+    return 'hsl(' + hue.toFixed(2) + ' ' + Math.min(100, saturation * 120).toFixed(2) + '% ' + (lightness * 60).toFixed(2) + '%)';
+  }
+
   const ctx = document.createElement('canvas').getContext('2d');
   function width(text, font) { ctx.font = font; return Math.ceil(ctx.measureText(text).width); }
   function emptyStateSize(id) {
@@ -662,6 +676,7 @@
       const luminance = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
       style.setProperty(variable + '-text', luminance > 0.179 ? '#000000' : '#ffffff');
     }
+    style.setProperty('--active-stroke', activeStrokeColor(a.activeHeaderColor));
     style.setProperty('--transition-width', a.lineWidth);
     style.setProperty('--state-border-width', a.borderWidth);
     style.setProperty('--transition-label-size', a.labelSize + 'px');
