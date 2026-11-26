@@ -612,7 +612,7 @@ function renameInPlace(n) {
   const nameEl = diagram.nodeEls.get(n.key)?.querySelector('.name');
   const where = n.kind === 'final' && nameEl ? nameEl : diagram.boxRect(n.key, true);
   diagram.editInPlace(where, n.id || '', {
-    label: 'State id', placeholder: 'state id', hint: 'Enter to rename · Esc to cancel',
+    label: 'State id', placeholder: 'state id', widthScale: 0.5,
     onCommit(value) {
       const v = value.trim();
       if (!v || v === n.id || !live(n.el)) return;

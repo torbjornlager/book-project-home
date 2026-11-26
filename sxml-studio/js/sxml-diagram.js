@@ -1224,12 +1224,11 @@
     field.autocomplete = 'off';
     field.setAttribute('aria-label', opts.label || 'Edit');
     if (opts.placeholder) field.placeholder = opts.placeholder;
-    const w = Math.max(opts.minWidth || 140, r.width + 16);
+    const w = Math.max(opts.minWidth || 140, r.width + 16) * (opts.widthScale || 1);
     const left = Math.max(4, Math.min(r.left + r.width / 2 - w / 2, hostRect.width - w - 4));
     const top = Math.max(4, Math.min(r.top + r.height / 2 - 14, hostRect.height - 32));
     Object.assign(box.style, { left: left + 'px', top: top + 'px', width: w + 'px' });
     box.append(field);
-    if (opts.hint) { const hint = document.createElement('div'); hint.className = 'inplace-hint'; hint.textContent = opts.hint; box.append(hint); }
     let done = false;
     const close = save => {
       if (done) return;
