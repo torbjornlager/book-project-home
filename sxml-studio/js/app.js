@@ -1640,6 +1640,10 @@ async function selectFile(index) {
     if (programs[current] !== p) return;
     index = current;
   }
+  if (p.url && !p.parent) {
+    p.source = SXML.upgradeExampleEvents(p.source);
+    if (p.draft != null) p.draft = SXML.upgradeExampleEvents(p.draft);
+  }
   clearTimeout(parseTimer);
   loadedIndex = index;
   silent = true;

@@ -250,6 +250,27 @@
     return '';
   }
 
+  /* Update the old bundled-example boilerplate without rewriting chart edits. */
+  function upgradeExampleEvents(text) {
+    return text.replace(/<!--\s*<examples>([\s\S]*?)-->/g, (comment, body) => {
+      const parts = body.split(/^\s*\?-/m), events = [];
+      if (parts.shift().trim()) return comment;
+      let setup = false;
+      for (const part of parts) {
+        const goal = part.trim().replace(/\.\s*$/, '');
+        if (/^statechart_spawn\(Pid,\s*\[\s*src_text\(<editor>\)\s*\]\)(?:,\s*sleep\(0\.1\),\s*flush)?$/.test(goal)) setup = true;
+        else if (/^statechart_halt\(\$Pid,\s*Reply,\s*1\)$/.test(goal)) continue;
+        else {
+          const event = /^\$Pid\s*!\s*([\s\S]+)$/.exec(goal);
+          if (!event) return comment; // Preserve custom query examples verbatim.
+          events.push(event[1].trim() + '.');
+        }
+      }
+      if (!setup) return comment;
+      return events.length ? '<!-- <example events>\n\n' + events.join('\n\n') + '\n\n-->' : '';
+    });
+  }
+
   function exampleQueries(doc) {
     const out = [];
     for (const n of Array.from(doc.childNodes)) {
@@ -748,6 +769,6 @@
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
     parse, build, validate, serialize, snapshot, locate, collapse, dedent, scriptText, isState, label,
-    getLayout, setLayout, automaticLayout, discardManualPositions, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
+    upgradeExampleEvents, getLayout, setLayout, automaticLayout, discardManualPositions, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
   };
 })(window);

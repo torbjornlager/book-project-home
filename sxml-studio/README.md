@@ -174,7 +174,9 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Halt or restart clears the live display. Try example 09 and send its integers
   query to watch the GCD calculation update `int/1`.
   Events from the document's trailing `<example events>` comment become
-  buttons; `$Pid` stands for the running chart. Clicking a transition while
+  buttons; `$Pid` stands for the running chart. Older bundled copies saved in
+  this browser have their example comments updated when opened, preserving
+  chart edits and layout settings. Clicking a transition while
   the chart runs sends its event.
 
 ## Navigation and debugging
