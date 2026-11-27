@@ -1490,7 +1490,7 @@ function play(item) {
 function renderSuggestions() {
   const box = $('suggestions');
   box.replaceChildren();
-  const goals = model ? model.examples.filter(g => !/<editor>|\bstatechart_halt\s*\(/.test(g)) : [];
+  const goals = model ? model.examples.filter(g => !/<editor>|\bstatechart_halt\s*\(|^\$Pid\s*!/.test(g)) : [];
   box.parentElement.hidden = !goals.length;
   for (const goal of goals) {
     const b = document.createElement('button');

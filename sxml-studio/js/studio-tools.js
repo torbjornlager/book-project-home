@@ -201,6 +201,18 @@ window.studioTools = (() => {
     if (!box.children.length) box.append(hint('No event handlers in the active configuration.'));
     window.SXMLChrome?.decorate(box);
   }
+  function exampleEventButtons() {
+    const events = (model.examples || []).flatMap(goal => {
+      const match = /^\$Pid\s*!\s*([\s\S]+)$/.exec(goal);
+      return match ? [match[1].trim()] : [];
+    });
+    if (!events.length) return null;
+    const disabled = !run.pid || run.starting || run.busy || run.done || paused;
+    return h('section', {class: 'example-events', 'aria-label': 'Example events'},
+      h('div', {class: 'debug-heading'}, 'Example events'),
+      h('div', {class: 'example-event-buttons'}, ...events.map(event =>
+        button(event.replace(/\s+/g, ' '), () => safeSend(event), {disabled, title: 'Send ' + event}))));
+  }
   function renderDebug() {
     const box = $('debug-tools'); if (!box || !model) return;
     const scroll = $('timeline-list')?.scrollTop || 0;
@@ -223,7 +235,8 @@ window.studioTools = (() => {
         h('p', {id:'playback-state', class:'hint'}), h('div', {id:'timeline-list', class:'timeline-list'}),
         hint('Playback only. Timers and actors continue running.')));
     timeline.querySelector('summary').onclick=()=>setTimeout(()=>{timelineOpen=timeline.open;},0);
-    box.replaceChildren(h('div', {class:'debug-heading'}, SXMLChrome.icon('play'), 'Send an event'),
+    box.replaceChildren(...[exampleEventButtons()].filter(Boolean),
+      h('div', {class:'debug-heading'}, SXMLChrome.icon('play'), 'Send an event'),
       h('div', {id:'event-palette'}), timeline);
     const speedControl=box.querySelector('[data-f="playback-speed"]'); speedControl.id='playback-speed';
     renderTimeline(); $('timeline-list').scrollTop=scroll; renderPalette();
@@ -239,7 +252,7 @@ window.studioTools = (() => {
     if (token !== sendGeneration) throw new Error('Chart changed while sending the event');
   }
   async function send(text) {
-    if (run.busy || !run.pid || paused || run.done) return;
+    if (run.starting || run.busy || !run.pid || paused || run.done) return;
     text = text.trim().replace(/\.\s*$/, ''); if (!text) return;
     // read_term_from_atom plus ground/1 validates concrete data before sending it.
     // The reserved worker request acknowledges completion of this exact macrostep.

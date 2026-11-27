@@ -25,3 +25,5 @@
 .move-preview{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
 
 .structure-panel summary,#debug-tools{font-size:calc(13px * var(--ui-font-scale,1))}
+
+.example-event-buttons{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}.example-event-buttons button{max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left;font:inherit;font-family:ui-monospace,monospace;padding:6px 9px}
