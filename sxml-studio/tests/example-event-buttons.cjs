@@ -28,6 +28,8 @@ Object.assign(context, {programs:[{}],current:0,lastSource:null,history:[],curso
   editor:{getValue:()=>editedSource},tree(){},notes(){},renderInspector(){},
   renderDebug:()=>{rendered=context.exampleEventButtons();}});
 context.file = context.programs[0];
+context.window = context; context.XMLSerializer = class {};
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/sxml-model.js'), 'utf8'),context);
 vm.runInContext(source.match(/  function adopt\(\) \{[\s\S]*?\n  \}/)[0],context);
 context.model.examples = ['$Pid ! input([blue])']; context.adopt();
 assert.equal(rendered.children[1].children[0].text,'input([blue])');

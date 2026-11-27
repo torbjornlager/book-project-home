@@ -113,19 +113,19 @@
     const tabs=document.createElement('div'); tabs.className='workspace-tabs'; tabs.setAttribute('role','tablist'); tabs.setAttribute('aria-label','Workspace navigation');
     function workspaceTab(mode,label,name) {
       const b=document.createElement('button'); b.type='button'; b.id='workspace-'+mode; b.setAttribute('role','tab'); b.setAttribute('aria-controls',mode==='files'?'files':'structure-panel'); b.dataset.icon=name; b.textContent=label;
-      b.onclick=()=>{workspace.dataset.section=mode; for(const t of tabs.children){t.setAttribute('aria-selected',String(t===b));t.tabIndex=t===b?0:-1;} const panel=mode==='files'?files:tree; panel.hidden=false; (mode==='files'?tree:files).hidden=true;};
+      b.onclick=()=>{SXMLWorkspace.save({section:mode});workspace.dataset.section=mode; for(const t of tabs.children){t.setAttribute('aria-selected',String(t===b));t.tabIndex=t===b?0:-1;} const panel=mode==='files'?files:tree; panel.hidden=false; (mode==='files'?tree:files).hidden=true;};
       tabs.append(b); return b;
     }
-    const first=workspaceTab('files','Files','folder'); workspaceTab('structure','Structure','structure'); workspace.prepend(tabs); first.click();
+    workspaceTab('files','Files','folder'); workspaceTab('structure','Structure','structure'); workspace.prepend(tabs); document.getElementById('workspace-'+SXMLWorkspace.preferences.section).click();
     for(const [id,label] of [['new','New chart'],['open','Open'],['save','Save XML'],['export','Save SVG']]) {
       const b=document.getElementById(id); b.title=b.title || b.textContent; b.textContent=label;
     }
     workspace.addEventListener('click',e=>{if(e.target.closest('#files .file-row > button:first-child')){document.body.dataset.drawer='';document.getElementById('toggle-workspace')?.setAttribute('aria-pressed','false');}});
-    const consolePanel=document.createElement('details'); consolePanel.className='runtime-console'; consolePanel.id='runtime-console';
+    const consolePanel=document.createElement('details'); consolePanel.className='runtime-console'; consolePanel.id='runtime-console';consolePanel.open=SXMLWorkspace.preferences.consoleOpen;
     const consoleSummary=document.createElement('summary'); consoleSummary.append(icon('code'),document.createTextNode('Trace & queries')); consolePanel.append(consoleSummary);
     const consoleBody=document.createElement('div');consoleBody.className='console-body';
     consoleBody.append(document.querySelector('#run .queries'),document.querySelector('#run .log-title'),document.getElementById('log'));consolePanel.append(consoleBody);document.getElementById('run').append(consolePanel);
-    consolePanel.addEventListener('toggle',()=>{if(consolePanel.open){const log=document.getElementById('log');log.scrollTop=log.scrollHeight;}});
+    consolePanel.addEventListener('toggle',()=>{SXMLWorkspace.save({consoleOpen:consolePanel.open});if(consolePanel.open){const log=document.getElementById('log');log.scrollTop=log.scrollHeight;}});
     const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='drawer-dismiss';dismiss.setAttribute('aria-label','Close side panel');
     dismiss.onclick=()=>{document.body.dataset.drawer='';for(const b of document.querySelectorAll('.panel-toggle'))b.setAttribute('aria-pressed','false');};document.body.append(dismiss);
     tabs.onkeydown=e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault(); const next=[...tabs.children].find(b=>b.getAttribute('aria-selected')!=='true'); next.click(); next.focus();}};
@@ -141,8 +141,8 @@
       const b=document.createElement('button'); b.id=id; b.type='button'; b.dataset.icon=name; b.textContent=label; b.className='panel-toggle compact-action'; b.setAttribute('aria-pressed','false');
       b.onclick=()=>{ const side=id==='toggle-workspace'?'workspace':'inspector'; const open=document.body.dataset.drawer===side; document.body.dataset.drawer=open?'':side; for(const t of actions.querySelectorAll('.panel-toggle'))t.setAttribute('aria-pressed',String(t===b&&!open));}; actions.append(b);
     }
-    const focus=document.createElement('button'); focus.id='canvas-focus'; focus.type='button'; focus.textContent='Focus canvas'; focus.setAttribute('aria-pressed','false');
-    focus.onclick=()=>{const active=document.body.dataset.focus!=='true';document.body.dataset.focus=String(active);document.body.dataset.drawer='';focus.setAttribute('aria-pressed',String(active));window.dispatchEvent(new Event('resize'));};
+    const focus=document.createElement('button'); focus.id='canvas-focus'; focus.type='button'; focus.textContent='Focus canvas'; document.body.dataset.focus=String(SXMLWorkspace.preferences.focus);focus.setAttribute('aria-pressed',String(SXMLWorkspace.preferences.focus));
+    focus.onclick=()=>{const active=document.body.dataset.focus!=='true';document.body.dataset.focus=String(active);SXMLWorkspace.save({focus:active});document.body.dataset.drawer='';focus.setAttribute('aria-pressed',String(active));window.dispatchEvent(new Event('resize'));};
     document.getElementById('toolbar-group-view').append(focus);
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.body.dataset.drawer='';for(const b of actions.querySelectorAll('.panel-toggle'))b.setAttribute('aria-pressed','false');} if((e.metaKey||e.ctrlKey)&&e.key==='.'){e.preventDefault();focus.click();}});
     decorate(document); inspector(document.getElementById('inspector')); syncRun();

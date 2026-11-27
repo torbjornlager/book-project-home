@@ -175,8 +175,10 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   query to watch the GCD calculation update `int/1`.
   Events from the document's trailing `<example events>` comment become
   **Example events** buttons in the Run panel. Events end with a period; blank
-  lines are optional. Button labels and sent events omit the terminating period. Clicking one sends its event to
-  the running chart; buttons are disabled while stopped, busy or viewing paused
+  lines are optional. Button labels and sent events omit the terminating period.
+  Editing this comment updates the buttons without stopping the chart or clearing
+  its execution history. Changes to the machine itself still stop the old run.
+  Clicking a button sends its event to the running chart; buttons are disabled while stopped, busy or viewing paused
   playback. Older bundled copies saved in
   this browser have their example comments updated when opened, preserving
   chart edits and layout settings. Clicking a transition while
@@ -184,9 +186,11 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 
 ## Navigation and debugging
 
-The workspace opens in **Diagram** view. The canvas toolbar uses SVG icons with
-tooltips and accessible names; **Split** and **Source** remain available beside
-the filename. **Files** and **Structure** are separate tabs in the left panel.
+The workspace defaults to side-by-side **Split** view, with 38% for source.
+The selected view, split arrangement and sizes, panel widths and selected tabs,
+Focus canvas, and expanded Run sections are remembered in this browser.
+The canvas toolbar uses SVG icons with tooltips and accessible names; **Diagram**
+and **Source** remain available beside the filename. **Files** and **Structure** are separate tabs in the left panel.
 The transition Inspector puts the target beside the source state and uses one
 trigger selector: Event, After (seconds), or Always. Guard and Actions are
 optional; existing guards and action bodies stay visible. Multiple transition
@@ -195,7 +199,7 @@ in an expandable section.
 
 The Inspector groups data, actions and advanced tools into
 expandable sections. The right panel contains Inspector, Run and Settings.
-In Run, event inputs come first, followed by the timeline. Raw traces and query
+In Run, example-event buttons come first, followed by event inputs and the timeline. Raw traces and query
 shortcuts are under **Trace & queries**, which opens automatically on errors.
 
 On narrower screens, the folder button opens Files/Structure; in portrait tablet

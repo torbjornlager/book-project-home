@@ -1,5 +1,5 @@
 /* SXML Studio additions on top of the Trinity Studio stylesheet. */
-:root{--right:380px;--source-height:36%;--source-width:45%;--state:#222a2e;--state-compound:#1b2225;--stroke:#62757a;--edge:#9fb1b4;--note:#1e2528}
+:root{--right:400px;--source-height:36%;--source-width:38%;--state:#222a2e;--state-compound:#1b2225;--stroke:#62757a;--edge:#9fb1b4;--note:#1e2528}
 body.light{--fg:#18241e;--muted:#3c4b43;--state:#fff;--state-compound:#f6f9f7;--stroke:#6f8379;--edge:#4c6258;--note:#fbfcf7}
 body{overflow:hidden}
 .studio{overflow:hidden;grid-template-rows:minmax(0,1fr)}

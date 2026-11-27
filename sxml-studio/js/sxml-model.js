@@ -250,6 +250,13 @@
     return '';
   }
 
+  /* Example-event comments are editor metadata, not part of the running machine.
+     Match CDATA first so comment-like text inside executable scripts is retained. */
+  function machineSource(text) {
+    return String(text ?? '').replace(/<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->/g,
+      part => /^<!--\s*<example events>/.test(part) ? '' : part).trim();
+  }
+
   /* Update the old bundled-example boilerplate without rewriting chart edits. */
   function upgradeExampleEvents(text) {
     return text.replace(/<!--\s*<examples>([\s\S]*?)-->/g, (comment, body) => {
@@ -805,6 +812,6 @@
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
     parse, build, validate, serialize, snapshot, locate, collapse, dedent, scriptText, isState, label,
-    upgradeExampleEvents, getLayout, setLayout, automaticLayout, discardManualPositions, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
+    machineSource, upgradeExampleEvents, getLayout, setLayout, automaticLayout, discardManualPositions, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
   };
 })(window);

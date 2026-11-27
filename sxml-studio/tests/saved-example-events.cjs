@@ -38,7 +38,7 @@ const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
 const selectFile = app.match(/async function selectFile\(index\) \{[\s\S]*?\n\}/)[0];
 async function open(file) {
   let shown;
-  const sandbox = {programs:[file],current:0,loadedIndex:0,run:{},window:{},SXML:S,parseTimer:null,clearTimeout(){},
+  const sandbox = {programs:[file],current:0,loadedIndex:0,run:{},window:{},SXML:S,SXMLWorkspace:{preferences:{side:'inspector'},save(){}},parseTimer:null,clearTimeout(){},
     editor:{getValue:()=>file.draft ?? file.source, setValue:value=>shown=value, clearHistory(){}},
     updateFileSelection(){},diagram:{},$:()=>({replaceChildren(){}}),reparse(){},showSide(){},runControls(){},saveExplorer(){}};
   vm.createContext(sandbox); vm.runInContext(selectFile, sandbox);

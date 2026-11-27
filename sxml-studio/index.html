@@ -8,21 +8,22 @@
 <link rel="stylesheet" href="runtime/vendor/codemirror.min.css">
 <link rel="stylesheet" href="studio.css">
 <link rel="stylesheet" href="chart.css?v=20261127-final-text-tips">
-<link rel="stylesheet" href="sxml-studio.css?v=20261127-layout-heading">
+<link rel="stylesheet" href="sxml-studio.css?v=20261127-workspace">
 <script defer src="runtime/vendor/codemirror.min.js"></script>
 <script defer src="runtime/swi_wasm_actor_worker.js?v=20261123-studio-tools"></script>
 <script defer src="runtime/vendor/swi-wasm-node.js?v=20261123-studio-tools"></script>
 <script defer src="vendor/elk.bundled.js"></script>
-<script defer src="js/sxml-model.js?v=20261127-new-chart-events"></script>
+<script defer src="js/sxml-model.js?v=20261127-workspace"></script>
 <script defer src="js/sxml-diagram.js?v=20261127-header-clipping"></script>
 <script defer src="js/studio-model.js?v=20261126-inspector-cog"></script>
-<script defer src="js/studio-chrome.js?v=20261127-history-controls"></script>
-<script defer src="js/app.js?v=20261127-example-buttons"></script>
-<script defer src="js/studio-tools.js?v=20261127-live-example-buttons"></script>
+<script defer src="js/studio-workspace.js?v=20261127-workspace"></script>
+<script defer src="js/studio-chrome.js?v=20261127-workspace"></script>
+<script defer src="js/app.js?v=20261127-workspace"></script>
+<script defer src="js/studio-tools.js?v=20261127-workspace"></script>
 <link rel="stylesheet" href="studio-tools.css?v=20261127-example-buttons">
 <link rel="stylesheet" href="studio-chrome.css?v=20261126-light-placeholders">
 </head>
-<body class="light" data-view="diagram" data-layout="horizontal">
+<body class="light" data-view="split" data-layout="vertical">
 <script src="js/ui-preferences.js"></script>
 <header class="topbar"><div class="brand"><a class="brand-home" href="https://trinity.elfenbenstornet.se" aria-label="Trinity homepage" title="Trinity homepage"><img class="brand-mark" src="img/spider-agent.png" width="42" height="42" alt=""></a><span>Trinity <strong>SXML Studio</strong></span></div><span class="experiment">STATECHART EDITOR</span><div class="top-actions"><span class="engine"><i></i> SWI-Prolog · WASM</span></div></header>
 <main class="studio">

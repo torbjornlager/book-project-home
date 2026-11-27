@@ -379,7 +379,7 @@ $('appearance-reset').onclick = () => {
 syncAppearanceControls();
 
 const SPLIT_STORAGE = 'trinity-sxml-studio.split.v1';
-const splitSizes = { horizontal: 36, vertical: 45 };
+const splitSizes = { horizontal: 36, vertical: 38 };
 try {
   const saved = JSON.parse(localStorage.getItem(SPLIT_STORAGE));
   for (const orientation of ['horizontal', 'vertical']) {
@@ -394,8 +394,8 @@ document.documentElement.style.setProperty('--source-width', splitSizes.vertical
    with the toolbar button beside the view switch and remembered here;
    it no longer follows the diagram's layout direction. */
 const SPLIT_ORIENTATION_STORAGE = 'trinity-sxml-studio.split-orientation.v1';
-let splitBeside = false;
-try { splitBeside = localStorage.getItem(SPLIT_ORIENTATION_STORAGE) === 'beside'; } catch (e) { /* default: source below */ }
+let splitBeside = true;
+try { splitBeside = localStorage.getItem(SPLIT_ORIENTATION_STORAGE) !== 'below'; } catch (e) { /* default: source beside diagram */ }
 const splitVertical = () => splitBeside;
 
 function saveSplitSize(vertical, percent) {
@@ -478,7 +478,8 @@ function adopt(doc, text, opts) {
     editor.scrollTo(scroll.left, scroll.top);
     silent = false;
   }
-  const wasRunning = run.pid && run.source !== text;
+  const wasRunning = run.pid && SXML.machineSource(run.source) !== SXML.machineSource(text);
+  if (run.pid && !wasRunning) run.source = text;
   model = SXML.build(doc);
   located = SXML.locate(text, doc);
   locatedText = text;
@@ -1503,6 +1504,7 @@ function renderSuggestions() {
 /* ---------- side panel, files, chrome ---------- */
 
 function showSide(name) {
+  SXMLWorkspace.save({side: name});
   for (const v of ['inspector', 'run', 'settings']) {
     $(v).hidden = v !== name;
     $('tab-' + v).setAttribute('aria-selected', String(v === name));
@@ -1654,7 +1656,7 @@ async function selectFile(index) {
   diagram.userMoved = false;
   $('log').replaceChildren();
   reparse({ fit: true });
-  showSide('inspector');
+  showSide(SXMLWorkspace.preferences.side);
   runControls();
   saveExplorer();
 }
@@ -1828,6 +1830,7 @@ $('split-menu').onkeydown = e => {
 };
 
 function setView(view) {
+  SXMLWorkspace.save({view});
   document.body.dataset.view = view;
   for (const b of document.querySelectorAll('.view-switch button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
   editor.refresh();
@@ -1901,7 +1904,7 @@ new ResizeObserver(() => { if (!diagram.userMoved) diagram.fit(); }).observe($('
 window.addEventListener('pagehide', disposeNode);
 window.addEventListener('beforeunload', e => { if (programs.some(p => p.source != null && (p === programs[current] ? editor.getValue() : p.draft != null ? p.draft : p.source) !== p.source)) { e.preventDefault(); e.returnValue = ''; } });
 
-setView('diagram');
+setView(SXMLWorkspace.preferences.view);
 const wanted = examplePrograms().find(p => decodeURIComponent(location.hash.slice(1)).startsWith(p.name.slice(0, 2)) && location.hash.length > 2);
 const wantedIndex = wanted ? programs.findIndex(p => p.url === wanted.url) : -1;
 selectFile(wantedIndex >= 0 ? wantedIndex : restoredExplorer ? restoredExplorer.selected : 0);

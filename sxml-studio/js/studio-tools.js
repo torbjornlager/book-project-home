@@ -2,7 +2,7 @@
 'use strict';
 window.studioTools = (() => {
   let file = null, history = [], cursor = -1, paused = false, speed = 260;
-  let sendGeneration = 0, lastSource = null, timelineOpen = true;
+  let sendGeneration = 0, lastSource = null, timelineOpen = SXMLWorkspace.preferences.timelineOpen;
   const drafts = new Map(), actors = new Map();
   const button = (text, action, attrs = {}) => h('button', Object.assign({type: 'button', onclick: action}, attrs), text);
   const hint = text => h('p', {class: 'hint'}, text);
@@ -62,7 +62,7 @@ window.studioTools = (() => {
   function adopt() {
     if (file !== programs[current]) { fileChanged(); file = programs[current]; }
     const source = editor.getValue();
-    if (lastSource != null && source !== lastSource) {
+    if (lastSource != null && SXML.machineSource(source) !== SXML.machineSource(lastSource)) {
       history = []; cursor = -1; sendGeneration++;
     }
     lastSource = source;
@@ -234,7 +234,7 @@ window.studioTools = (() => {
           selectBox('playback-speed', [['650','Slow'],['260','Normal'],['0','Instant']], String(speed), value => {speed=Number(value);})),
         h('p', {id:'playback-state', class:'hint'}), h('div', {id:'timeline-list', class:'timeline-list'}),
         hint('Playback only. Timers and actors continue running.')));
-    timeline.querySelector('summary').onclick=()=>setTimeout(()=>{timelineOpen=timeline.open;},0);
+    timeline.querySelector('summary').onclick=()=>setTimeout(()=>{timelineOpen=timeline.open; SXMLWorkspace.save({timelineOpen});},0);
     box.replaceChildren(...[exampleEventButtons()].filter(Boolean),
       h('div', {class:'debug-heading'}, SXMLChrome.icon('play'), 'Send an event'),
       h('div', {id:'event-palette'}), timeline);
