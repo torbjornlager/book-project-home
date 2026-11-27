@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 function element(name) {
-  return {name, attrs: {}, children: [], setAttribute(k,v) {this.attrs[k]=String(v);}, appendChild(e) {this.children.push(e);}, classList: {toggle() {}}};
+  return {name, attrs: {}, children: [], setAttribute(k,v) {this.attrs[k]=String(v);}, getAttribute(k) {return this.attrs[k] ?? null;}, appendChild(e) {this.children.push(e);}, classList: {toggle() {}}};
 }
 global.window=global;
 global.ELK=require('../vendor/elk.bundled.js');

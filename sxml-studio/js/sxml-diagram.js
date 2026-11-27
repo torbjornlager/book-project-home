@@ -416,6 +416,7 @@
       }
       for (const c of n.children || []) collect(c);
     })(res);
+    protectHeadings(boxes, edges, info);
     /* Root datamodel notes follow the chart: a row below or a column to its right. */
     let width = res.width, height = res.height, x = 24, y = 24;
     const down = direction === 'DOWN';
@@ -428,6 +429,111 @@
       width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24);
     }
     return { boxes, edges, info, width, height, appearance };
+  }
+
+  /* ELK does not treat our painted state headings as routing obstacles.
+     Repair only routes that intersect them, preserving the rest of each route. */
+  function protectHeadings(boxes, edges, info) {
+    const headings = [];
+    for (const [key, inf] of info) {
+      const b = boxes.get(key), n = inf.node;
+      if (!b || !n) continue;
+      if (['state', 'parallel'].includes(n.kind)) {
+        const half = width(n.id || '(no id)', F_HEAD) / 2;
+        headings.push({key, left: b.x + b.w / 2 - half - 10, right: b.x + b.w / 2 + half + 10,
+          top: b.y + 2, bottom: b.y + 27});
+      } else if (n.kind === 'final') {
+        const label = b.labels[0], cx = label ? b.x + label.x + label.width / 2 : b.x + FINAL_R;
+        const baseline = label ? b.y + label.y + 11.5 : b.y + FINAL_R * 2 + 14;
+        const half = width(n.id || '(no id)', F_HEAD) / 2;
+        headings.push({key, left: cx - half - 10, right: cx + half + 10, top: baseline - 18, bottom: baseline + 10});
+      } else if (inf.type === 'nested') {
+        headings.push({key, left: b.x + 24, right: b.x + 28 + width(inf.title.toUpperCase(), F_NOTE) + 10,
+          top: b.y + 2, bottom: b.y + 27});
+      }
+    }
+    const inside = (p, r) => p.x > r.left + .001 && p.x < r.right - .001 && p.y > r.top + .001 && p.y < r.bottom - .001;
+    const crosses = (a, b, r) => a.x === b.x
+      ? a.x > r.left + .001 && a.x < r.right - .001 && Math.max(a.y, b.y) > r.top + .001 && Math.min(a.y, b.y) < r.bottom - .001
+      : a.y === b.y && a.y > r.top + .001 && a.y < r.bottom - .001 && Math.max(a.x, b.x) > r.left + .001 && Math.min(a.x, b.x) < r.right - .001;
+    const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    for (const edge of edges) {
+      if (edge.points.length < 2 || info.get(edge.id)?.type === 'chain') continue;
+      if (!edge.points.some((p, i, ps) => i && headings.some(r => crosses(ps[i - 1], p, r)))) continue;
+      const original = edge.points;
+      const points = [];
+      original.forEach((p, i) => {
+        if (i) {
+          const a = original[i - 1], additions = [];
+          for (const r of headings) if (crosses(a, p, r)) {
+            if (a.x === p.x) for (const y of [r.top - 8, r.bottom + 8]) {
+              if (y > Math.min(a.y, p.y) && y < Math.max(a.y, p.y)) additions.push({x: p.x, y});
+            }
+            else for (const x of [r.left - 8, r.right + 8]) {
+              if (x > Math.min(a.x, p.x) && x < Math.max(a.x, p.x)) additions.push({x, y: p.y});
+            }
+          }
+          additions.sort((u, v) => distance(a, u) - distance(a, v));
+          points.push(...additions);
+        }
+        points.push({...p});
+      });
+      const anchors = points.filter((p, i) => !i || i === points.length - 1 || !headings.some(r => inside(p, r)));
+      // Keep detours out of unrelated states, symbols and datamodel notes too.
+      const obstacles = [...headings];
+      for (const [key, b] of boxes) {
+        const inf = info.get(key);
+        if (!inf || inf.node?.kind === 'statechart' && !inf.node.scope) continue;
+        if (!inf.node && !['note', 'init'].includes(inf.type)) continue;
+        const r = {left: b.x + .01, right: b.x + b.w - .01, top: b.y + .01, bottom: b.y + b.h - .01};
+        const container = inf.node && (inf.node.children.length || inf.type === 'nested') && !inf.collapsed;
+        if (container && anchors.some(p => inside(p, r))) continue;
+        obstacles.push(r);
+      }
+      const repaired = [anchors[0]];
+      for (let i = 1; i < anchors.length; i++) {
+        const a = repaired.at(-1), b = anchors[i];
+        if (distance(a, b) < .001) continue;
+        if ((a.x === b.x || a.y === b.y) && !headings.some(r => crosses(a, b, r))) repaired.push(b);
+        else repaired.push(...orthogonalDetour(a, b, obstacles).slice(1));
+      }
+      edge.points = repaired.filter((p, i, ps) => !i || i === ps.length - 1 ||
+        !((ps[i - 1].x === p.x && p.x === ps[i + 1].x) || (ps[i - 1].y === p.y && p.y === ps[i + 1].y)));
+    }
+  }
+
+  /* A small rectilinear visibility grid; A* finds the shortest clear detour. */
+  function orthogonalDetour(start, end, obstacles) {
+    const xs = [...new Set([start.x, end.x, ...obstacles.flatMap(r => [r.left, r.right])])].sort((a, b) => a - b);
+    const ys = [...new Set([start.y, end.y, ...obstacles.flatMap(r => [r.top, r.bottom])])].sort((a, b) => a - b);
+    const cols = xs.length, id = (x, y) => y * cols + x;
+    const first = id(xs.indexOf(start.x), ys.indexOf(start.y)), last = id(xs.indexOf(end.x), ys.indexOf(end.y));
+    const open = [{id: first, score: 0}], costs = new Map([[first, 0]]), previous = new Map(), closed = new Set();
+    const clear = (a, b) => !obstacles.some(r => a.x === b.x
+      ? a.x > r.left + .001 && a.x < r.right - .001 && Math.max(a.y, b.y) > r.top + .001 && Math.min(a.y, b.y) < r.bottom - .001
+      : a.y > r.top + .001 && a.y < r.bottom - .001 && Math.max(a.x, b.x) > r.left + .001 && Math.min(a.x, b.x) < r.right - .001);
+    while (open.length) {
+      open.sort((a, b) => b.score - a.score);
+      const current = open.pop().id;
+      if (closed.has(current)) continue;
+      if (current === last) {
+        const route = [];
+        for (let at = last; at != null; at = previous.get(at)) route.push({x: xs[at % cols], y: ys[Math.floor(at / cols)]});
+        return route.reverse();
+      }
+      closed.add(current);
+      const x = current % cols, y = Math.floor(current / cols), a = {x: xs[x], y: ys[y]};
+      for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= ys.length) continue;
+        const next = id(nx, ny), b = {x: xs[nx], y: ys[ny]};
+        if (closed.has(next) || !clear(a, b)) continue;
+        const cost = costs.get(current) + Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        if (cost >= (costs.get(next) ?? Infinity)) continue;
+        costs.set(next, cost); previous.set(next, current);
+        open.push({id: next, score: cost + Math.abs(b.x - end.x) + Math.abs(b.y - end.y)});
+      }
+    }
+    throw new Error('Cannot route a transition clear of state headings.');
   }
 
   /* ---------- SVG helpers ---------- */

@@ -135,7 +135,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   to connect to it, or onto empty space to create a new connected state.
   Automatic layout chooses the new state’s position.
 - Layout: ELK arranges the diagram automatically after edits. States, transition
-  labels and datamodel notes have no manual positions. Drag empty canvas to pan;
+  labels and datamodel notes have no manual positions. Transition routes avoid
+  state headings in both layout directions. Drag empty canvas to pan;
   scrolling, zooming, selection, double-click editing and connection handles remain
   available. **Fit** fits the chart to the pane; **Direction** switches the overall
   flow. Layout direction and each parallel
