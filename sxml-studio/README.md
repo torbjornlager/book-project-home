@@ -201,7 +201,8 @@ The Inspector groups data, actions and advanced tools into
 expandable sections. The right panel contains Inspector, Run and Settings.
 In Run, example-event buttons come first, followed by **Send any event** and the
 timeline. Enter a concrete Prolog term and click **!** or press Return to send it.
-After a successful send, the field clears and regains focus for the next event. Raw traces and query
+Once the interpreter accepts an event, the field clears and regains focus for
+the next event immediately, while timeline playback continues. Raw traces and query
 shortcuts are under **Trace & queries**, which opens automatically on errors.
 
 On narrower screens, the folder button opens Files/Structure; in portrait tablet

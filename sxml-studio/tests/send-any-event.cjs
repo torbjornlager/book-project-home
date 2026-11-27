@@ -19,7 +19,7 @@ const event={preventDefault(){}};
   assert(row.button.disabled);
   type(row,'input([a,red,box]).');assert.equal(row.button.disabled,false);
   let finish;
-  context.safeSend=text=>{sent.push(text);return new Promise(resolve=>finish=resolve);};
+  context.safeSend=(text,options)=>{assert.equal(options.waitForPlayback,false);sent.push(text);return new Promise(resolve=>finish=resolve);};
   let prevented=0;
   const pending=row.form.onsubmit({preventDefault(){prevented++;}});
   row=render(); // Runtime state/trace updates replace the original input.
@@ -47,6 +47,18 @@ const event={preventDefault(){}};
   }
   context.run={pid:'chart@localhost'};context.paused=true;row=render();assert(row.button.disabled);
   await row.form.onsubmit(event);assert.equal(attempts,0);
+  // Delivery completion must not wait for queued timeline observations in manual mode.
+  let waits=0;
+  const delivery={run:{pid:'chart@localhost',queue:[{text:'pending playback'}],timer:1},paused:false,sendGeneration:4,
+    quoteAtom:text=>JSON.stringify(text),runGoal:async()=>({type:'success'}),
+    settled:async()=>{waits++;},snapshot:()=>({active:['s0']})};
+  vm.createContext(delivery);
+  vm.runInContext(source.match(/  async function send\(text, options = \{\}\) \{[\s\S]*?\n  \}/)[0],delivery);
+  await delivery.send('e',{waitForPlayback:false});assert.equal(waits,0);
+  assert.equal(delivery.run.queue.length,1,'Keep playback queued while the field is readied.');
+  await delivery.send('e');assert.equal(waits,1,'Other callers retain the settled-snapshot behavior.');
+  delivery.runGoal=async()=>({type:'failure'});
+  await assert.rejects(delivery.send('invalid(',{waitForPlayback:false}),/Event failed/);
   assert(source.includes("'Send any event'"));
   console.log('Checked !/Return submission, clear/refocus after redraws, failed input, concurrent typing/chart changes, focused typing and run-state guards.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

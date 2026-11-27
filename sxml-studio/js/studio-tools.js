@@ -202,7 +202,7 @@ window.studioTools = (() => {
       e.preventDefault();
       if (disabled || !input.value.trim()) return;
       const value = input.value, token = sendGeneration;
-      const result = await safeSend(value);
+      const result = await safeSend(value, {waitForPlayback: false});
       if (token !== sendGeneration) return;
       // Sending and trace playback rebuild the controls; focus the current input.
       const current = $('event-palette')?.querySelector('input');
@@ -231,6 +231,9 @@ window.studioTools = (() => {
   function renderDebug() {
     const box = $('debug-tools'); if (!box || !model) return;
     const scroll = $('timeline-list')?.scrollTop || 0;
+    const activeInput = $('event-palette')?.querySelector('input');
+    const caret = activeInput && document.activeElement === activeInput
+      ? [activeInput.selectionStart, activeInput.selectionEnd, activeInput.selectionDirection] : null;
     const timeline = h('details', {class:'ui-section', open:timelineOpen},
       h('summary', {}, SXMLChrome.icon('clock'), 'Execution timeline'),
       h('div', {class:'ui-section-body'},
@@ -255,6 +258,11 @@ window.studioTools = (() => {
       h('div', {id:'event-palette'}), timeline);
     const speedControl=box.querySelector('[data-f="playback-speed"]'); speedControl.id='playback-speed';
     renderTimeline(); $('timeline-list').scrollTop=scroll; renderPalette();
+    const input = $('event-palette')?.querySelector('input');
+    if (caret && input && !input.disabled) {
+      input.focus({preventScroll: true});
+      input.setSelectionRange(...caret);
+    }
     window.SXMLChrome?.decorate(box);
   }
   async function settled(token = sendGeneration) {
@@ -266,19 +274,20 @@ window.studioTools = (() => {
     }
     if (token !== sendGeneration) throw new Error('Chart changed while sending the event');
   }
-  async function send(text) {
+  async function send(text, options = {}) {
     if (run.starting || run.busy || !run.pid || paused || run.done) return;
     text = text.trim().replace(/\.\s*$/, ''); if (!text) return;
     // read_term_from_atom plus ground/1 validates concrete data before sending it.
     // The reserved worker request acknowledges completion of this exact macrostep.
     const token = sendGeneration;
     const answer = await runGoal("read_term_from_atom(" + quoteAtom(text) + ", Event, []), ground(Event), self(From), make_ref(Ref), $Pid ! '$studio_step'(From, Ref, Event), receive({Ref-studio_done -> true}, [timeout(10), on_timeout(throw(studio_step_timeout))])");
-    await settled(token);
+    if (token !== sendGeneration) throw new Error('Chart changed while sending the event');
     if (!answer || answer.type !== 'success') throw new Error('Event failed; provide a concrete Prolog term and check the trace.');
+    if (options.waitForPlayback !== false) await settled(token);
     return snapshot();
   }
   function showError(error) { status(error.message); }
-  async function safeSend(text) { try { return await send(text); } catch (error) { showError(error); } }
+  async function safeSend(text, options) { try { return await send(text, options); } catch (error) { showError(error); } }
   $('structure-search').oninput = tree;
   const api = {adopt, selection, inspector, controls, stopped, newRun, fileChanged, scope, played, send: safeSend, paused: () => paused, speed: () => speed};
   if (model) adopt();
