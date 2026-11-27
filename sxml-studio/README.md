@@ -22,8 +22,11 @@ Web Workers need HTTP, so serve this folder with any static server:
 The Explorer remembers filenames, removed entries and local source edits across
 reloads using this browser’s local storage. Double-click a filename to rename it;
 Enter saves and Escape cancels. The trash icon removes a file from the Explorer.
-These changes apply to this browser and site address. “Save source” still downloads
-an XML file for keeping a separate copy. Unchanged bundled examples are loaded
+These changes apply to this browser and site address. **Save XML** saves a source
+file, and **Save SVG** saves the drawing. Both open a Save As dialog to choose a
+filename and folder in supported browsers. Otherwise they use ordinary downloads;
+the browser’s download settings control the destination and whether to ask each
+time. Cancelling a Save As dialog leaves the document unsaved. Unchanged bundled examples are loaded
 afresh so updates to them remain available.
 Use **Settings → Restore missing examples** to bring removed bundled examples back.
 Existing files, renamed examples and edits are preserved.
@@ -48,7 +51,7 @@ Incoming transitions are twice the normal thickness, with arrowheads 25% larger.
 arrowhead size, state border thickness, transition label size, and label background
 opacity. **Use theme colour** follows the light/dark theme; **Reset appearance**
 restores the original styling. These preferences are remembered in this browser
-and included in **Save diagram** SVG downloads. Style remains available while
+and included in **Save SVG** files. Style remains available while
 a chart runs, with selection and execution highlights kept distinct. Label size
 and transition thickness recalculate the layout; use **Fit** if needed.
 **Label background** defaults to transparent (0%) and controls the backing behind transition text, from fully

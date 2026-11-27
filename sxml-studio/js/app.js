@@ -1673,15 +1673,70 @@ function download(name, text, type) {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$('save').onclick = () => { download(programs[current].name.replace(/^↳ /, ''), editor.getValue(), 'application/xml;charset=utf-8'); const p = programs[current]; p.local = !!p.local || p.source !== editor.getValue(); p.source = editor.getValue(); updateChrome(); saveExplorer(); };
+/* Open the picker before awaiting content generation so the click still
+   grants user activation. Unsupported browsers retain ordinary downloads. */
+async function saveFile(name, content, type, extension, description) {
+  let handle = null, writable = null;
+  if (window.isSecureContext && typeof window.showSaveFilePicker === 'function') {
+    try {
+      handle = await window.showSaveFilePicker({
+        id: 'sxml-studio-save', startIn: 'downloads', suggestedName: name,
+        types: [{ description, accept: { [type.split(';')[0]]: [extension] } }]
+      });
+    } catch (error) {
+      if (error.name === 'AbortError') return false;
+      if (!['SecurityError', 'NotSupportedError'].includes(error.name)) {
+        console.warn('Could not open the save dialog:', error);
+        status('Could not open the save dialog. Please try again.');
+        return false;
+      }
+    }
+  }
+  try {
+    const text = typeof content === 'function' ? await content() : content;
+    if (handle) {
+      writable = await handle.createWritable();
+      await writable.write(new Blob([text], { type }));
+      await writable.close();
+      status('Saved ' + (handle.name || name));
+    } else {
+      download(name, text, type);
+      status('Download started · ' + name);
+    }
+    return true;
+  } catch (error) {
+    try { await writable?.abort(); } catch (_) { /* The stream may already be closed. */ }
+    console.warn('Could not save the file:', error);
+    status('Could not save the file. Please try again.');
+    return false;
+  }
+}
+$('save').onclick = async () => {
+  const p = programs[current], source = editor.getValue();
+  if (!await saveFile(p.name.replace(/^↳ /, ''), source, 'application/xml;charset=utf-8', '.xml', 'SXML source')) return;
+  p.local = !!p.local || p.source !== source;
+  p.source = source;
+  updateChrome();
+  saveExplorer();
+};
 
 $('export').onclick = async () => {
   if (!diagram.geo) return;
+  const name = programs[current].name.replace(/^↳ /, '').replace(/\.\w+$/, '') + '.svg';
   const cs = getComputedStyle(diagram.svg);
   const vars = ['--fg', '--muted', '--line', '--accent', '--accent-bg', '--blue', '--editor', '--raised', '--state', '--state-compound', '--stroke', '--edge', '--note', '--transition-width', '--state-border-width', '--transition-label-size', '--transition-label-opacity', '--edge-hit-width'];
-  let css = 'svg{' + vars.map(v => v + ':' + cs.getPropertyValue(v).trim()).join(';') + ';background:' + cs.getPropertyValue('--editor').trim() + '}\n';
-  try { css += (await (await fetch('chart.css')).text()).replace(/svg\.chart/g, 'svg'); } catch (e) { /* unstyled export */ }
-  download(programs[current].name.replace(/\.\w+$/, '') + '.svg', diagram.exportSVG(css), 'image/svg+xml');
+  const css = 'svg{' + vars.map(v => v + ':' + cs.getPropertyValue(v).trim()).join(';') + ';background:' + cs.getPropertyValue('--editor').trim() + '}\n';
+  // Capture the current drawing before the save dialog or stylesheet fetch.
+  const snapshot = diagram.exportSVG(css);
+  await saveFile(name, async () => {
+    const doc = new DOMParser().parseFromString(snapshot, 'image/svg+xml');
+    try {
+      const response = await fetch('chart.css');
+      if (!response.ok) throw new Error('Could not load diagram styles');
+      doc.querySelector('style').textContent += (await response.text()).replace(/svg\.chart/g, 'svg');
+    } catch (error) { console.warn('Saving SVG without the diagram stylesheet:', error); }
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(doc.documentElement);
+  }, 'image/svg+xml', '.svg', 'SVG drawing');
 };
 
 $('delete').onclick = removeSelected;

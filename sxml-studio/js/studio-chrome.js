@@ -55,7 +55,7 @@
     }
     return svg;
   }
-  const ids = {'new':'plus','open':'folder','save':'download','export':'image','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'extras','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
+  const ids = {'new':'plus','open':'folder','save':'download','export':'download','delete':'trash','undo':'undo','redo':'redo','layout-toggle':'extras','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
   const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;
@@ -117,7 +117,7 @@
       tabs.append(b); return b;
     }
     const first=workspaceTab('files','Files','folder'); workspaceTab('structure','Structure','structure'); workspace.prepend(tabs); first.click();
-    for(const [id,label] of [['new','New chart'],['open','Open'],['save','Save XML'],['export','Export']]) {
+    for(const [id,label] of [['new','New chart'],['open','Open'],['save','Save XML'],['export','Save SVG']]) {
       const b=document.getElementById(id); b.title=b.title || b.textContent; b.textContent=label;
     }
     workspace.addEventListener('click',e=>{if(e.target.closest('#files .file-row > button:first-child')){document.body.dataset.drawer='';document.getElementById('toggle-workspace')?.setAttribute('aria-pressed','false');}});
