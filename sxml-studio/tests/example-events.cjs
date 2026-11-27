@@ -29,6 +29,30 @@ input([
     a, red, box
 ]).
 `]), ["$Pid ! message('Keep this. And that.')", '$Pid ! reading(1.25)', '$Pid ! input([\n    a, red, box\n])']);
+// Consecutive lines and optional blank lines must produce the same four events.
+const inputs = ['input([a,red,box])', 'input([blue])', 'input([a,big,box])', 'input([a,small,box])'];
+for (const separator of ['\n', '\n\n', ' ', '\n \n\n']) {
+  assert.deepEqual(queries(['<example events>\n' + inputs.map(term => term + '.').join(separator)]), inputs.map(term => '$Pid ! ' + term));
+}
+assert.deepEqual(queries([`<example events>
+input([a,red,box]).
+input([blue]).
+
+input([a,big,box]).
+input([a,small,box]).
+`]), inputs.map(term => '$Pid ! ' + term));
+assert.deepEqual(queries([`<example events>
+% an example comment with a period.
+input([
+ a,
+
+ red, box
+]). % another comment.
+/* ignored. /* nested. */ */ reading(1.25).
+message('A doubled ''quote''. Still one event.').
+message("A string. With periods.").
+`]), ['$Pid ! input([\n a,\n\n red, box\n])', '$Pid ! reading(1.25)', "$Pid ! message('A doubled ''quote''. Still one event.')", '$Pid ! message("A string. With periods.")']);
+assert.deepEqual(queries(['<example events> /* comment. */ % comment.']), []);
 assert.deepEqual(queries(['<example events>\n\n']), []);
 assert.deepEqual(queries(['<examples>\n\n?- statechart_spawn(Pid, [src_text(<editor>)]).\n\n?- $Pid ! old_event.\n\n?- statechart_halt($Pid, Reply, 1).']), ['statechart_spawn(Pid, [src_text(<editor>)])', '$Pid ! old_event', 'statechart_halt($Pid, Reply, 1)'], 'Previously saved files must keep working.');
 assert.equal(S.description(doc(['<example events>\n\nplay.'])), '', 'Example events are not the chart description.');

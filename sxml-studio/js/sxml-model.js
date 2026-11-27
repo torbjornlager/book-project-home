@@ -271,15 +271,44 @@
     });
   }
 
+  /* A full stop outside a quoted or nested term ends an example event.
+     Blank lines are ordinary whitespace, including inside multiline terms. */
+  function splitExampleEvents(body) {
+    const events = [];
+    let text = '', quote = null, depth = 0, block = 0, lineComment = false;
+    const emit = () => { const event = dedent(text).trim(); if (event) events.push(event); text = ''; };
+    for (let i = 0; i < body.length; i++) {
+      const c = body[i], next = body[i + 1];
+      if (lineComment) { if (c === '\n') { lineComment = false; text += '\n'; } continue; }
+      if (block) {
+        if (c === '/' && next === '*') { block++; i++; }
+        else if (c === '*' && next === '/') { block--; i++; }
+        continue;
+      }
+      if (quote) {
+        text += c;
+        if (c === '\\' && next != null) { text += next; i++; }
+        else if (c === quote) { if (next === quote) { text += next; i++; } else quote = null; }
+        continue;
+      }
+      if (c === '%') { lineComment = true; text += ' '; continue; }
+      if (c === '/' && next === '*') { block = 1; text += ' '; i++; continue; }
+      if (c === "'" || c === '"' || c === '`') quote = c;
+      else if ('([{'.includes(c)) depth++;
+      else if (')]}'.includes(c)) depth--;
+      else if (c === '.' && depth === 0 && (next == null || /\s/.test(next) || next === '%' || next === '/' && body[i + 2] === '*')) { emit(); continue; }
+      text += c;
+    }
+    emit();
+    return events;
+  }
+
   function exampleQueries(doc) {
     const out = [];
     for (const n of Array.from(doc.childNodes)) {
       if (n.nodeType !== 8) continue;
       if (/<example events>/.test(n.data)) {
-        for (const part of n.data.replace(/<example events>/, '').split(/\n\s*\n/)) {
-          const event = dedent(part).replace(/\.\s*$/, '').trim();
-          if (event) out.push('$Pid ! ' + event);
-        }
+        for (const event of splitExampleEvents(n.data.replace(/<example events>/, ''))) out.push('$Pid ! ' + event);
         continue;
       }
       if (!/<examples>/.test(n.data)) continue;
