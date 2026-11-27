@@ -16,12 +16,13 @@ class Element {
   querySelectorAll(selector) {return this.children.flatMap(e => [...(selector === '[data-tooltip]' && e.attrs['data-tooltip'] ? [e] : []), ...e.querySelectorAll(selector)]);}
   cloneNode() {const e = new Element(this.tag); e.attrs = {...this.attrs}; e.textContent = this.textContent; e.children = this.children.map(c=>c.cloneNode()); return e;}
 }
+const realSetTimeout = global.setTimeout, realClearTimeout = global.clearTimeout;
 let timer, delay;
 global.window = global;
 global.innerWidth = 800; global.innerHeight = 600;
 global.setTimeout = (fn, ms) => {timer = fn; delay = ms; return 1;};
 global.clearTimeout = () => {timer = null;};
-global.document = {createElement: tag => tag === 'canvas' ? {getContext: () => ({})} : new Element(tag), createElementNS: (_,tag) => new Element(tag)};
+global.document = {createElement: tag => tag === 'canvas' ? {getContext: () => ({measureText: text => ({width: text.length * 7})})} : new Element(tag), createElementNS: (_,tag) => new Element(tag)};
 global.SXMLStudio = {description: () => 'Order completed', metadata: () => ({notes: []})};
 global.XMLSerializer = class {serializeToString(e) {return JSON.stringify(e);}};
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../js/sxml-diagram.js'), 'utf8'));
@@ -69,3 +70,59 @@ assert(output.includes('"tag":"title"'));
 assert(!output.includes('data-tooltip'));
 assert(output.includes('You want a ~p ~p box!'));
 console.log('Checked complete boxshop final-state action, text-only action hover, one-second delay, cancellation, viewport placement and SVG titles.');
+
+// Generate real layout/label metadata, then check the rendered hover targets.
+(async () => {
+  global.setTimeout = realSetTimeout; global.clearTimeout = realClearTimeout;
+  global.ELK = require('../vendor/elk.bundled.js');
+  const makeState = (id, kind = 'state') => ({id, key: id, kind, el: {}, children: [], datamodels: [], spawns: [], onentry: [], onexit: [], defers: [], transitions: []});
+  const chart = makeState('#root', 'statechart'), source = makeState('source'), target = makeState('target');
+  chart.children = [source, target]; chart.initial = 'source';
+  const long = name => name + '(' + 'complete_content_'.repeat(8) + 'tail)';
+  const entry = {key: 'source/entry', body: long('entry_action')};
+  const exit = {key: 'source/exit', body: long('exit_action')};
+  const defer = {key: 'source/defer', on: long('deferred_event'), cond: long('defer_guard')};
+  const spawn = {key: 'source/spawn', type: 'actor', el: {getAttribute: name => name === 'goal' ? long('spawn_goal') : null}};
+  const internal = {key: 'source/internal', el: {}, source, to: [], on: long('internal_event'), cond: long('internal_guard'), body: long('internal_action'), index: 0};
+  const external = {key: 'source/external', el: {}, source, to: ['target'], on: long('external_event'), cond: long('external_guard'), body: long('external_action'), index: 1};
+  source.onentry = [entry]; source.onexit = [exit]; source.defers = [defer]; source.spawns = [spawn]; source.transitions = [internal, external];
+  const dm = {key: '#root/datamodel0', body: Array.from({length: 12}, (_, i) => long('fact_' + i) + '.').join('\n')};
+  chart.datamodels = [dm];
+  const model = {root: chart, nodes: [chart, source, target], byId: new Map([['source',source],['target',target]]), nested: new Map(), transitions: [internal, external], layout: null};
+  const geo = await SXMLDiagram.layout(model, 'RIGHT');
+  const drawing = {...diagram, view: new Element('g'), svg: new Element('svg'), host: new Element('div'), geo, model, _note: SXMLDiagram.Diagram.prototype._note};
+  SXMLDiagram.Diagram.prototype._render.call(drawing);
+  global.setTimeout = (fn, ms) => {timer = fn; delay = ms; return 1;};
+  global.clearTimeout = () => {timer = null;};
+  SXMLDiagram.Diagram.prototype._bindTooltip.call(drawing);
+  const popup = drawing.host.lastChild;
+  function check(owner, expected, name) {
+    const full = owner.getAttribute('data-tooltip');
+    for (const value of expected) assert(full.includes(value), name + ' must retain ' + value);
+    drawing.svg.listeners.pointermove({target: {closest: () => owner}, clientX: 20, clientY: 30, buttons: 0});
+    assert.equal(delay, 1000, name + ' delay');
+    assert(popup.hidden, name + ' must wait');
+    timer();
+    assert.equal(popup.hidden, false);
+    assert.equal(popup.textContent, full, name + ' popup content');
+    drawing.svg.listeners.pointerleave();
+  }
+  for (const [item, expected, name] of [
+    [entry, [entry.body], 'entry action'], [exit, [exit.body], 'exit action'],
+    [defer, [defer.on, defer.cond], 'deferred event and guard'],
+    [spawn, [long('spawn_goal')], 'spawn goal'],
+    [internal, [internal.on, internal.cond, internal.body], 'internal transition']
+  ]) {
+    const line = geo.info.get('source').lines.find(line => line.item === item);
+    assert(line.shown.endsWith('…'), name + ' must actually be truncated in the drawing');
+    check(drawing.itemEls.get(item.key), expected, name);
+  }
+  const labelInfo = [...geo.info.values()].find(info => info.item === external && info.label);
+  assert(labelInfo.label.lines.some(line => line.endsWith('…')));
+  const edgeLabel = drawing.edgeEls.get(external.key).find(el => el.attrs.class.includes('tlabel'));
+  check(edgeLabel, [external.on, external.cond, external.body], 'transition event, guard and action');
+  assert(geo.info.get(dm.key).lines.some(line => line.endsWith('…')));
+  assert(geo.info.get(dm.key).lines.length < dm.body.split('\n').length);
+  check(drawing.itemEls.get(dm.key), [dm.body], 'datamodel including omitted lines');
+  console.log('Checked truncated entry/exit actions, spawn goals, deferred events, internal/external transition events, guards/actions and datamodel lines: full hover text after 1000 ms.');
+})().catch(error => {console.error(error); process.exitCode = 1;});
