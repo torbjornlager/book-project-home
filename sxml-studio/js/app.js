@@ -509,7 +509,6 @@ function updateChrome() {
   if (regionControl) regionControl.disabled = !!run.pid || run.starting;
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
-  for (const b of document.querySelectorAll('[data-add],#tool-connect')) b.disabled = !!run.pid;
   diagram.readOnly = !!run.pid;
 }
 
@@ -757,24 +756,6 @@ function guard() {
   return true;
 }
 
-function containerFor(kind) {
-  let entry = entryFor(selEl) || model.root;
-  let n = ownerNode(entry);
-  while (n && !(SXML.CHILDREN[n.kind] || []).includes(kind)) n = n.parent;
-  return n || model.root;
-}
-
-function addState(kind) {
-  if (!guard()) return;
-  const parent = containerFor(kind);
-  if (kind === 'history' && parent.kind === 'statechart') { status('Select a compound state to add a history state'); return; }
-  const el = SXML.addState(model.doc, parent.el, kind);
-  selEl = el; commit();
-  showSide('inspector');
-  const f = $('inspector').querySelector('input[data-f="id"]');
-  if (f) { f.focus(); f.select(); }
-}
-
 async function connect(sourceKey, targetKey, opts) {
   if (!guard()) return;
   const s = model.byKey.get(sourceKey), t = model.byKey.get(targetKey);
@@ -866,7 +847,6 @@ function diagramKey(ev) {
 
 function setTool(tool) {
   diagram.tool = tool;
-  $('tool-connect').setAttribute('aria-pressed', String(tool === 'connect'));
   $('chart').classList.toggle('connect', tool === 'connect');
   if (tool === 'connect') status('Transition tool · drag from the source state to the target state');
 }
@@ -1745,8 +1725,6 @@ $('export').onclick = async () => {
   download(programs[current].name.replace(/\.\w+$/, '') + '.svg', diagram.exportSVG(css), 'image/svg+xml');
 };
 
-for (const b of document.querySelectorAll('[data-add]')) b.onclick = () => addState(b.dataset.add);
-$('tool-connect').onclick = () => setTool(diagram.tool === 'connect' ? null : 'connect');
 $('delete').onclick = removeSelected;
 $('undo').onclick = () => editor.undo();
 $('redo').onclick = () => editor.redo();

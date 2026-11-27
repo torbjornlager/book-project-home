@@ -102,10 +102,11 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   A graphical edit rewrites only the lines it concerns: every
   untouched element, comment and blank line keeps its source text exactly.
   Undo/Redo covers both.
-- Editing: add state / parallel / final / history inside the selection. Default labels
+- Editing: add states on the canvas; use the Inspector’s Type field to choose
+  parallel, final or history. Default labels
   are `s0`, `s1`, … for states, `p0`, `p1`, … for parallel states, `f0`, `f1`, …
-  for final states, `h0`, `h1`, … for history states, and `e0`, `e1`, … for events. Use the
-  Transition tool (key T) to connect states, and edit in the Inspector. Transition
+  for final states, `h0`, `h1`, … for history states, and `e0`, `e1`, … for events. Use diagram handles or the
+  Transition shortcut (key T) to connect states, and edit in the Inspector. Transition
   order determines priority. Renaming a state updates references; Delete removes
   it together with transitions that target it.
 - On-canvas editing: double-click a state's name to rename it in place (references
@@ -142,7 +143,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   the saved positions and returns to automatic layout; **Direction** does the
   same in the other direction. Undo covers both. Root datamodel notes can be
   freely positioned in either mode. To create a new transition, use a handle or
-  the Transition tool. Drag empty canvas to pan; scrolling and zooming remain
+  the Transition shortcut (key T). Drag empty canvas to pan; scrolling and zooming remain
   available. The layout direction is saved in the same comment.
 - Parallel states have a **Region arrangement** selector in the Inspector:
   Stacked (the default), Side by side, or Follow chart. Each parallel state can be set
