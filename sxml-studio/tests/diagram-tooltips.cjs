@@ -12,6 +12,9 @@ class Element {
   insertBefore(e) {this.children.unshift(e);}
   get firstChild() {return this.children[0];}
   get lastChild() {return this.children.at(-1);}
+  get offsetTop() {return this.parent.children.indexOf(this) * 14;}
+  get offsetHeight() {return 14;}
+  get clientHeight() {return 196;}
   addEventListener(type, fn) {this.listeners[type] = fn;}
   getBoundingClientRect() {return {width: 300, height: 100};}
   querySelectorAll(selector) {return this.children.flatMap(e => [...((selector === '[data-tooltip]' && e.attrs['data-tooltip']) || (selector.startsWith('.') && selector === '.' + e.attrs.class) ? [e] : []), ...e.querySelectorAll(selector)]);}
@@ -144,6 +147,23 @@ console.log('Checked complete boxshop final-state action, text-only action hover
   const restored = rerendered.firstChild.children.find(el => el.attrs.class === 'note-scroll').firstChild;
   assert.equal(restored.scrollTop, 120, 'Redrawing must preserve the scroll position.');
   assert.equal(restored.scrollLeft, 35);
+  const live = {facts: [], changed: []};
+  const liveInfo = {...geo.info.get(dm.key), live, changedLines: Array.from({length:60}, (_, i) => i >= 58)};
+  function renderLive(info) {
+    const parent = new Element('g');
+    drawing._note(parent, dm, box, info);
+    return parent.firstChild.children.find(el => el.attrs.class === 'note-scroll').firstChild;
+  }
+  const followed = renderLive(liveInfo);
+  assert.equal(followed.scrollTop, 60 * 14 - followed.clientHeight, 'The last line of a new multiline clause must be visible.');
+  assert.equal(followed.scrollLeft, 35, 'Following additions must preserve horizontal scrolling.');
+  followed.scrollTop = 95; followed.listeners.scroll();
+  assert.equal(renderLive(liveInfo).scrollTop, 95, 'Redrawing the same snapshot must let the user scroll back.');
+  assert.equal(renderLive({...liveInfo, live:{facts:[]}, changedLines:[]}).scrollTop, 95, 'Updates with no additions must preserve scrolling.');
+  const inserted = renderLive({...liveInfo, live:{facts:[]}, changedLines:Array.from({length:60}, (_, i) => i === 20)});
+  assert.equal(inserted.scrollTop, 21 * 14 - inserted.clientHeight, 'An addition before existing clauses must also scroll into view.');
+  const sourceAgain = renderLive(geo.info.get(dm.key));
+  assert.equal(sourceAgain.scrollTop, inserted.scrollTop, 'Static source notes must retain their scroll position.');
   drawing.svg.listeners.pointermove({target: {closest: selector => selector === '.note-scroll' ? viewport : null}, buttons: 0});
   assert.equal(timer, null, 'Reading scrollable content must not open an obstructing tooltip.');
   drawing.svg.appendChild(drawing.view);

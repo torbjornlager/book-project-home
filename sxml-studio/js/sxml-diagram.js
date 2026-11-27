@@ -716,9 +716,13 @@
     content.setAttribute('role', 'region');
     content.setAttribute('aria-label', 'Datamodel content');
     viewport.appendChild(content);
+    let latestAddition = null;
     inf.fullText.split('\n').forEach((text, i) => {
       const line = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-      if (inf.live && inf.changedLines[i]) line.setAttribute('class', 'fact-change');
+      if (inf.live && inf.changedLines[i]) {
+        line.setAttribute('class', 'fact-change');
+        latestAddition = line;
+      }
       line.textContent = text || '\u00a0';
       content.appendChild(line);
     });
@@ -730,6 +734,12 @@
     this.noteScrollPositions ||= new Map();
     const position = this.noteScrollPositions.get(dm.key);
     if (position) { content.scrollTop = position.top; content.scrollLeft = position.left; }
+    this.followedDatamodels ||= new WeakSet();
+    if (latestAddition && !this.followedDatamodels.has(inf.live)) {
+      content.scrollTop = Math.max(0, latestAddition.offsetTop + latestAddition.offsetHeight - content.clientHeight);
+      this.followedDatamodels.add(inf.live);
+      this.noteScrollPositions.set(dm.key, {top: content.scrollTop, left: content.scrollLeft});
+    }
     content.addEventListener('scroll', () => this.noteScrollPositions.set(dm.key, {top: content.scrollTop, left: content.scrollLeft}));
     el('title', {}, grp, inf.fullText + (inf.live?.truncated ? '\n… snapshot limited to 40 clauses' : ''));
     if (!dm.scope) this.itemEls.set(dm.key, grp);
