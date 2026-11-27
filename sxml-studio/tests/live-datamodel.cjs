@@ -27,23 +27,24 @@ const fake = {model, liveDatamodels:new Map(), calls:0, setModel(m, options) {as
   const ruleGeo = await SXMLDiagram.layout(model, 'RIGHT', {'studio.liveDatamodels':fake.liveDatamodels});
   assert(ruleGeo.info.get(dm.key).lines.includes('    shared_fact(A),'));
   assert(ruleGeo.info.get(dm.key).lines.includes('    local_label(B).'));
-  // The 48-line preview applies to source and runtime notes, while hover retains everything.
-  const sourceLines = Array.from({length: 48}, (_, i) => 'source_fact(' + i + ').');
+  // The 16-line preview applies to source and runtime notes, while hover retains everything.
+  const sourceLines = Array.from({length: 16}, (_, i) => 'source_fact(' + i + ').');
   dm.body = sourceLines.join('\n');
   const sourcePreview = await SXMLDiagram.layout(model, 'RIGHT');
   assert.deepEqual(sourcePreview.info.get(dm.key).lines, sourceLines);
-  dm.body += '\nsource_fact(48).';
+  dm.body += '\nsource_fact(16).';
   const overflow = await SXMLDiagram.layout(model, 'RIGHT');
   assert.deepEqual(overflow.info.get(dm.key).lines, [...sourceLines, '… more clauses (hover to view)']);
-  assert(overflow.info.get(dm.key).fullText.endsWith('source_fact(48).'));
+  assert(overflow.info.get(dm.key).fullText.endsWith('source_fact(16).'));
+  assert.equal(overflow.boxes.get(dm.key).h, 276, 'Overflowing notes must keep a compact height.');
   dm.body = original;
   const facts = Array.from({length: 25}, (_, i) => 'value(' + i + ').');
   await SXMLDiagram.Diagram.prototype.setDatamodelFacts.call(fake, [{key:dm.key, facts, truncated:false}]);
   const runtimePreview = (await SXMLDiagram.layout(model, 'RIGHT', {'studio.liveDatamodels':fake.liveDatamodels})).info.get(dm.key);
-  assert.equal(runtimePreview.lines.length, 49);
-  assert.equal(runtimePreview.lines[46], 'value(23).');
-  assert.equal(runtimePreview.lines[47], '');
-  assert.equal(runtimePreview.lines[48], '… more clauses (hover to view)');
+  assert.equal(runtimePreview.lines.length, 17);
+  assert.equal(runtimePreview.lines[14], 'value(7).');
+  assert.equal(runtimePreview.lines[15], '');
+  assert.equal(runtimePreview.lines[16], '… more clauses (hover to view)');
   assert.equal(runtimePreview.fullText, facts.join('\n\n'));
   assert.equal(dm.body, original);
   const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
@@ -59,5 +60,5 @@ const fake = {model, liveDatamodels:new Map(), calls:0, setModel(m, options) {as
   SXMLDiagram.Diagram.prototype.setRun.call(fake, false);
   assert.equal(fake.liveDatamodels.size, 0);
   assert.equal(dm.body, original);
-  console.log('Checked snapshot parsing and chart identity, duplicate-fact changes/highlights, blank clause separators, 48-line previews/overflow, source preservation and clearing on stop.');
+  console.log('Checked snapshot parsing and chart identity, duplicate-fact changes/highlights, blank clause separators, 16-line previews/overflow, source preservation and clearing on stop.');
 })().catch(error => {console.error(error); process.exitCode=1;});

@@ -168,7 +168,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Datamodel notes update in place with current facts and rules during a run.
   Snapshots follow live chart actions, with new clauses briefly
   highlighted; source XML is unchanged. Rules retain line breaks and indentation.
-  Notes show up to 48 lines at once, with native vertical and horizontal scrolling
+  Notes show up to 16 lines at once, with native vertical and horizontal scrolling
   to read complete clauses and blank lines between runtime clauses. Saved SVGs
   retain a plain SVG preview with full hover text. Rule bodies are never executed for inspection.
   Halt or restart clears the live display. Try example 09 and send its integers
