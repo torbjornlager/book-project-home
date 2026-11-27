@@ -89,7 +89,7 @@ preferences are remembered separately, and **Reset layout** restores them
 without changing spacing. They change only the drawing, not the source or
 transition priority. If the bundled ELK rejects a combination of layout options,
 Studio retries with the unsupported option disabled and reports the fallback
-beside the diagram dimensions.
+in the Advanced layout panel.
 Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 
 ## What it does

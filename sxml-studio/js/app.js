@@ -140,8 +140,8 @@ function syncSpacingControls() {
   }
   for (const key of ['compaction', 'labels', 'order', 'loops', 'alignment', 'effort', 'padding', 'sides']) $('layout-' + key).value = diagram.layoutExperiments[key];
 }
-function showSpacingSize() {
-  if (diagram.geo) $('spacing-status').textContent = 'Diagram size: ' + Math.round(diagram.geo.width) + ' × ' + Math.round(diagram.geo.height) + ' px' + (diagram.geo.fallbackNotes ? '\n' + diagram.geo.fallbackNotes.join(' ') : '');
+function showLayoutStatus() {
+  $('spacing-status').textContent = diagram.geo?.fallbackNotes?.join(' ') || '';
   requestAnimationFrame(positionLayoutPopover);
 }
 let spacingTimer = null, spacingGeneration = 0;
@@ -156,7 +156,7 @@ function changeSpacing() {
     $('spacing-status').textContent = 'Laying out…';
     try {
       await diagram.setModel(model, { preserveViewport: true });
-      if (generation === spacingGeneration) showSpacingSize();
+      if (generation === spacingGeneration) showLayoutStatus();
     } catch (e) {
       if (generation === spacingGeneration) $('spacing-status').textContent = 'Could not apply layout. Try resetting the layout or spacing.';
       console.warn('Spacing layout failed:', e);
@@ -233,7 +233,7 @@ function changeRegionArrangement(value) {
   SXML.setLayout(model.doc, layout);
   diagram.userMoved = false;
   commit();
-  diagram.pending.then(showSpacingSize);
+  diagram.pending.then(showLayoutStatus);
 }
 $('layout-region-arrangement').onchange = event => changeRegionArrangement(event.target.value);
 
@@ -288,7 +288,7 @@ $('layout-popover').addEventListener('toggle', event => {
     syncSpacingControls();
     syncRegionArrangement();
     syncAppearanceControls();
-    showSpacingSize();
+    showLayoutStatus();
     requestAnimationFrame(positionLayoutPopover);
   }
 });
@@ -345,7 +345,7 @@ function changeAppearance(settings) {
         await diagram.setModel(model, { preserveViewport: true });
         if (generation === appearanceGeneration) {
           $('appearance-status').textContent = 'Updated. Use Fit if needed.';
-          showSpacingSize();
+          showLayoutStatus();
         }
       } catch (e) {
         if (generation === appearanceGeneration) {

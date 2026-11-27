@@ -141,13 +141,17 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .spacing-popover button{font-size:calc(11px * var(--ui-font-scale,1));padding:4px 8px}
 .spacing-popover .hint,#spacing-status{font-size:calc(11px * var(--ui-font-scale,1));color:var(--muted);line-height:1.5;margin:10px 0 0}
 
+.layout-popover #layout-title{font-size:calc(14px * var(--ui-font-scale,1))}
+.layout-popover .layout-intro{margin:0 0 14px}
+.layout-popover #layout-diagram-title{font-size:calc(13px * var(--ui-font-scale,1))}
 .layout-scope h4{margin:0;font-size:inherit;font-weight:600;overflow-wrap:anywhere}
-.layout-scope + .layout-scope{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.layout-scope + .layout-scope,.layout-footer{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
 .layout-options label{display:block;margin:12px 0 4px}
 .layout-options select{width:100%;padding:5px 6px;background:var(--editor);border:1px solid var(--line);border-radius:4px;font:inherit}
 .layout-options button{margin-top:10px}
 
 #spacing-status{white-space:pre-line}
+#spacing-status:empty{display:none}
 
 .appearance-color{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin:12px 0}
 .appearance-color input[type=color]{width:40px;height:28px;border:1px solid var(--line);border-radius:4px;padding:2px;background:var(--editor);cursor:pointer}

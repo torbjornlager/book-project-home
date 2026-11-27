@@ -13,7 +13,7 @@ const context = {
   SXMLDiagram: {canArrangeRegions: () => safe},
   SXML: {setLayout(doc, layout) {assert.equal(doc, context.model.doc); context.model.layout = layout;}},
   diagram: {userMoved: true, pending: Promise.resolve()},
-  commit() {commits++;}, showSpacingSize() {}
+  commit() {commits++;}, showLayoutStatus() {}
 };
 for (const name of ['syncRegionArrangement', 'changeRegionArrangement']) vm.runInNewContext(app.match(new RegExp('function ' + name + '\\([^]*?\\n\\}'))[0], context);
 const sync = () => context.syncRegionArrangement();
