@@ -60,11 +60,29 @@ function separators(geo, node) {
     assert.equal(arrangement === 'DOWN' ? separator.y1 : separator.x1, arrangement === 'DOWN' ? separator.y2 : separator.x2);
     for (const edge of model.transitions) assert(geo.edges.find(e => e.id === edge.key + '>0').points.length >= 2);
   }
+  // Physical spacing axes must follow each container's own direction, even
+  // when a nested parallel state runs across the overall chart direction.
+  for (const direction of ['RIGHT', 'DOWN']) for (const arrangement of ['RIGHT', 'DOWN']) {
+    const nestedArrangement = arrangement === 'RIGHT' ? 'DOWN' : 'RIGHT';
+    model.layout = {agent: {'@regions': arrangement}, emotions: {'@regions': nestedArrangement}};
+    for (const padding of ['50', '100', '150']) for (const axis of ['horizontal', 'vertical']) for (const spacing of [0, 100]) {
+      const horizontal = axis === 'horizontal' ? spacing : 50;
+      const vertical = axis === 'vertical' ? spacing : 50;
+      const geo = await D.layout(model, direction, {...D.spacingOptions(direction, horizontal, vertical), ...D.experimentOptions({padding})});
+      for (const [first, second, flow] of [['emotions', 'behavior', arrangement], ['af', 'as', nestedArrangement]]) {
+        const a = geo.boxes.get(first), b = geo.boxes.get(second);
+        const gap = flow === 'DOWN' ? b.y - a.y - a.h : b.x - a.x - a.w;
+        const expected = 48 * (flow === 'DOWN' ? vertical : horizontal) / 100;
+        assert(Math.abs(gap - expected) < .01,
+          `${first}: ${flow} gap must follow its physical axis at padding ${padding}, chart ${direction}; got ${gap}, expected ${expected}`);
+      }
+    }
+  }
   const cross = transition(anger, attacking);
   assert(!D.canArrangeRegions(model, agent));
   assert(!D.canArrangeRegions(model, emotions));
   // Unsupported independent layouts must retain cross-region routes.
   const geo = await D.layout(model, 'RIGHT', D.spacingOptions('RIGHT'));
   assert(geo.edges.find(e => e.id === cross.key + '>0').points.length >= 2);
-  console.log('Checked independent and nested region directions, horizontal/vertical separators, unchanged metadata and cross-region routing.');
+  console.log('Checked independent and nested region directions, horizontal/vertical separators, unchanged metadata, physical spacing at all padding levels and cross-region routing.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

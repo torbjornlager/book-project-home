@@ -164,7 +164,7 @@
     return true;
   }
 
-  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map(), collapsed = new Set()) {
+  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map(), collapsed = new Set(), spacing = null) {
     const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
     const hints = base ? model.layout : null;
@@ -241,7 +241,13 @@
       }
       const requestedDirection = n.kind === 'parallel' ? (model.layout && model.layout[n.key] && model.layout[n.key]['@regions']) || 'DOWN' : null;
       const independent = ['RIGHT', 'DOWN'].includes(requestedDirection) && canArrangeRegions(model, n);
-      const inter = { 'elk.direction': independent ? requestedDirection : direction };
+      const localDirection = independent ? requestedDirection : direction;
+      const inter = { 'elk.direction': localDirection };
+      if (spacing) {
+        const localSpacing = spacingOptions(localDirection, spacing.horizontal, spacing.vertical);
+        delete localSpacing['studio.spacing'];
+        Object.assign(inter, localSpacing);
+      }
       if (n.kind === 'parallel') info.get(n.key).regions = independent ? requestedDirection : direction;
       if (independent) inter['elk.hierarchyHandling'] = 'SEPARATE_CHILDREN';
       if (n.kind === 'statechart' && n.scope) {
@@ -307,6 +313,7 @@
     const along = direction === 'DOWN' ? v : h;
     const across = direction === 'DOWN' ? h : v;
     return {
+      'studio.spacing': { horizontal: h * 100, vertical: v * 100 },
       'elk.layered.spacing.nodeNodeBetweenLayers': String(48 * along),
       'elk.spacing.nodeNode': String(30 * across),
       'elk.spacing.edgeNode': String(20 * across),
@@ -558,9 +565,9 @@
   }
 
   async function run(model, direction, extra, base) {
-    const { 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, 'studio.collapsed': collapsed, ...elkOptions } = extra || {};
+    const { 'studio.spacing': spacing, 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, 'studio.collapsed': collapsed, ...elkOptions } = extra || {};
     const appearance = normalizeAppearance(appearanceSettings);
-    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels, collapsed);
+    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels, collapsed, spacing);
     const meta = { root: graph.id, parent: new Map(), kids: new Map(), min: new Map(), pad: new Map() };
     (function scan(n) {
       const o = n.layoutOptions || {};

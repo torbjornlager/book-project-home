@@ -61,7 +61,9 @@ limited, keeping every block visible.
 
 The canvas toolbar has **Auto layout** (wand icon) and **Horizontal spacing** /
 **Vertical spacing** buttons (arrows between bars); each spacing button opens a
-slider (0–100%, default 50%) with **Reset to 50%**. The **Direction** button
+slider (0–100%, default 50%) with **Reset to 50%**. These sliders follow physical
+horizontal and vertical gaps, including parallel regions arranged across the
+chart’s overall direction, independently of nested-state padding. The **Direction** button
 immediately after vertical spacing switches between horizontal and vertical flow;
 its icon shows the direction to switch to. Spacing tunes the automatic
 layout, so it is disabled while positions are saved: use Auto layout first.
