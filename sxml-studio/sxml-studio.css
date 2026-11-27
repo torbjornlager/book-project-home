@@ -143,7 +143,7 @@ body[data-view=source] .source-pane{flex:1 1 0}
 
 .layout-popover #layout-title{font-size:calc(14px * var(--ui-font-scale,1))}
 .layout-popover .layout-intro{margin:0 0 14px}
-.layout-popover #layout-diagram-title{font-size:calc(13px * var(--ui-font-scale,1))}
+.layout-popover #layout-diagram-title,.layout-popover #layout-selection-title{font-size:calc(13px * var(--ui-font-scale,1))}
 .layout-scope h4{margin:0;font-size:inherit;font-weight:600;overflow-wrap:anywhere}
 .layout-scope + .layout-scope,.layout-footer{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
 .layout-options label{display:block;margin:12px 0 4px}
