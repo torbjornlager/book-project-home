@@ -66,7 +66,7 @@ window.studioTools = (() => {
       history = []; cursor = -1; sendGeneration++;
     }
     lastSource = source;
-    tree(); notes(); renderInspector();
+    tree(); notes(); renderInspector(); renderDebug();
   }
   function selection(entry) {
     let changed = false;

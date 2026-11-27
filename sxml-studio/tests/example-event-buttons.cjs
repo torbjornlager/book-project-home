@@ -22,6 +22,21 @@ context.run = {pid:'chart@localhost'}; context.paused = true;
 assert(context.exampleEventButtons().children[1].children.every(b=>b.disabled));
 context.paused = false; context.model.examples = ['inspect_chart($Pid)'];
 assert.equal(context.exampleEventButtons(),null);
+// Source adoption must refresh buttons without waiting for Run or a panel change.
+let rendered, editedSource = 'original source';
+Object.assign(context, {programs:[{}],current:0,lastSource:null,history:[],cursor:-1,sendGeneration:0,
+  editor:{getValue:()=>editedSource},tree(){},notes(){},renderInspector(){},
+  renderDebug:()=>{rendered=context.exampleEventButtons();}});
+context.file = context.programs[0];
+vm.runInContext(source.match(/  function adopt\(\) \{[\s\S]*?\n  \}/)[0],context);
+context.model.examples = ['$Pid ! input([blue])']; context.adopt();
+assert.equal(rendered.children[1].children[0].text,'input([blue])');
+editedSource = 'edited example comment'; context.model.examples = ['$Pid ! input([red])','$Pid ! input([big])'];
+context.adopt();
+assert.deepEqual(Array.from(rendered.children[1].children,b=>b.text),['input([red])','input([big])']);
+rendered.children[1].children[1].onclick(); assert.equal(sent.at(-1),'input([big])');
+editedSource = 'empty example comment'; context.model.examples = []; context.adopt();
+assert.equal(rendered,null,'Removing all example events must remove the section immediately.');
 // Event shortcuts have moved out of the collapsed query console; custom queries remain.
 const app = fs.readFileSync(path.join(__dirname,'../js/app.js'),'utf8');
 const box = {children:[],parentElement:{},replaceChildren(){this.children=[];},append(el){this.children.push(el);}};
