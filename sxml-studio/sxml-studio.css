@@ -100,11 +100,7 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .run-view{display:flex;flex-direction:column;overflow:hidden}
 .run-view[hidden]{display:none}
 .query-actions{align-items:center}
-.queries{padding:0 16px;flex:none;max-height:150px;overflow:auto}
-.queries .section-title{margin-top:4px}
-#suggestions button{font:var(--ui-font-weight,500) calc(10px * var(--ui-font-scale,1)) ui-monospace,monospace;margin:0 5px 5px 0;color:var(--accent);background:transparent;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .log-title{margin:8px 16px 0;padding-top:10px;border-top:1px solid var(--line);flex:none}
-.log-title label{margin-left:auto;font-size:calc(10px * var(--ui-font-scale,1));letter-spacing:0;display:flex;align-items:center;gap:4px}
 .log-title button{margin-left:0}
 .log{flex:1;min-height:80px;overflow:auto;padding:8px 16px 14px;font:var(--ui-font-weight,500) calc(11.5px * var(--ui-font-scale,1))/1.7 ui-monospace,"SFMono-Regular",Consolas,monospace}
 .log div{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -115,7 +111,6 @@ body[data-view=source] .source-pane{flex:1 1 0}
 .log .answer{margin-bottom:4px}
 .log .err{color:var(--error)}
 .log .note{color:var(--muted);font-style:italic}
-.log.no-trace .trace{display:none}
 @media(max-width:1050px){:root{--right:330px}}
 .chart-toolbar button.primary{background:var(--accent-bg);color:var(--accent)}
 #files button.nested{padding-left:34px}

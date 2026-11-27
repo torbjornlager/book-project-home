@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
   const STORAGE = 'trinity-sxml-studio.workspace.v1';
-  const defaults = {view: 'split', side: 'inspector', section: 'files', focus: false, consoleOpen: false, timelineOpen: true};
+  const defaults = {view: 'split', side: 'inspector', section: 'files', focus: false};
   const choices = {view: ['source', 'split', 'diagram'], side: ['inspector', 'run', 'settings'], section: ['files', 'structure']};
   function normalize(value, base = defaults) {
     const result = {...base};

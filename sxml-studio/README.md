@@ -110,8 +110,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Diagram hover tips appear after one second and show full text, including
   final-state entry actions.
   Undo/Redo covers both and is disabled while a chart starts or runs, including
-  keyboard shortcuts. These controls undo edits; execution playback has its own
-  timeline. Delete a selection through its floating toolbar, the Inspector, or
+  keyboard shortcuts. These controls undo edits. Delete a selection through its
+  floating toolbar, the Inspector, or
   the Delete key.
 - Editing: add states on the canvas; use the Inspector’s Type field to choose
   parallel, final or history. Default labels
@@ -166,7 +166,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - Run chart spawns the document in the real SWI-WASM interpreter with
   tracing on, and animates the active configuration and fired transitions.
   Datamodel notes update in place with current facts and rules during a run.
-  Snapshots follow chart actions in the trace playback, with new clauses briefly
+  Snapshots follow live chart actions, with new clauses briefly
   highlighted; source XML is unchanged. Rules retain line breaks and indentation.
   Up to 24 lines are shown in the note, with blank lines between runtime clauses
   and up to forty clauses in its hover
@@ -177,9 +177,10 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   **Example events** buttons in the Run panel. Events end with a period; blank
   lines are optional. Button labels and sent events omit the terminating period.
   Editing XML comments, including this event list, keeps the chart running and
-  preserves its execution history. Event buttons update as the comment changes. Changes to the machine itself still stop the old run.
-  Clicking a button sends its event to the running chart; buttons are disabled while stopped, busy or viewing paused
-  playback. Older bundled copies saved in
+  preserves its trace log. Event buttons update as the comment changes. Changes
+  to the machine itself still stop the old run.
+  Clicking a button sends its event to the running chart; buttons are disabled
+  while stopped, busy or finished. Older bundled copies saved in
   this browser have their example comments updated when opened, preserving
   chart edits and layout settings. Clicking a transition while
   the chart runs sends its event.
@@ -188,7 +189,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 
 The workspace defaults to side-by-side **Split** view, with 38% for source.
 The selected view, split arrangement and sizes, panel widths and selected tabs,
-Focus canvas, and expanded Run sections are remembered in this browser.
+and Focus canvas are remembered in this browser.
 The canvas toolbar uses SVG icons with tooltips and accessible names; **Diagram**
 and **Source** remain available beside the filename. **Files** and **Structure** are separate tabs in the left panel.
 The transition Inspector puts the target beside the source state and uses one
@@ -199,11 +200,12 @@ in an expandable section.
 
 The Inspector groups data, actions and advanced tools into
 expandable sections. The right panel contains Inspector, Run and Settings.
-In Run, example-event buttons come first, followed by **Send any event** and the
-timeline. Enter a concrete Prolog term and click **!** or press Return to send it.
-Once the interpreter accepts an event, the field clears and regains focus for
-the next event immediately, while timeline playback continues. Raw traces and query
-shortcuts are under **Trace & queries**, which opens automatically on errors.
+In Run, example-event buttons and **Send any event** sit above a permanently
+visible **Trace and output** log that fills the remaining panel space. Enter a
+concrete Prolog term and click **!** or press Return to send it. Once the
+interpreter accepts the event, the field clears and regains focus immediately.
+Events, state changes, program output and errors appear live in the log. It
+follows new entries while scrolled to the bottom; **Clear** empties the log.
 
 On narrower screens, the folder button opens Files/Structure; in portrait tablet
 layouts the inspector button opens the right-hand panels. Tap outside a panel
@@ -233,20 +235,9 @@ plus validation results, before Apply move. Existing target IDs stay the same;
 ancestor event handlers and entry/exit behavior may change. Moving a subtree
 recomputes the automatic layout while retaining region arrangements.
 
-The **Run** tab includes an execution timeline with pause, previous/next,
-speed, and follow-live controls. Selecting an observation displays its recorded
-configuration, transition highlights and datamodel clauses. **These controls
-pause playback only: the interpreter, timers and spawned actors keep running.**
-History is limited to the latest 1,000 observations and is cleared when source
-changes. A restart should be used to begin a new execution, rather than treating
-historical inspection as runtime rollback.
-
-The event palette discovers handlers in active states and their ancestors.
-Enter concrete Prolog terms, for example `integers([25,10,15,30])`. Patterns
-containing variables must be instantiated. Handlers are candidates, not promises
-that a guard will succeed. Guard outcomes come from actual runtime evaluation;
-inspection never evaluates them again. Trace records identify the compiled
-handler and originating actor, including inline charts with shared state IDs.
+Trace records identify the compiled handler and originating actor, including
+inline charts with shared state IDs. Guard outcomes come from actual runtime
+evaluation; inspection never evaluates them again.
 
 For regression checks, run each `tests/*.cjs` file with Node, and:
 

@@ -76,22 +76,12 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .tools-actions{gap:6px;margin:12px 0}.tools-actions button{min-height:36px;font-size:calc(12px * var(--ui-font-scale,1));padding:7px 10px}
 #debug-tools{padding:0 16px;max-height:none;flex:1;min-height:120px;border:0}
 .debug-heading{display:flex;align-items:center;gap:8px;font-size:calc(13px * var(--ui-font-scale,1));font-weight:650;margin:8px 0 12px}.debug-heading .ui-icon{width:17px;height:17px;color:var(--muted)}
-.event-owner{font-size:calc(11px * var(--ui-font-scale,1));margin-top:12px;color:var(--muted)}
 .event-row{padding:4px 0 8px;margin:0}.event-row input{font:var(--ui-font-weight,500) calc(12px * var(--ui-font-scale,1)) ui-monospace,monospace;min-height:36px;border-radius:6px!important;background:var(--panel)!important}
 .event-row button{border:0;background:var(--accent-bg);color:var(--accent)}
-.timeline-list{max-height:210px;border-left:1px solid var(--line);margin:8px 0 8px 7px;padding-left:8px}
-.timeline-list button{display:flex;align-items:center;justify-content:flex-start;text-align:left;gap:7px;min-height:32px;border:0;border-radius:5px;font-size:calc(11px * var(--ui-font-scale,1))}
-.timeline-list button>.ui-icon{width:14px;height:14px;color:var(--muted)}
-.timeline-list .ui-button-label{min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chart-toolbar #toolbar-run{color:var(--accent);background:var(--accent-bg)}
 .chart-toolbar #toolbar-stop:not(:disabled){color:var(--error)}
-.playback-toolbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:4px 0}
-.playback-toolbar button{min-height:32px;height:32px;min-width:32px;width:32px;padding:6px!important;background:transparent;border:0}
-.playback-toolbar select{margin-left:auto;width:auto!important;max-width:100px;font-size:calc(11px * var(--ui-font-scale,1));padding:5px!important;background:transparent!important}
-.run-view .queries{max-height:95px;padding:0 16px;border-top:1px solid var(--line);flex:0 0 auto}
-.queries .section-title{font-size:calc(9px * var(--ui-font-scale,1));margin:9px 0 5px}.queries button{border:0;background:var(--raised)!important;border-radius:4px;font-size:calc(10px * var(--ui-font-scale,1))!important}
 .run-view .log-title{font-size:calc(9px * var(--ui-font-scale,1));margin:0;padding:8px 16px;border-top:1px solid var(--line);gap:8px}
-.run-view .log{flex:0 1 110px;min-height:70px;font-size:calc(10px * var(--ui-font-scale,1));background:var(--bg);padding:8px 16px}
+.run-view .log{flex:1;min-height:0;font-size:calc(10px * var(--ui-font-scale,1));background:var(--bg);padding:8px 16px}
 .statusbar{background:var(--panel);border-top:1px solid var(--line);color:var(--muted);height:26px;font-size:calc(10px * var(--ui-font-scale,1))}
 .statusbar>span:last-child{display:none}
 body[data-focus=true] .studio{grid-template-columns:minmax(0,1fr)}
@@ -110,15 +100,6 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #inspector>.insp-actions{border-top:1px solid var(--line);padding-top:6px;margin-top:10px!important}
 #inspector>.insp-actions button{border:0;color:var(--muted);font-size:calc(12px * var(--ui-font-scale,1))}
 #inspector>.insp-actions button:hover{color:var(--error)}
-.runtime-console{flex:none;border-top:1px solid var(--line);background:var(--panel)}
-.runtime-console>summary{display:flex;align-items:center;gap:8px;list-style:none;cursor:pointer;min-height:44px;padding:10px 16px;font-size:calc(12px * var(--ui-font-scale,1));color:var(--muted)}
-.runtime-console>summary::-webkit-details-marker{display:none}
-.runtime-console>summary::after{content:'›';margin-left:auto;transform:rotate(-90deg)}
-.runtime-console[open]>summary::after{transform:rotate(90deg)}
-.runtime-console>summary .ui-icon{width:16px;height:16px}
-.runtime-console .console-body{display:flex;flex-direction:column;height:220px;max-height:36vh;min-height:130px}
-.runtime-console .queries{max-height:70px;border-top:0}
-.runtime-console .log{flex:1;min-height:40px}
 .drawer-dismiss{display:none;position:fixed;inset:64px 0 26px;z-index:30;border:0;border-radius:0;background:#152b3b18;padding:0;width:100%}
 @media(max-width:1100px){body[data-drawer=workspace] .drawer-dismiss{display:block}}
 @media(max-width:860px){body[data-drawer=inspector] .drawer-dismiss{display:block}.drawer-dismiss{top:58px}}
@@ -184,26 +165,17 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #inspector .prolog-code{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
 
 /* Keep Run controls together, with compact rows and readable interface text. */
-.run-view{overflow:auto}
-#run #debug-tools{padding:8px 14px;flex:none;min-height:0;overflow:visible}
+.run-view{overflow:hidden}
+#run #debug-tools{padding:8px 14px;flex:none;max-height:45%;min-height:0;overflow:auto}
 #run .debug-heading{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;gap:6px;margin:0 0 6px}
 #run .hint{font-size:calc(11px * var(--ui-font-scale,1));line-height:1.4;margin:4px 0 6px}
-#run .event-owner{margin-top:6px}
 #run .event-row{padding:2px 0 4px;gap:6px}
 #run input,#run select{font-family:inherit;font-size:calc(12px * var(--ui-font-scale,1));line-height:1.4;padding:5px 8px;min-height:32px}
 #run .event-row button{width:32px;min-width:32px;height:32px;min-height:32px;padding:6px!important}
-#run .playback-toolbar{margin:2px 0;gap:3px}
-#run .playback-toolbar select{min-height:30px}
-#run .timeline-list{max-height:180px;margin:4px 0 4px 6px;padding-left:6px}
-#run .timeline-list button{min-height:26px;padding:3px 5px;font-family:inherit}
-#run .runtime-console>summary{min-height:32px;padding:6px 14px;font-size:calc(12px * var(--ui-font-scale,1));gap:6px}
-#run .queries{padding:0 14px}
-#run .queries .section-title{margin:6px 0 4px}
 #run .log-title{padding:5px 14px;font-family:inherit}
 #run .log-title input{min-height:0;padding:0}
 #run .log{padding:6px 14px;font-family:inherit;line-height:1.4}
-#run .log code,#run .log .goal,#run .log .answer,#run #suggestions button{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
-@media(pointer:coarse){#run .ui-section>summary,#run .runtime-console>summary,#run button,#run input:not([type=checkbox]),#run select{min-height:44px}#run .event-row button{height:44px;width:44px;min-width:44px}}
+#run .log code,#run .log .goal,#run .log .answer{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
 
 /* Settings share the compact form density used in the Inspector. */
 #settings{padding:10px 14px 16px;font-size:calc(12px * var(--ui-font-scale,1))}
@@ -227,3 +199,10 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #layout-title:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
 input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opacity:.8}
+
+#run .trace-output{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+#run .log-title{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;letter-spacing:0;flex:none}
+#run .log-title button{margin-left:auto}
+#run .log{flex:1;min-height:0;overflow:auto;font-size:calc(12px * var(--ui-font-scale,1))}
+
+@media(pointer:coarse){#run button,#run input:not([type=checkbox]),#run select{min-height:44px}#run .event-row button{height:44px;width:44px;min-width:44px}}

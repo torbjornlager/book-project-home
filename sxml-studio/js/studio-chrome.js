@@ -55,7 +55,7 @@
     }
     return svg;
   }
-  const ids = {'new':'plus','open':'folder','save':'download','export':'download','undo':'undo','redo':'redo','layout-toggle':'extras','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','timeline-pause':'pause','timeline-previous':'back','timeline-next':'next','canvas-focus':'focus'};
+  const ids = {'new':'plus','open':'folder','save':'download','export':'download','undo':'undo','redo':'redo','layout-toggle':'extras','zoom-in':'plus','zoom-out':'minus','fit':'fit','tab-settings':'settings','clear':'trash','canvas-focus':'focus'};
   const labels = {'Edit':'edit','Remove':'trash','Send':'play','Duplicate subtree':'copy','Apply move':'move','Delete state':'trash','Delete transition':'trash','+ Add':'plus','×':'close','↑':'up','↓':'down','Collapse children':'minus','Expand children':'plus'};
   function decorate(root) {
     if (!root) return;
@@ -67,7 +67,6 @@
       if (b.closest('.structure-row') && b.hasAttribute('aria-expanded')) {name=b.getAttribute('aria-expanded')==='true'?'down':'next';b.classList.add('tree-toggle');}
       if (b.closest('#files') && !b.classList.contains('file-remove')) name = 'file';
       if (!name) continue;
-      if (b.id === 'timeline-pause' && /Follow/.test(label)) name = 'play';
       const old = b.querySelector('svg');
       if (!old || old.dataset.chromeIcon !== name) { if (old) old.remove(); const svg=icon(name); svg.dataset.chromeIcon=name; b.prepend(svg); }
       for (const text of [...b.childNodes]) if (text.nodeType === 3 && text.textContent.trim()) {
@@ -80,7 +79,6 @@
         b.setAttribute('aria-label', b.dataset.originalAria || label);
         b.classList.add('icon-only');
       }
-      if(b.id==='timeline-pause') b.title=label;
       if(b.id==='tab-run') b.title='Run and inspect events';
     }
   }
@@ -121,11 +119,6 @@
       const b=document.getElementById(id); b.title=b.title || b.textContent; b.textContent=label;
     }
     workspace.addEventListener('click',e=>{if(e.target.closest('#files .file-row > button:first-child')){document.body.dataset.drawer='';document.getElementById('toggle-workspace')?.setAttribute('aria-pressed','false');}});
-    const consolePanel=document.createElement('details'); consolePanel.className='runtime-console'; consolePanel.id='runtime-console';consolePanel.open=SXMLWorkspace.preferences.consoleOpen;
-    const consoleSummary=document.createElement('summary'); consoleSummary.append(icon('code'),document.createTextNode('Trace & queries')); consolePanel.append(consoleSummary);
-    const consoleBody=document.createElement('div');consoleBody.className='console-body';
-    consoleBody.append(document.querySelector('#run .queries'),document.querySelector('#run .log-title'),document.getElementById('log'));consolePanel.append(consoleBody);document.getElementById('run').append(consolePanel);
-    consolePanel.addEventListener('toggle',()=>{SXMLWorkspace.save({consoleOpen:consolePanel.open});if(consolePanel.open){const log=document.getElementById('log');log.scrollTop=log.scrollHeight;}});
     const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='drawer-dismiss';dismiss.setAttribute('aria-label','Close side panel');
     dismiss.onclick=()=>{document.body.dataset.drawer='';for(const b of document.querySelectorAll('.panel-toggle'))b.setAttribute('aria-pressed','false');};document.body.append(dismiss);
     tabs.onkeydown=e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault(); const next=[...tabs.children].find(b=>b.getAttribute('aria-selected')!=='true'); next.click(); next.focus();}};

@@ -5,7 +5,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname,'../js/studio-tools.js'),'utf8');
 const sent = [], box = {children:[],contains:()=>false,replaceChildren(...children){this.children=children;},querySelector(tag){return this.children[0].children.find(el=>el.tag===tag);}};
 let focused;
-const context = {$:()=>box,document:{activeElement:null},run:{pid:'chart@localhost'},paused:false,eventDraft:'',sendGeneration:0,
+const context = {$:()=>box,document:{activeElement:null},run:{pid:'chart@localhost'},eventDraft:'',sendGeneration:0,
   h:(tag,attrs,...children)=>({tag,...attrs,children,focus(){focused=this;}}),safeSend:text=>{sent.push(text);return {};}};
 vm.createContext(context);vm.runInContext(source.match(/  function renderPalette\(\) \{[\s\S]*?\n  \}/)[0],context);
 function render(){context.renderPalette(); const form=box.children[0];return {form,input:form.children[0],button:form.children[1]};}
@@ -19,7 +19,7 @@ const event={preventDefault(){}};
   assert(row.button.disabled);
   type(row,'input([a,red,box]).');assert.equal(row.button.disabled,false);
   let finish;
-  context.safeSend=(text,options)=>{assert.equal(options.waitForPlayback,false);sent.push(text);return new Promise(resolve=>finish=resolve);};
+  context.safeSend=(text,options)=>{assert.equal(options.waitForTrace,false);sent.push(text);return new Promise(resolve=>finish=resolve);};
   let prevented=0;
   const pending=row.form.onsubmit({preventDefault(){prevented++;}});
   row=render(); // Runtime state/trace updates replace the original input.
@@ -45,20 +45,19 @@ const event={preventDefault(){}};
     context.run={pid:'chart@localhost',...state};context.eventDraft='e';row=render();
     assert(row.input.disabled);assert(row.button.disabled);await row.form.onsubmit(event);
   }
-  context.run={pid:'chart@localhost'};context.paused=true;row=render();assert(row.button.disabled);
-  await row.form.onsubmit(event);assert.equal(attempts,0);
+  assert.equal(attempts,0);
   // Delivery completion must not wait for queued timeline observations in manual mode.
   let waits=0;
-  const delivery={run:{pid:'chart@localhost',queue:[{text:'pending playback'}],timer:1},paused:false,sendGeneration:4,
-    quoteAtom:text=>JSON.stringify(text),runGoal:async()=>({type:'success'}),
+  const delivery={run:{pid:'chart@localhost',queue:[{text:'pending trace processing'}],timer:1},sendGeneration:4,
+    quoteAtom:text=>JSON.stringify(text),runGoal:async(goal,options)=>{assert.equal(options.label,'$Pid ! e');assert.equal(options.hideAnswer,true);return {type:'success'};},
     settled:async()=>{waits++;},snapshot:()=>({active:['s0']})};
   vm.createContext(delivery);
   vm.runInContext(source.match(/  async function send\(text, options = \{\}\) \{[\s\S]*?\n  \}/)[0],delivery);
-  await delivery.send('e',{waitForPlayback:false});assert.equal(waits,0);
-  assert.equal(delivery.run.queue.length,1,'Keep playback queued while the field is readied.');
+  await delivery.send('e',{waitForTrace:false});assert.equal(waits,0);
+  assert.equal(delivery.run.queue.length,1,'Keep trace processing queued while the field is readied.');
   await delivery.send('e');assert.equal(waits,1,'Other callers retain the settled-snapshot behavior.');
   delivery.runGoal=async()=>({type:'failure'});
-  await assert.rejects(delivery.send('invalid(',{waitForPlayback:false}),/Event failed/);
+  await assert.rejects(delivery.send('invalid(',{waitForTrace:false}),/Event failed/);
   assert(source.includes("'Send any event'"));
   console.log('Checked !/Return submission, clear/refocus after redraws, failed input, concurrent typing/chart changes, focused typing and run-state guards.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

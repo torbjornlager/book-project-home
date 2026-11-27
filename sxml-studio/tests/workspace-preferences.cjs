@@ -9,11 +9,12 @@ function load(value, fail = false) {
   context.window=context; vm.runInNewContext(code,context); return context.SXMLWorkspace;
 }
 const plain = value => JSON.parse(JSON.stringify(value));
-const defaults = {view:'split',side:'inspector',section:'files',focus:false,consoleOpen:false,timelineOpen:true};
+const defaults = {view:'split',side:'inspector',section:'files',focus:false};
 assert.deepEqual(plain(load(null).preferences),defaults);
+assert.deepEqual(plain(load(JSON.stringify({...defaults,consoleOpen:true,timelineOpen:false})).preferences),defaults,'Ignore retired Run-section preferences.');
 const first = load(null);
-first.save({view:'source',side:'run',section:'structure',focus:true,consoleOpen:true,timelineOpen:false});
-assert.deepEqual(plain(load(stored).preferences),{view:'source',side:'run',section:'structure',focus:true,consoleOpen:true,timelineOpen:false});
+first.save({view:'source',side:'run',section:'structure',focus:true});
+assert.deepEqual(plain(load(stored).preferences),{view:'source',side:'run',section:'structure',focus:true});
 const second = load(stored); second.save({view:'diagram'});
 assert.equal(load(stored).preferences.view,'diagram');
 assert.equal(load(stored).preferences.side,'run','Changing the view must not discard panel choices.');

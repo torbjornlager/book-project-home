@@ -500,7 +500,6 @@ function adopt(doc, text, opts) {
   diagram.setModel(model, opts).then(() => { diagram.select(selKey); });
   if (programs[current].parent) writeBack(programs[current], text);
   renderInspector();
-  renderSuggestions();
   window.studioTools?.adopt();
   markSelection(false);
   updateChrome();
@@ -817,7 +816,7 @@ function removeSelected() {
   commit();
 }
 
-/* Undo/redo change source edits; execution playback has separate controls. */
+/* Undo/redo change source edits, never the running interpreter. */
 function syncHistoryControls() {
   const locked = !!run.pid || run.starting, history = editor.historySize();
   for (const command of ['undo', 'redo']) {
@@ -1167,7 +1166,6 @@ const run = { nested: new Map(), node: null, pid: null, source: null, busy: fals
 let inputResolve = null;
 
 function logRow(cls, parts) {
-  if (cls === 'err' && $('runtime-console')) $('runtime-console').open = true;
   const log = $('log');
   const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
   const d = document.createElement('div');
@@ -1256,7 +1254,7 @@ async function ensureNode() {
 
 const quoteAtom = text => "'" + text.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
 
-async function runGoal(raw) {
+async function runGoal(raw, options = {}) {
   raw = String(raw).trim().replace(/^\?-\s*/, '').replace(/\.\s*$/, '');
   if (!raw || run.busy || run.starting) return;
   const spawns = /<editor>/.test(raw);
@@ -1278,7 +1276,7 @@ async function runGoal(raw) {
     run.source = source;
   }
   run.busy = true; runControls();
-  enqueue({ type: 'goal', text: '?- ' + raw + '.' });
+  enqueue({ type: 'goal', text: '?- ' + (options.label ?? raw) + '.' });
   status(spawns ? 'Spawning the chart…' : 'Running query…');
   try {
     const answer = await node.query(goal, { limit: 1 });
@@ -1286,7 +1284,7 @@ async function runGoal(raw) {
     if (answer.type === 'success') {
       const row = Array.isArray(answer.data) ? answer.data[0] : null;
       const text = row && typeof row === 'object' ? Object.entries(row).map(([k, v]) => k + ' = ' + v).join(',\n') : '';
-      enqueue({ type: 'answer', text: text || 'true' });
+      if (!options.hideAnswer) enqueue({ type: 'answer', text: text || 'true' });
       if (spawns && row) {
         run.pid = String(row.Pid || Object.values(row).find(v => /@/.test(String(v))) || '');
         if (run.pid) { diagram.setRun(true, run.active, run.fired, run.nested); status('Chart running as ' + run.pid + ' · send it events'); }
@@ -1342,7 +1340,7 @@ function sendTransition(t) {
   if (window.studioTools) window.studioTools.send(pattern); else runGoal('$Pid ! ' + pattern);
 }
 
-/* ----- trace playback ----- */
+/* ----- live trace and output ----- */
 
 function enqueue(item) {
   run.queue.push(item);
@@ -1352,16 +1350,7 @@ function enqueue(item) {
 function drain() {
   run.timer = null;
   if (run.busy && !run.pid) { run.timer = setTimeout(drain, 20); return; }
-  if (window.studioTools?.paused()) return;
-  while (run.queue.length) {
-    const item = run.queue.shift();
-    const pause = play(item);
-    window.studioTools?.played(item);
-    if (pause && run.queue.length < 400) {
-      run.timer = setTimeout(drain, run.queue.length > 40 ? 30 : (window.studioTools?.speed() ?? 260));
-      return;
-    }
-  }
+  while (run.queue.length) play(run.queue.shift());
   window.studioTools?.controls();
 }
 
@@ -1407,7 +1396,7 @@ function firedTransition(sourceId, targets) {
   return cands.find(t => t.on == null && t.after == null) || cands[0];
 }
 
-/* Show one queued item; returns true when the diagram changed (worth a pause). */
+/* Show one live observation and update the diagram. */
 function play(item) {
   if (item.type === 'output') { logRow(/^Shell got down\(/.test(item.text) ? 'note' : 'out', item.text); return false; }
   if (item.type === 'answer') { logRow('answer', item.text); return false; }
@@ -1486,19 +1475,6 @@ function play(item) {
   if (t.name === 'unmatched') { logRow('trace', ['  unmatched ', bold(item.text.slice(10, -1))]); return false; }
   logRow('trace', '  ' + item.text);
   return false;
-}
-
-function renderSuggestions() {
-  const box = $('suggestions');
-  box.replaceChildren();
-  const goals = model ? model.examples.filter(g => !/<editor>|\bstatechart_halt\s*\(|^\$Pid\s*!/.test(g)) : [];
-  box.parentElement.hidden = !goals.length;
-  for (const goal of goals) {
-    const b = document.createElement('button');
-    b.textContent = '?- ' + goal.replace(/\s+/g, ' ') + '.';
-    b.onclick = () => runGoal(goal);
-    box.append(b);
-  }
 }
 
 /* ---------- side panel, files, chrome ---------- */
@@ -1839,7 +1815,6 @@ function setView(view) {
 for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => b.dataset.view === 'split' ? openSplitMenu(b) : setView(b.dataset.view);
 
 $('clear').onclick = () => $('log').replaceChildren();
-$('show-trace').onchange = () => $('log').classList.toggle('no-trace', !$('show-trace').checked);
 function updateUI(settings) {
   const preferences = SXMLUI.apply(settings);
   diagram.appearanceTheme = preferences.theme;

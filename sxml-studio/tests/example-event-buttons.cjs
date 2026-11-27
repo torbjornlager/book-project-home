@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../js/studio-tools.js'), 'utf8');
-const sent = [], context = {model:{examples:['$Pid ! input([a, red, box])','$Pid ! input([blue])','inspect_chart($Pid)']},run:{pid:'chart@localhost'},paused:false,
+const sent = [], context = {model:{examples:['$Pid ! input([a, red, box])','$Pid ! input([blue])','inspect_chart($Pid)']},run:{pid:'chart@localhost'},
   h:(tag,attrs,...children)=>({tag,attrs,children}),button:(text,onclick,attrs)=>({text,onclick,...attrs}),safeSend:event=>sent.push(event)};
 vm.createContext(context);
 vm.runInContext(source.match(/  function exampleEventButtons\(\) \{[\s\S]*?\n  \}/)[0], context);
@@ -18,9 +18,8 @@ for (const state of [{pid:null},{starting:true},{busy:true},{done:true}]) {
   context.run = {pid:'chart@localhost',...state};
   assert(context.exampleEventButtons().children[1].children.every(b=>b.disabled));
 }
-context.run = {pid:'chart@localhost'}; context.paused = true;
-assert(context.exampleEventButtons().children[1].children.every(b=>b.disabled));
-context.paused = false; context.model.examples = ['inspect_chart($Pid)'];
+context.run = {pid:'chart@localhost'};
+context.model.examples = ['inspect_chart($Pid)'];
 assert.equal(context.exampleEventButtons(),null);
 // Source adoption must refresh buttons without waiting for Run or a panel change.
 let rendered, editedSource = 'original source';
@@ -39,12 +38,4 @@ assert.deepEqual(Array.from(rendered.children[1].children,b=>b.text),['input([re
 rendered.children[1].children[1].onclick(); assert.equal(sent.at(-1),'input([big])');
 editedSource = 'empty example comment'; context.model.examples = []; context.adopt();
 assert.equal(rendered,null,'Removing all example events must remove the section immediately.');
-// Event shortcuts have moved out of the collapsed query console; custom queries remain.
-const app = fs.readFileSync(path.join(__dirname,'../js/app.js'),'utf8');
-const box = {children:[],parentElement:{},replaceChildren(){this.children=[];},append(el){this.children.push(el);}};
-const goals = [], ctx = {model:{examples:['$Pid ! e','inspect_chart($Pid)']},$:()=>box,document:{createElement:()=>({})},runGoal:goal=>goals.push(goal)};
-vm.createContext(ctx);vm.runInContext(app.match(/function renderSuggestions\(\) \{[\s\S]*?\n\}/)[0],ctx);
-ctx.renderSuggestions(); assert.equal(box.children.length,1);
-assert.equal(box.children[0].textContent,'?- inspect_chart($Pid).');
-box.children[0].onclick(); assert.deepEqual(goals,['inspect_chart($Pid)']);
-console.log('Checked visible example-event labels/payloads, stopped/start/busy/done/paused states, empty lists and preserved custom query suggestions.');
+console.log('Checked example-event labels/payloads, live edits, stopped/start/busy/done states and empty lists.');

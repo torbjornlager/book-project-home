@@ -23,13 +23,13 @@ const app=fs.readFileSync(path.join(__dirname,'../js/app.js'),'utf8');
 const tools=fs.readFileSync(path.join(__dirname,'../js/studio-tools.js'),'utf8');
 const root={key:'#root',kind:'statechart',el:{}};
 let text=before, stopped=0, shown=0;
-const originalHistory=[{text:'existing trace'}];
+const traceLog={children:['existing trace']};
 Object.assign(context,{run:{pid:'same-chart@localhost',source:before},programs:[{}],current:0,lastSource:before,
-  history:originalHistory,cursor:0,sendGeneration:7,model:{root},editor:{getValue:()=>text},
+  sendGeneration:7,model:{root},editor:{getValue:()=>text},
   tree(){},notes(){},renderInspector(){},renderDebug(){shown++;},
   SXML:{...S,snapshot:()=>({}),discardManualPositions:()=>false,build:()=>({root,layout:null,problems:[]}),locate:()=>({})},
   entryFor:()=>null,entryByKey:()=>null,selEl:null,selKey:'#root',syncSplitOrientation(){},
-  $:()=>({classList:{remove(){}},dataset:{},setAttribute(){},parentNode:{}}),
+  $:id=>id==='log'?traceLog:({classList:{remove(){}},dataset:{},setAttribute(){},parentNode:{}}),
   showProblems(){},diagram:{setModel:()=>Promise.resolve(),select(){}},renderSuggestions(){},
   markSelection(){},updateChrome(){},stopRun(){stopped++;context.run.pid=null;},status(){},saveExplorer(){}});
 context.file=context.programs[0];
@@ -39,18 +39,18 @@ vm.runInContext(app.match(/function adopt\(doc, text, opts\) \{[\s\S]*?\n\}/)[0]
 text=after; context.adoptDocument({},text);
 assert.equal(stopped,0);assert.equal(context.run.pid,'same-chart@localhost');
 assert.equal(context.run.source,after);
-assert.equal(context.history,originalHistory);assert.equal(context.sendGeneration,7);assert.equal(context.cursor,0);
+assert.deepEqual(traceLog.children,['existing trace']);assert.equal(context.sendGeneration,7);
 assert.equal(shown,1,'Example buttons must still refresh.');
 text=machine;context.adoptDocument({},text);assert.equal(stopped,0,'Removing the event block must keep the run alive too.');
 for (const note of ['ordinary note', 'updated description', '<layout> {"@direction":"DOWN"}', '<studio> {"notes":["hello"]}']) {
   text = machine + '<!-- ' + note + ' -->'; context.adoptDocument({},text);
   assert.equal(stopped,0,'XML comment edits must not stop the chart.');
-  assert.equal(context.history,originalHistory); assert.equal(context.sendGeneration,7);
+  assert.deepEqual(traceLog.children,['existing trace']); assert.equal(context.sendGeneration,7);
   assert.equal(context.run.pid,'same-chart@localhost');
 }
 text=machine; context.adoptDocument({},text);
 assert.equal(stopped,0,'Removing comments must keep the chart running.');
 text=machine.replace('value(1)','value(2)');context.adoptDocument({},text);
 assert.equal(stopped,1,'Actual executable changes must still stop the old machine.');
-assert.equal(context.history.length,0);assert.equal(context.sendGeneration,8);
-console.log('Checked adding/editing/removing XML comments and metadata without stopping or losing history/send state, while executable and CDATA changes still invalidate runs.');
+assert.equal(context.sendGeneration,8);
+console.log('Checked adding/editing/removing XML comments and metadata without stopping or losing log/send state, while executable and CDATA changes still invalidate runs.');
