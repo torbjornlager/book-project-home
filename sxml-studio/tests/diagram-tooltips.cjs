@@ -86,7 +86,7 @@ console.log('Checked complete boxshop final-state action, text-only action hover
   const internal = {key: 'source/internal', el: {}, source, to: [], on: long('internal_event'), cond: long('internal_guard'), body: long('internal_action'), index: 0};
   const external = {key: 'source/external', el: {}, source, to: ['target'], on: long('external_event'), cond: long('external_guard'), body: long('external_action'), index: 1};
   source.onentry = [entry]; source.onexit = [exit]; source.defers = [defer]; source.spawns = [spawn]; source.transitions = [internal, external];
-  const dm = {key: '#root/datamodel0', body: Array.from({length: 12}, (_, i) => long('fact_' + i) + '.').join('\n')};
+  const dm = {key: '#root/datamodel0', body: Array.from({length: 30}, (_, i) => long('fact_' + i) + '.').join('\n')};
   chart.datamodels = [dm];
   const model = {root: chart, nodes: [chart, source, target], byId: new Map([['source',source],['target',target]]), nested: new Map(), transitions: [internal, external], layout: null};
   const geo = await SXMLDiagram.layout(model, 'RIGHT');

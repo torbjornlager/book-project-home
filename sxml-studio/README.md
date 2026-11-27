@@ -167,7 +167,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Datamodel notes update in place with current facts and rules during a run.
   Snapshots follow chart actions in the trace playback, with new clauses briefly
   highlighted; source XML is unchanged. Rules retain line breaks and indentation.
-  Up to eight lines are shown in the note, with up to forty clauses in its hover
+  Up to 24 lines are shown in the note, with blank lines between runtime clauses
+  and up to forty clauses in its hover
   text. Rule bodies are never executed for inspection.
   Halt or restart clears the live display. Try example 09 and send its integers
   query to watch the GCD calculation update `int/1`.

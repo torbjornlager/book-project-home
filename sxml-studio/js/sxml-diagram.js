@@ -13,7 +13,7 @@
   const F_MONO = '11px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
   const F_NOTE = '10.5px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
   const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 5;
-  const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 8;
+  const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 24;
 
   const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0, headerColor: '#f5f5f5', activeHeaderColor: '#e6f3ee', darkHeaderColor: '#2b343a', darkActiveHeaderColor: '#203f34' });
   function normalizeAppearance(settings = {}) {
@@ -168,7 +168,7 @@
       const all = [], changedLines = [];
       if (live) {
         live.facts.forEach((clause, index) => {
-          if (index && clause.includes('\n')) { all.push(''); changedLines.push(false); }
+          if (index) { all.push(''); changedLines.push(false); }
           const lines = clause.split('\n');
           all.push(...lines); changedLines.push(...lines.map(() => live.changed[index]));
         });
