@@ -1412,7 +1412,12 @@ function play(item) {
     if (tr) { run.fired.add(tr.key); diagram.setRun(true, run.active, run.fired, run.nested); }
     return false;
   }
-  if (t.name === 'guard_result') { logRow('trace', '  guard ' + t.args[0] + ' #' + (Number(t.args[1]) + 1) + ': ' + t.args[2]); return false; }
+  if (t.name === 'guard_result') {
+    const transition = traceModel?.byId.get(unquote(t.args[0] || ''))?.transitions[Number(t.args[1])];
+    if (transition && !transition.cond?.trim()) return false;
+    logRow('trace', '  guard ' + t.args[0] + ' #' + (Number(t.args[1]) + 1) + ': ' + t.args[2]);
+    return false;
+  }
   if (t.name === 'datamodel_snapshot') {
     const ids = listOf(t.args[0] || '[]');
     const candidates = window.studioTools ? (traceModel ? [traceModel] : []) : model ? [model, ...model.nested.values()] : [];

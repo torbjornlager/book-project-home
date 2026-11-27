@@ -204,7 +204,8 @@ In Run, example-event buttons and **Send any event** sit above a permanently
 visible **Trace and output** log that fills the remaining panel space. Enter a
 concrete Prolog term and click **!** or press Return to send it. Once the
 interpreter accepts the event, the field clears and regains focus immediately.
-Events, state changes, program output and errors appear live in the log. It
+Events, state changes, program output and errors appear live in the log.
+Guard results are shown only for transitions with an explicit guard. It
 follows new entries while scrolled to the bottom; **Clear** empties the log.
 
 On narrower screens, the folder button opens Files/Structure; in portrait tablet

@@ -41,3 +41,21 @@ console.log('Checked live trace/output ordering, startup queuing, message/error 
   assert.equal(entries[1].text,'false','Failure feedback must remain visible.');
   console.log('Checked readable event entries, hidden transport-only bindings and preserved results/failure feedback.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
+// Runtime emits a true result for unguarded transitions; show only real guards.
+{
+  const rows=[], state={transitions:[{cond:null},{cond:'  '},{cond:'ready(X)'}]};
+  const nested={byId:new Map([['s1',state]])};let scope=null;
+  const trace={window:{studioTools:{scope:()=>scope}},model:{byId:new Map([['s1',state]]),nested:new Map([['child',nested]])},
+    termOf:input=>({name:'guard_result',args:input.split('|')}),unquote:text=>text.replace(/^'|'$/g,''),logRow:(kind,text)=>rows.push(text)};
+  vm.createContext(trace);vm.runInContext(app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
+  for(const child of [null,'child']) {
+    scope=child;rows.length=0;
+    trace.play({type:'trace',text:'s1|0|true'});trace.play({type:'trace',text:'s1|1|true'});
+    assert.equal(rows.length,0,'No explicit guard means no guard-result noise.');
+    trace.play({type:'trace',text:"'s1'|2|true"});trace.play({type:'trace',text:'s1|2|false'});
+    assert.equal(rows.length,2,'Keep both passed and failed outcomes for explicit guards.');
+    trace.play({type:'trace',text:'unknown|0|true'});assert.equal(rows.length,3,'Do not silently hide unresolved guard results.');
+  }
+  console.log('Checked implicit/empty guard suppression and explicit true/false guard results for root and inline charts.');
+}
