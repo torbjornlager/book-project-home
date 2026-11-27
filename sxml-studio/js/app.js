@@ -200,6 +200,43 @@ $('layout-reset').onclick = () => {
 };
 syncSpacingControls();
 
+/* Region arrangement belongs to the selected parallel state, not browser preferences. */
+function syncRegionArrangement() {
+  const entry = entryFor(selEl);
+  const node = entry && entry.kind === 'parallel' ? entry : null;
+  const control = $('layout-region-arrangement');
+  $('layout-selection-title').textContent = 'Selected parallel state' + (node ? ' — ' + node.id : '');
+  $('layout-region-options').hidden = !node;
+  control.disabled = !node || !!run.pid || run.starting;
+  if (!node) {
+    $('layout-region-hint').textContent = 'Select a parallel state in the diagram to arrange its regions.';
+    return;
+  }
+  const safe = SXMLDiagram.canArrangeRegions(model, node);
+  const saved = model.layout && model.layout[node.key] && model.layout[node.key]['@regions'];
+  control.value = saved || (safe ? 'DOWN' : 'AUTO');
+  for (const option of control.options) option.disabled = option.value !== 'AUTO' && !safe;
+  $('layout-region-hint').textContent = safe ? 'Applies to this state’s regions. Saved with this diagram.'
+    : 'Regions follow the chart direction because transitions cross region boundaries. Saved with this diagram.';
+}
+function changeRegionArrangement(value) {
+  if (run.starting || !guard()) return;
+  const node = entryFor(selEl);
+  if (!node || node.kind !== 'parallel' || !['DOWN', 'RIGHT', 'AUTO'].includes(value)) return;
+  if (value !== 'AUTO' && !SXMLDiagram.canArrangeRegions(model, node)) return;
+  const layout = Object.assign({}, model.layout || {});
+  const hints = Object.assign({}, layout[node.key] || {});
+  if (value !== 'DOWN') hints['@regions'] = value;
+  else delete hints['@regions'];
+  if (Object.keys(hints).length) layout[node.key] = hints;
+  else delete layout[node.key];
+  SXML.setLayout(model.doc, layout);
+  diagram.userMoved = false;
+  commit();
+  diagram.pending.then(showSpacingSize);
+}
+$('layout-region-arrangement').onchange = event => changeRegionArrangement(event.target.value);
+
 let layoutPopoverPosition = null;
 function positionLayoutPopover() {
   const popover = $('layout-popover');
@@ -249,6 +286,7 @@ enableLayoutDragging();
 $('layout-popover').addEventListener('toggle', event => {
   if (event.newState === 'open') {
     syncSpacingControls();
+    syncRegionArrangement();
     syncAppearanceControls();
     showSpacingSize();
     requestAnimationFrame(positionLayoutPopover);
@@ -507,8 +545,7 @@ function updateChrome() {
   }
   for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
-  const regionControl = $('inspector').querySelector('[data-f="region-arrangement"]');
-  if (regionControl) regionControl.disabled = !!run.pid || run.starting;
+  syncRegionArrangement();
   const entry = entryFor(selEl);
   $('delete').disabled = !entry || entry === model.root || !!run.pid;
   diagram.readOnly = !!run.pid;
@@ -1015,26 +1052,6 @@ function stateInspector(box, n) {
     if (initial) box.append(initial);
   }
   if (root) box.append(field('Version', input('version', n.el.getAttribute('version'), v => edit(() => SXML.setAttr(n.el, 'version', v)))));
-  if (n.kind === 'parallel') {
-    const saved = model.layout && model.layout[n.key] && model.layout[n.key]['@regions'];
-    const safe = SXMLDiagram.canArrangeRegions(model, n);
-    const control = selectBox('region-arrangement', [['DOWN', 'Stacked'], ['RIGHT', 'Side by side'], ['AUTO', 'Follow chart']], saved || (safe ? 'DOWN' : 'AUTO'), value => edit(() => {
-      const layout = Object.assign({}, model.layout || {});
-      const hints = Object.assign({}, layout[n.key] || {});
-      if (value !== 'DOWN') hints['@regions'] = value;
-      else delete hints['@regions'];
-      if (Object.keys(hints).length) layout[n.key] = hints;
-      else delete layout[n.key];
-      SXML.setLayout(model.doc, layout);
-      selEl = n.el;
-      diagram.userMoved = false;
-    }));
-    control.setAttribute('aria-label', 'Region arrangement');
-    for (const option of control.options) if (option.value !== 'AUTO') option.disabled = !safe;
-    control.disabled = !!run.pid || run.starting;
-    box.append(field('Region arrangement', control, true));
-    if (!safe) box.append(h('p', { class: 'hint' }, 'Regions follow the chart direction because transitions cross region boundaries.'));
-  }
   const kids = n.children.filter(c => c.kind !== 'history');
   if ((root || n.kind === 'state') && (kids.length || n.initial)) {
     const opts = kids.map(c => [c.id, c.id]);

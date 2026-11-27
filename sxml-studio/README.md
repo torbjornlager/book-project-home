@@ -145,9 +145,14 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   freely positioned in either mode. To create a new transition, use a handle or
   the Transition shortcut (key T). Drag empty canvas to pan; scrolling and zooming remain
   available. The layout direction is saved in the same comment.
-- Parallel states have a **Region arrangement** selector in the Inspector:
+- Parallel states have a **Region arrangement** selector under
+  **Advanced layout → Selected parallel state — [name]**:
   Stacked (the default), Side by side, or Follow chart. Each parallel state can be set
-  independently; separators follow the arrangement. The choice is saved in the
+  independently; separators follow the arrangement. Select a parallel state in
+  the diagram to show its controls; other selections show a selection hint.
+  The **Whole diagram** section keeps the browser-wide layout preferences, and
+  **Reset whole-diagram layout** leaves region arrangements unchanged.
+  The choice is saved in the
   layout comment and survives Auto, direction changes, renaming and reloads.
   Transitions that cross region boundaries require the shared chart direction,
   so independent arrangements are unavailable for those parallel states.
