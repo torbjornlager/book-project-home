@@ -611,9 +611,9 @@
         (inf.labels || []).forEach((t, i) => {
           const lb = b.labels[i];
           const x = lb ? b.x + lb.x + lb.width / 2 : cx, y = lb ? b.y + lb.y + 11.5 : cy + FINAL_R + 14 + i * 15;
-          el('text', { class: i ? 'line' : 'name', x, y, 'text-anchor': 'middle' }, grp, t);
+          const label = el('text', { class: i ? 'line' : 'name', x, y, 'text-anchor': 'middle' }, grp, t);
+          if (i && n.onentry[i - 1]) el('title', {}, label, 'entry /\n' + n.onentry[i - 1].body.trim());
         });
-        if (n.onentry.length) el('title', {}, grp, n.onentry.map(e => 'entry /\n' + e.body.trim()).join('\n\n'));
         return;
       }
       el('rect', { class: 'state-fill', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
