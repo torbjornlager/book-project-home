@@ -73,3 +73,6 @@ svg.chart .nested .note-title{fill:var(--blue)}
 svg.chart .nested-icon{fill:none;stroke:var(--blue);stroke-width:1.1}
 svg.chart .nested.selected>.shape{stroke-width:2.2;stroke-dasharray:none}
 svg.chart .transition.inner .edge-hit,svg.chart .tlabel.inner{cursor:pointer}
+
+/* Full diagram hover text, independent of native browser tooltip timing. */
+.diagram-tooltip{position:fixed;z-index:1000;pointer-events:none;max-width:min(560px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);box-shadow:0 4px 16px #0004;font:12px/1.5 ui-monospace,monospace}

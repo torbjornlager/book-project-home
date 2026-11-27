@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
-const saving = app.slice(app.indexOf('async function saveFile('), app.indexOf("$('delete').onclick"));
+const saving = app.slice(app.indexOf('async function saveFile('), app.indexOf("$('undo').onclick"));
 function setup(picker) {
   const calls = [], buttons = {}, files = [{name: '↳ example.xml', source: '<old/>'}, {name: 'second.xml', source: '<second/>'}];
   let source = '<edited/>', drawing = 'drawing-A';

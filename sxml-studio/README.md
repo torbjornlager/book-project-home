@@ -107,6 +107,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   scrolls only when the entire selected element is outside the visible area.
   A graphical edit rewrites only the lines it concerns: every
   untouched element, comment and blank line keeps its source text exactly.
+  Diagram hover tips appear after one second and show full text, including
+  final-state entry actions.
   Undo/Redo covers both and is disabled while a chart starts or runs, including
   keyboard shortcuts. These controls undo edits; execution playback has its own
   timeline. Delete a selection through its floating toolbar, the Inspector, or

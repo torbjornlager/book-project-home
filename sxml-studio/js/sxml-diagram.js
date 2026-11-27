@@ -433,6 +433,12 @@
   /* ---------- SVG helpers ---------- */
 
   function el(name, attrs, parent, text) {
+    if (name === 'title' && parent) {
+      const full = [parent.getAttribute('data-tooltip'), text].filter(Boolean).join('\n\n');
+      parent.setAttribute('data-tooltip', full);
+      parent.setAttribute('aria-label', full);
+      return parent;
+    }
     const e = document.createElementNS(SVGNS, name);
     for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
     if (text != null) e.textContent = text;
@@ -480,6 +486,7 @@
     this.applyAppearance(this.appearance);
     this.seq = 0;
     this.userMoved = false;
+    this._bindTooltip();
     this._bind();
   }
 
@@ -559,6 +566,7 @@
   };
 
   Diagram.prototype._render = function () {
+    this._hideTooltip?.();
     const { boxes, edges, info } = this.geo, model = this.model, g = this.view;
     while (g.firstChild) g.removeChild(g.firstChild);
     this.nodeEls = new Map(); this.edgeEls = new Map(); this.itemEls = new Map(); this.edgeGeo = new Map();
@@ -605,7 +613,7 @@
           const x = lb ? b.x + lb.x + lb.width / 2 : cx, y = lb ? b.y + lb.y + 11.5 : cy + FINAL_R + 14 + i * 15;
           el('text', { class: i ? 'line' : 'name', x, y, 'text-anchor': 'middle' }, grp, t);
         });
-        if (n.onentry.length) el('title', {}, grp, n.onentry.map(e => 'entry / ' + one(e.body)).join('\n'));
+        if (n.onentry.length) el('title', {}, grp, n.onentry.map(e => 'entry /\n' + e.body.trim()).join('\n\n'));
         return;
       }
       el('rect', { class: 'state-fill', x: b.x, y: b.y, width: b.w, height: b.h, rx: 13, ry: 13 }, grp);
@@ -840,6 +848,37 @@
     return { x: (ev.clientX - r.left - this.tx) / this.k, y: (ev.clientY - r.top - this.ty) / this.k };
   };
 
+  /* Diagram tooltips use a predictable delay and wrap complete source text. */
+  Diagram.prototype._bindTooltip = function () {
+    const tip = document.createElement('div');
+    tip.className = 'diagram-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    tip.hidden = true;
+    this.host.appendChild(tip);
+    let timer = null, owner = null;
+    this._hideTooltip = () => {
+      clearTimeout(timer); timer = null; owner = null; tip.hidden = true;
+    };
+    const hide = this._hideTooltip;
+    this.svg.addEventListener('pointermove', ev => {
+      if (ev.buttons) { hide(); return; }
+      const target = ev.target.closest('[data-tooltip]');
+      if (target === owner) return;
+      hide();
+      if (!target) return;
+      owner = target;
+      const x = ev.clientX, y = ev.clientY;
+      timer = setTimeout(() => {
+        tip.textContent = target.getAttribute('data-tooltip');
+        tip.hidden = false;
+        const box = tip.getBoundingClientRect(), gap = 8;
+        tip.style.left = Math.max(gap, Math.min(x + 12, global.innerWidth - box.width - gap)) + 'px';
+        tip.style.top = Math.max(gap, Math.min(y + 16, global.innerHeight - box.height - gap)) + 'px';
+      }, 1000);
+    });
+    for (const type of ['pointerleave', 'pointerdown', 'wheel', 'keydown']) this.svg.addEventListener(type, hide);
+  };
+
   Diagram.prototype._bind = function () {
     const svg = this.svg;
     let drag = null;
@@ -1041,6 +1080,12 @@
     clone.setAttribute('width', Math.ceil(this.geo.width));
     clone.setAttribute('height', Math.ceil(this.geo.height));
     clone.removeAttribute('tabindex');
+    for (const target of clone.querySelectorAll('[data-tooltip]')) {
+      const title = document.createElementNS(SVGNS, 'title');
+      title.textContent = target.getAttribute('data-tooltip');
+      target.insertBefore(title, target.firstChild);
+      target.removeAttribute('data-tooltip');
+    }
     clone.lastChild.removeAttribute('transform');
     for (const o of clone.querySelectorAll('.handle,.rubber,.ghost,.end')) o.remove();
     const notes = global.SXMLStudio?.metadata(this.model.doc).notes || [];
