@@ -36,22 +36,16 @@
 </statechart>
 
 
-<!-- <examples>
+<!-- <example events>
 
-?- statechart_spawn(Pid, [
-       src_text(<editor>)
-   ]).
+play.
 
-?- $Pid ! play.
+reset.
 
-?- $Pid ! reset.
+pause.
 
-?- $Pid ! pause.
+resume.
 
-?- $Pid ! resume.
-
-?- $Pid ! stop.
-
-?- statechart_halt($Pid, Reply, 1).
+stop.
 
 -->

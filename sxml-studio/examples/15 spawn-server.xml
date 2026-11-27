@@ -38,14 +38,3 @@
     </state>
     <final id="Final" />
 </statechart>
-
-
-<!-- <examples>
-
-?- statechart_spawn(Pid, [
-       src_text(<editor>)
-   ]).
-
-?- statechart_halt($Pid, Reply, 1).
-
--->

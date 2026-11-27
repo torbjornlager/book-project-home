@@ -173,7 +173,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   text. Rule bodies are never executed for inspection.
   Halt or restart clears the live display. Try example 09 and send its integers
   query to watch the GCD calculation update `int/1`.
-  The queries from the document's trailing `<examples>` comment become
+  Events from the document's trailing `<example events>` comment become
   buttons; `$Pid` stands for the running chart. Clicking a transition while
   the chart runs sends its event.
 

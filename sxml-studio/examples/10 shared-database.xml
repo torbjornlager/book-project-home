@@ -36,14 +36,3 @@
         <onentry>output('DONE')</onentry>
     </final>
 </statechart>
-
-
-<!-- <examples>
-
-?- statechart_spawn(Pid, [
-       src_text(<editor>)
-   ]),
-   sleep(0.1),
-   flush.
-
--->

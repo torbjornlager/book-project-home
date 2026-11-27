@@ -244,7 +244,7 @@
 
   function description(doc) {
     for (const n of Array.from(doc.childNodes)) {
-      if (n.nodeType === 8 && !/<examples>|<layout>|<studio>/.test(n.data)) return dedent(n.data);
+      if (n.nodeType === 8 && !/<examples>|<example events>|<layout>|<studio>/.test(n.data)) return dedent(n.data);
       if (n.nodeType === 1) break;
     }
     return '';
@@ -253,7 +253,15 @@
   function exampleQueries(doc) {
     const out = [];
     for (const n of Array.from(doc.childNodes)) {
-      if (n.nodeType !== 8 || !/<examples>/.test(n.data)) continue;
+      if (n.nodeType !== 8) continue;
+      if (/<example events>/.test(n.data)) {
+        for (const part of n.data.replace(/<example events>/, '').split(/\n\s*\n/)) {
+          const event = dedent(part).replace(/\.\s*$/, '').trim();
+          if (event) out.push('$Pid ! ' + event);
+        }
+        continue;
+      }
+      if (!/<examples>/.test(n.data)) continue;
       const body = n.data.replace(/<examples>/, '');
       for (const part of body.split(/^\s*\?-/m).slice(1)) {
         const goal = dedent(part).replace(/\.\s*$/, '').trim();

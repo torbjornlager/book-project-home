@@ -33,20 +33,14 @@
 </statechart>
 
 
-<!-- <examples>
+<!-- <example events>
 
-?- statechart_spawn(Pid, [
-       src_text(<editor>)
-   ]).
+command(open).
 
-?- $Pid ! command(open).
+command(close).
 
-?- $Pid ! command(close).
+initialised.
 
-?- $Pid ! initialised.
-
-?- $Pid ! command(status).
-
-?- statechart_halt($Pid, Reply, 1).
+command(status).
 
 -->

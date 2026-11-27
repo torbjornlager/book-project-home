@@ -36,14 +36,8 @@
 </statechart>
 
 
-<!-- <examples>
+<!-- <example events>
 
-?- statechart_spawn(Pid, [
-       src_text(<editor>)
-   ]).
-
-?- $Pid ! integers([25, 10, 15, 30]).
-
-?- statechart_halt($Pid, Reply, 1).
+integers([25, 10, 15, 30]).
 
 -->
