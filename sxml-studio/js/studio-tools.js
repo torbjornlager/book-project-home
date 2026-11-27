@@ -137,7 +137,7 @@ window.studioTools = (() => {
     // Keep typing uninterrupted when live updates refresh the event controls.
     if (box.contains(document.activeElement)) return;
     const disabled = !run.pid || run.starting || run.busy || run.done;
-    const input = h('input', {value: eventDraft, disabled, placeholder: 'Prolog term, e.g. input([red])',
+    const input = h('input', {value: eventDraft, disabled, placeholder: 'Prolog term',
       'aria-label': 'Event as a Prolog term', spellcheck: false, autocomplete: 'off',
       oninput: e => { eventDraft = e.target.value; submit.disabled = disabled || !eventDraft.trim(); }});
     const submit = h('button', {type: 'submit', class: 'event-send', 'aria-label': 'Send event', title: 'Send event',

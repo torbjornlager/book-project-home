@@ -79,7 +79,7 @@
         b.setAttribute('aria-label', b.dataset.originalAria || label);
         b.classList.add('icon-only');
       }
-      if(b.id==='tab-run') b.title='Run and inspect events';
+      if(b.id==='tab-run') b.title='Runner';
     }
   }
   const sectionState = new Map();

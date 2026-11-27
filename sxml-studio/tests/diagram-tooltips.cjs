@@ -86,7 +86,7 @@ console.log('Checked complete boxshop final-state action, text-only action hover
   const internal = {key: 'source/internal', el: {}, source, to: [], on: long('internal_event'), cond: long('internal_guard'), body: long('internal_action'), index: 0};
   const external = {key: 'source/external', el: {}, source, to: ['target'], on: long('external_event'), cond: long('external_guard'), body: long('external_action'), index: 1};
   source.onentry = [entry]; source.onexit = [exit]; source.defers = [defer]; source.spawns = [spawn]; source.transitions = [internal, external];
-  const dm = {key: '#root/datamodel0', body: Array.from({length: 30}, (_, i) => long('fact_' + i) + '.').join('\n')};
+  const dm = {key: '#root/datamodel0', body: Array.from({length: 60}, (_, i) => long('fact_' + i) + '.').join('\n')};
   chart.datamodels = [dm];
   const model = {root: chart, nodes: [chart, source, target], byId: new Map([['source',source],['target',target]]), nested: new Map(), transitions: [internal, external], layout: null};
   const geo = await SXMLDiagram.layout(model, 'RIGHT');
@@ -123,6 +123,12 @@ console.log('Checked complete boxshop final-state action, text-only action hover
   check(edgeLabel, [external.on, external.cond, external.body], 'transition event, guard and action');
   assert(geo.info.get(dm.key).lines.some(line => line.endsWith('…')));
   assert(geo.info.get(dm.key).lines.length < dm.body.split('\n').length);
+  const note = drawing.itemEls.get(dm.key);
+  const heading = note.children.find(el => el.attrs.class === 'note-title');
+  const clauses = note.children.filter(el => el.attrs.class === 'note-line');
+  assert.equal(Number(clauses[0].attrs.y) - Number(heading.attrs.y), 23, 'Datamodel clauses must have extra space below the heading.');
+  const box = geo.boxes.get(dm.key);
+  assert(Number(clauses.at(-1).attrs.y) < box.y + box.h, 'The expanded note must contain its final visible line.');
   check(drawing.itemEls.get(dm.key), [dm.body], 'datamodel including omitted lines');
   console.log('Checked truncated entry/exit actions, spawn goals, deferred events, internal/external transition events, guards/actions and datamodel lines: full hover text after 1000 ms.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

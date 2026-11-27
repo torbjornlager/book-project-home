@@ -62,8 +62,8 @@ body[data-view=source] .chart-pane,body[data-view=source] .hdivider{display:none
 body[data-view=source] .source-pane{flex:1 1 0}
 /* side panel */
 .side-tabs{border-top:0;height:43px;flex:none;align-items:stretch}
-#run-badge{font-size:calc(9px * var(--ui-font-scale,1));border-radius:3px;background:var(--raised);padding:1px 5px;margin-left:3px}
-#run-badge.live{background:var(--accent-bg);color:var(--accent)}
+
+
 .side-view{flex:1;min-height:0;overflow:auto}
 #inspector{padding:14px 16px 24px}
 .insp-head{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}

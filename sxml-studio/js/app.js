@@ -1180,9 +1180,6 @@ const bold = t => { const b = document.createElement('b'); b.textContent = t; re
 function runControls() {
   const triggerMode = $('transition-trigger-mode');
   if (triggerMode && triggerMode.disabled !== (!!run.pid || run.starting)) renderInspector();
-  const badge = $('run-badge');
-  badge.textContent = run.starting ? 'starting' : run.pid ? (run.done ? 'done' : 'live') : 'idle';
-  badge.classList.toggle('live', !!run.pid && !run.done);
   updateChrome();
   window.studioTools?.controls();
   window.SXMLChrome?.decorate(document.querySelector('.query-pane'));

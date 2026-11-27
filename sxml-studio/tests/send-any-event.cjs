@@ -14,7 +14,7 @@ const event={preventDefault(){}};
 (async()=>{
   let row=render();
   assert.equal(row.form.tag,'form');assert.equal(row.form.children.length,2);
-  assert.equal(row.input.tag,'input');assert.equal(row.input['aria-label'],'Event as a Prolog term');
+  assert.equal(row.input.tag,'input');assert.equal(row.input.placeholder,'Prolog term');assert.equal(row.input['aria-label'],'Event as a Prolog term');
   assert.equal(row.button.children[0],'!');assert.equal(row.button['aria-label'],'Send event');
   assert(row.button.disabled);
   type(row,'input([a,red,box]).');assert.equal(row.button.disabled,false);

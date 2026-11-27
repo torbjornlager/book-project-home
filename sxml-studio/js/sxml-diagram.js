@@ -14,7 +14,7 @@
   const F_MONO = '11px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
   const F_NOTE = '10.5px "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
   const HEAD_H = 26, LINE_H = 16, PAD = 14, FINAL_R = 11, HIST_R = 13, INIT_R = 5;
-  const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 24;
+  const MAX_LINE = 42, MAX_LABEL = 30, MAX_NOTE = 46, MAX_NOTE_LINES = 48, NOTE_TOP = 38;
 
   const APPEARANCE_DEFAULTS = Object.freeze({ lineWidth: 1.3, lineColor: null, arrowSize: 8.5, borderWidth: 1.25, labelSize: 11, labelOpacity: 0, headerColor: '#f5f5f5', activeHeaderColor: '#e6f3ee', darkHeaderColor: '#2b343a', darkActiveHeaderColor: '#203f34' });
   function normalizeAppearance(settings = {}) {
@@ -178,7 +178,7 @@
       let lines = all.slice(0, MAX_NOTE_LINES).map(l => cut(l.replace(/\s+$/, ''), MAX_NOTE));
       if (all.length > MAX_NOTE_LINES || live?.truncated) lines.push('… more clauses (hover to view)');
       const w = Math.max(76, ...lines.map(l => width(l, F_NOTE))) + 22;
-      const h = 24 + lines.length * 14 + 8;
+      const h = NOTE_TOP + lines.length * 14;
       info.set(dm.key, { type: 'note', item: dm, lines, live, changedLines, fullText: all.join('\n') });
       return { id: dm.key, width: w, height: h };
     }
@@ -703,7 +703,7 @@
     el('path', { class: 'fold', d: 'M' + (b.x + b.w - f) + ' ' + b.y + ' v' + f + ' h' + f }, grp);
     el('text', { class: 'note-title', x: b.x + 10, y: b.y + 15 }, grp, 'DATAMODEL');
     inf.lines.forEach((t, i) => {
-      const y = b.y + 32 + i * 14;
+      const y = b.y + NOTE_TOP + i * 14;
       if (inf.live && inf.changedLines[i]) el('rect', {class: 'fact-change', x: b.x + 6, y: y - 11, width: b.w - 12, height: 14, rx: 3}, grp);
       el('text', { class: 'note-line', x: b.x + 10, y, 'xml:space': 'preserve' }, grp, t);
     });

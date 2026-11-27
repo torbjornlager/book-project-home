@@ -168,13 +168,13 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Datamodel notes update in place with current facts and rules during a run.
   Snapshots follow live chart actions, with new clauses briefly
   highlighted; source XML is unchanged. Rules retain line breaks and indentation.
-  Up to 24 lines are shown in the note, with blank lines between runtime clauses
+  Up to 48 lines are shown in the note, with blank lines between runtime clauses
   and up to forty clauses in its hover
   text. Rule bodies are never executed for inspection.
   Halt or restart clears the live display. Try example 09 and send its integers
   query to watch the GCD calculation update `int/1`.
   Events from the document's trailing `<example events>` comment become
-  **Example events** buttons in the Run panel. Events end with a period; blank
+  **Example events** buttons in the Runner panel. Events end with a period; blank
   lines are optional. Button labels and sent events omit the terminating period.
   Editing XML comments, including this event list, keeps the chart running and
   preserves its trace log. Event buttons update as the comment changes. Changes
@@ -199,8 +199,8 @@ targets remain editable as space-separated IDs. Priority ordering is available
 in an expandable section.
 
 The Inspector groups data, actions and advanced tools into
-expandable sections. The right panel contains Inspector, Run and Settings.
-In Run, example-event buttons and **Send any event** sit above a permanently
+expandable sections. The right panel contains Inspector, Runner and Settings.
+In Runner, example-event buttons and **Send any event** sit above a permanently
 visible **Trace and output** log that fills the remaining panel space. Enter a
 concrete Prolog term and click **!** or press Return to send it. Once the
 interpreter accepts the event, the field clears and regains focus immediately.
