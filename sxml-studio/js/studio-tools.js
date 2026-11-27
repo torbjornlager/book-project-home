@@ -198,9 +198,22 @@ window.studioTools = (() => {
       oninput: e => { eventDraft = e.target.value; submit.disabled = disabled || !eventDraft.trim(); }});
     const submit = h('button', {type: 'submit', class: 'event-send', 'aria-label': 'Send event', title: 'Send event',
       disabled: disabled || !eventDraft.trim()}, '!');
-    box.replaceChildren(h('form', {class: 'event-row', onsubmit: e => {
+    box.replaceChildren(h('form', {class: 'event-row', onsubmit: async e => {
       e.preventDefault();
-      if (!disabled && input.value.trim()) safeSend(input.value);
+      if (disabled || !input.value.trim()) return;
+      const value = input.value, token = sendGeneration;
+      const result = await safeSend(value);
+      if (token !== sendGeneration) return;
+      // Sending and trace playback rebuild the controls; focus the current input.
+      const current = $('event-palette')?.querySelector('input');
+      if (result && eventDraft === value) {
+        eventDraft = '';
+        if (current) {
+          current.value = '';
+          $('event-palette').querySelector('button').disabled = true;
+        }
+      }
+      if (current && !current.disabled) current.focus({preventScroll: true});
     }}, input, submit));
   }
   function exampleEventButtons() {

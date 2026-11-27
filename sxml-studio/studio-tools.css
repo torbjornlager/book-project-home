@@ -18,7 +18,7 @@
 .timeline-list{max-height:140px;overflow:auto}
 .timeline-list button{display:block;width:100%;text-align:left;background:transparent;color:var(--fg);padding:4px 6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .timeline-list button[aria-current=true]{background:var(--accent-bg);color:var(--accent)}
-.event-row{display:flex;gap:4px;margin:5px 0;align-items:center}
+.event-row{display:flex;gap:6px;margin:5px 0;align-items:center}
 .event-row input{min-width:0;flex:1}.event-row button{padding:6px 8px}
 .event-row .event-send{font-size:18px;font-weight:700;line-height:1;min-width:34px}
 @media(max-width:700px){.structure-panel{max-height:230px}.diagram-notes{max-width:180px}#debug-tools{max-height:none}}

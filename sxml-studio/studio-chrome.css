@@ -189,7 +189,7 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #run .debug-heading{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;gap:6px;margin:0 0 6px}
 #run .hint{font-size:calc(11px * var(--ui-font-scale,1));line-height:1.4;margin:4px 0 6px}
 #run .event-owner{margin-top:6px}
-#run .event-row{padding:2px 0 4px;gap:4px}
+#run .event-row{padding:2px 0 4px;gap:6px}
 #run input,#run select{font-family:inherit;font-size:calc(12px * var(--ui-font-scale,1));line-height:1.4;padding:5px 8px;min-height:32px}
 #run .event-row button{width:32px;min-width:32px;height:32px;min-height:32px;padding:6px!important}
 #run .playback-toolbar{margin:2px 0;gap:3px}
