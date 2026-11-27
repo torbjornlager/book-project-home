@@ -87,7 +87,12 @@ CodeMirror.defineMode('sxml', () => ({
     stream.next(); return null;
   }
 }));
-const editor = CodeMirror.fromTextArea($('source'), { lineNumbers: true, mode: 'sxml', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: { Tab: cm => cm.execCommand('insertSoftTab') } });
+const editor = CodeMirror.fromTextArea($('source'), { lineNumbers: true, mode: 'sxml', indentUnit: 4, tabSize: 4, lineWrapping: false, extraKeys: {
+  Tab: cm => cm.execCommand('insertSoftTab'),
+  'Ctrl-Z': () => changeHistory('undo'), 'Cmd-Z': () => changeHistory('undo'),
+  'Shift-Ctrl-Z': () => changeHistory('redo'), 'Shift-Cmd-Z': () => changeHistory('redo'),
+  'Ctrl-Y': () => changeHistory('redo'), 'Cmd-Y': () => changeHistory('redo')
+} });
 editor.getInputField().setAttribute('aria-label', 'SXML source');
 
 /* ---------- state ---------- */
@@ -540,8 +545,7 @@ function updateChrome() {
     const states = model.nodes.filter(n => n.kind !== 'statechart').length;
     $('stats').textContent = 'SXML 0.2 · ' + states + ' state' + (states === 1 ? '' : 's') + ' · ' + model.transitions.length + ' transition' + (model.transitions.length === 1 ? '' : 's');
   }
-  const hist = editor.historySize();
-  $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
+  syncHistoryControls();
   $('direction').disabled = !!run.pid || run.starting;
   $('layout-toggle').disabled = !!run.pid || run.starting;
   if ((run.pid || run.starting) && $('layout-popover').matches(':popover-open')) $('layout-popover').hidePopover();
@@ -553,8 +557,6 @@ function updateChrome() {
   for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
   syncRegionArrangement();
-  const entry = entryFor(selEl);
-  $('delete').disabled = !entry || entry === model.root || !!run.pid;
   diagram.readOnly = !!run.pid;
 }
 
@@ -814,12 +816,28 @@ function removeSelected() {
   commit();
 }
 
+/* Undo/redo change source edits; execution playback has separate controls. */
+function syncHistoryControls() {
+  const locked = !!run.pid || run.starting, history = editor.historySize();
+  for (const command of ['undo', 'redo']) {
+    $(command).disabled = locked || !history[command];
+    $(command).title = locked ? 'Stop the chart to ' + command + ' edits'
+      : (command === 'undo' ? 'Undo edit (Ctrl or Command + Z)' : 'Redo edit (Ctrl or Command + Shift + Z)');
+  }
+}
+function changeHistory(command) {
+  if (run.pid || run.starting || !['undo', 'redo'].includes(command)) return;
+  if (!editor.historySize()[command]) return;
+  editor[command]();
+  updateChrome();
+}
+
 function diagramKey(ev) {
   const mod = ev.ctrlKey || ev.metaKey;
   if ((ev.key === 'Delete' || ev.key === 'Backspace') && !mod) { ev.preventDefault(); removeSelected(); }
   else if (ev.key === 'Escape') { setTool(null); select('#root'); }
-  else if (mod && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? editor.redo() : editor.undo(); }
-  else if (mod && ev.key.toLowerCase() === 'y') { ev.preventDefault(); editor.redo(); }
+  else if (mod && ev.key.toLowerCase() === 'z') { ev.preventDefault(); changeHistory(ev.shiftKey ? 'redo' : 'undo'); }
+  else if (mod && ev.key.toLowerCase() === 'y') { ev.preventDefault(); changeHistory('redo'); }
   else if (ev.key === 't' && !mod) setTool(diagram.tool === 'connect' ? null : 'connect');
   else if (ev.key === '0' && !mod) diagram.fit();
 }
@@ -1739,9 +1757,8 @@ $('export').onclick = async () => {
   }, 'image/svg+xml', '.svg', 'SVG drawing');
 };
 
-$('delete').onclick = removeSelected;
-$('undo').onclick = () => editor.undo();
-$('redo').onclick = () => editor.redo();
+$('undo').onclick = () => changeHistory('undo');
+$('redo').onclick = () => changeHistory('redo');
 $('fit').onclick = () => diagram.fit();
 $('zoom-in').onclick = () => diagram.zoomBy(1.2);
 $('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
