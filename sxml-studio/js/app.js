@@ -1475,7 +1475,7 @@ function play(item) {
     if (!targets.length) { diagram.setRun(true, run.active, run.fired, run.nested); return true; }
     return false;
   }
-  if (t.name === 'microstep') return false;
+  if (t.name === 'microstep' || t.name === 'macrostep_complete') return false;
   if (t.name === 'execution') { logRow('trace', ['  run ', h('code', {}, item.text.slice(10, -1))]); return false; }
   if (t.name === 'unmatched') { logRow('trace', ['  unmatched ', bold(item.text.slice(10, -1))]); return false; }
   logRow('trace', '  ' + item.text);

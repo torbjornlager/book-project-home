@@ -59,3 +59,14 @@ console.log('Checked live trace/output ordering, startup queuing, message/error 
   }
   console.log('Checked implicit/empty guard suppression and explicit true/false guard results for root and inline charts.');
 }
+
+{
+  const rows=[],trace={window:{studioTools:{scope:()=>null}},model:{},termOf:name=>({name,args:[]}),logRow:(kind,text)=>rows.push(text)};
+  vm.createContext(trace);vm.runInContext(app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
+  assert.equal(trace.play({type:'trace',text:'macrostep_complete'}),false);
+  assert.equal(trace.play({type:'trace',text:'microstep'}),false);
+  assert.equal(rows.length,0,'Routine step-completion markers should not appear in the log.');
+  trace.play({type:'output',text:'Program output'});trace.play({type:'error',text:'An error'});
+  assert.deepEqual(rows,['Program output','An error']);
+  console.log('Checked hidden macrostep/microstep markers with program output and errors still visible.');
+}
