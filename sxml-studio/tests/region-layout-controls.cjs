@@ -8,7 +8,7 @@ elements['layout-region-arrangement'].options = ['DOWN', 'RIGHT', 'AUTO'].map(va
 let selected = null, safe = true, commits = 0;
 const context = {
   $: id => elements[id], selEl: {}, entryFor: () => selected,
-  model: {doc: {}, layout: {first: {'@regions': 'RIGHT', child: [10, 20]}, second: {'@regions': 'AUTO'}, '@direction': 'DOWN'}},
+  model: {doc: {}, layout: {first: {'@regions': 'RIGHT'}, second: {'@regions': 'AUTO'}, '@direction': 'DOWN'}},
   run: {pid: null, starting: false}, guard: () => !context.run.pid,
   SXMLDiagram: {canArrangeRegions: () => safe},
   SXML: {setLayout(doc, layout) {assert.equal(doc, context.model.doc); context.model.layout = layout;}},
@@ -31,7 +31,7 @@ assert.equal(control.value, 'RIGHT');
 assert(!control.disabled);
 context.changeRegionArrangement('DOWN');
 assert.equal(commits, 1);
-assert.equal(JSON.stringify(context.model.layout.first), '{"child":[10,20]}', 'Resetting this state must preserve saved child positions.');
+assert.equal(context.model.layout.first, undefined, 'Choosing the default removes only this state’s region preference.');
 assert.equal(context.model.layout.second['@regions'], 'AUTO', 'Another parallel state must retain its arrangement.');
 assert.equal(context.model.layout['@direction'], 'DOWN');
 assert(!context.diagram.userMoved);
@@ -40,7 +40,7 @@ selected = {kind: 'parallel', id: 'second', key: 'second'}; sync();
 assert.equal(control.value, 'AUTO');
 context.changeRegionArrangement('RIGHT');
 assert.equal(context.model.layout.second['@regions'], 'RIGHT', 'The control must use the current selection.');
-assert.equal(JSON.stringify(context.model.layout.first), '{"child":[10,20]}');
+assert.equal(context.model.layout.first, undefined);
 safe = false; sync();
 assert(control.options.filter(o => o.value !== 'AUTO').every(o => o.disabled));
 assert(!control.options.find(o => o.value === 'AUTO').disabled);

@@ -139,12 +139,6 @@
 
   /* ---------- ELK graph ---------- */
 
-  const INTERACTIVE = {
-    'elk.layered.cycleBreaking.strategy': 'INTERACTIVE',
-    'elk.layered.layering.strategy': 'INTERACTIVE',
-    'elk.layered.crossingMinimization.strategy': 'INTERACTIVE'
-  };
-
   function canArrangeRegions(model, parallel) {
     const region = node => {
       for (let child = node; child && child !== parallel; child = child.parent) {
@@ -164,10 +158,9 @@
     return true;
   }
 
-  function toElk(model, direction, base, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map(), collapsed = new Set(), spacing = null) {
+  function toElk(model, direction, paddingPercent = 100, appearance = APPEARANCE_DEFAULTS, liveDatamodels = new Map(), collapsed = new Set(), spacing = null) {
     const nestedPad = PAD * Math.max(50, Math.min(150, Number(paddingPercent) || 100)) / 100;
     const edges = [];
-    const hints = base ? model.layout : null;
     const rootNotes = [];
     const info = new Map();      // elk id -> description
     function noteNode(dm, owner) {
@@ -229,15 +222,6 @@
           edges.push({ id, sources: [realKids[i].key], targets: [realKids[i + 1].key], layoutOptions: { 'elk.layered.priority.direction': '0' } });
           info.set(id, { type: 'chain' });
         }
-      }
-      if (hints) {
-        const hint = hints[n.key] || {}, me = base.get(n.key);
-        kids.forEach((k, i) => {
-          const h = hint[k.id], b = base.get(k.id);
-          if (h) { k.x = h[0]; k.y = h[1]; }
-          else if (b && me) { k.x = b.x - me.x; k.y = b.y - me.y; }
-          else { k.x = 100000 + i; k.y = 100000 + i; }
-        });
       }
       const requestedDirection = n.kind === 'parallel' ? (model.layout && model.layout[n.key] && model.layout[n.key]['@regions']) || 'DOWN' : null;
       const independent = ['RIGHT', 'DOWN'].includes(requestedDirection) && canArrangeRegions(model, n);
@@ -403,181 +387,13 @@
 
   async function layoutOnce(model, direction, extra) {
     if (!elk) elk = new global.ELK();
-    const noteKeys = new Set(model.root.datamodels.map(d => d.key));
-    const hinted = !!model.layout && Object.keys(model.layout).some(pk => pk[0] !== '@' && Object.keys(model.layout[pk]).some(k => k[0] !== '@' && !(pk === '#root' && noteKeys.has(k))));
-    const geo = await run(model, direction, extra, null);
-    /* Saved positions are exact: ELK supplies sizes and the positions of
-       anything not yet placed, and the saved arrangement is applied on top. */
-    return freeLayout(geo, model, hinted);
+    return run(model, direction, extra);
   }
 
-  /* ---------- free (saved) positions ----------
-
-     A position saved in the <layout> comment is a child's offset in its
-     parent's frame: layout[parentKey][childKey] = [x, y].  A parent always
-     wraps its children tightly (with its padding and header), so moving a
-     child never moves its siblings, and moving it by (dx, dy) adds exactly
-     (dx, dy) to its saved offset.  `shift` is how far a parent's top-left
-     moved to wrap its children; offsets are corrected by it when drawing. */
-  function freeLayout(geo, model, apply) {
-    const { boxes, meta } = geo, saved = (model.layout) || {};
-    const rel = new Map(), shift = new Map(), size = new Map();
-    const rootKey = meta.root;
-    function fit(p) {
-      const kids = meta.kids.get(p) || [], b = boxes.get(p);
-      for (const k of kids) fit(k);
-      if (!kids.length) { size.set(p, [b.w, b.h]); shift.set(p, [0, 0]); return; }
-      const hint = apply ? (saved[p] || {}) : {};
-      const placed = kids.filter(k => Array.isArray(hint[k]) && hint[k].length === 2 && hint[k].every(Number.isFinite));
-      for (const k of placed) rel.set(k, hint[k].slice());
-      if (placed.length) {
-        /* Children without a saved place go in a column beside the placed ones. */
-        let right = -Infinity, y = Infinity;
-        for (const k of placed) { right = Math.max(right, rel.get(k)[0] - shift.get(k)[0] + size.get(k)[0]); y = Math.min(y, rel.get(k)[1] - shift.get(k)[1]); }
-        for (const k of kids) if (!rel.has(k)) { rel.set(k, [right + 40 + shift.get(k)[0], y + shift.get(k)[1]]); y += size.get(k)[1] + 24; }
-      } else for (const k of kids) { const c = boxes.get(k); rel.set(k, [c.x - b.x + shift.get(k)[0], c.y - b.y + shift.get(k)[1]]); }
-      if (!apply) { size.set(p, [b.w, b.h]); shift.set(p, [0, 0]); return; }
-      /* Regions of a parallel state stay in a tidy row or column, in the order
-         of their saved positions, so dragging a region reorders it. */
-      const pinf = geo.info.get(p);
-      if (pinf && pinf.type === 'parallel') {
-        const regs = kids.filter(k => { const t = geo.info.get(k); return t && (t.type === 'state' || t.type === 'parallel'); });
-        if (regs.length > 1) {
-          const down = pinf.regions !== 'RIGHT', ax = down ? 1 : 0;
-          const elkSorted = regs.slice().sort((a, c) => boxes.get(a)[down ? 'y' : 'x'] - boxes.get(c)[down ? 'y' : 'x']);
-          const e0 = boxes.get(elkSorted[0]), e1 = boxes.get(elkSorted[1]);
-          const gap = Math.max(0, down ? e1.y - e0.y - e0.h : e1.x - e0.x - e0.w);
-          const order = regs.slice().sort((a, c) => (rel.get(a)[ax] - shift.get(a)[ax]) - (rel.get(c)[ax] - shift.get(c)[ax]));
-          /* Each region keeps its place unless the one before it now reaches it. */
-          let along = -Infinity;
-          for (const k of order) {
-            const r = rel.get(k).slice(), sk = shift.get(k), sz = size.get(k);
-            const pos = Math.max(r[ax] - sk[ax], along);
-            r[ax] = pos + sk[ax]; rel.set(k, r);
-            along = pos + sz[ax] + gap;
-          }
-        }
-      }
-      const pad = meta.pad.get(p) || { top: 24, left: 24, right: 24, bottom: 24 };
-      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-      for (const k of kids) {
-        const [rx, ry] = rel.get(k), [sx, sy] = shift.get(k), [w, h] = size.get(k);
-        x0 = Math.min(x0, rx - sx); y0 = Math.min(y0, ry - sy); x1 = Math.max(x1, rx - sx + w); y1 = Math.max(y1, ry - sy + h);
-      }
-      /* Grow, never shrink, relative to ELK's box, so an unchanged arrangement
-         is drawn exactly as ELK drew it. */
-      const left = Math.min(0, x0 - pad.left), top = Math.min(0, y0 - pad.top);
-      const right = Math.max(b.w, x1 + pad.right), bottom = Math.max(b.h, y1 + pad.bottom);
-      shift.set(p, [-left, -top]);
-      size.set(p, [right - left, bottom - top]);
-    }
-    fit(rootKey);
-    geo.rel = rel; geo.shift = shift; geo.parentOf = meta.parent;
-    if (!apply) return offsetLabels(geo, saved);
-    const abs = new Map([[rootKey, [0, 0]]]);
-    (function place(p) {
-      for (const k of meta.kids.get(p) || []) {
-        const a = abs.get(p), r = rel.get(k), sk = shift.get(k), sp = shift.get(p);
-        abs.set(k, [a[0] + r[0] - sk[0] + sp[0], a[1] + r[1] - sk[1] + sp[1]]);
-        place(k);
-      }
-    })(rootKey);
-    const before = new Map(boxes);
-    const next = new Map(boxes);
-    for (const [k, a] of abs) { const b = boxes.get(k), sz = size.get(k); next.set(k, Object.assign({}, b, { x: a[0], y: a[1], w: sz[0], h: sz[1] })); }
-    /* Saved offsets are rounded to whole pixels at each nesting level, so allow a few pixels' drift. */
-    const near = (u, v) => Math.abs(u - v) < 3;
-    const same = k => { const a = before.get(k), b = next.get(k); return a && b && near(a.x, b.x) && near(a.y, b.y) && near(a.w, b.w) && near(a.h, b.h); };
-    const pairs = new Map();
-    for (const e of geo.edges) if (e.source && e.target) { const id = [e.source, e.target].sort().join('|'); pairs.set(id, (pairs.get(id) || []).concat(e)); }
-    for (const e of geo.edges) {
-      if (!e.source || !e.target || (same(e.source) && same(e.target))) continue;
-      const group = pairs.get([e.source, e.target].sort().join('|'));
-      routeEdge(e, next.get(e.source), next.get(e.target), group.indexOf(e), group.length);
-    }
-    geo.boxes = next;
-    let width = 0, height = 0;
-    for (const b of next.values()) { width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24); }
-    geo.width = width; geo.height = height;
-    geo.free = true;
-    return offsetLabels(geo, saved);
-  }
-
-  /* A dragged transition label keeps its offset from where it would sit by
-     default, saved with the transition's source: layout[source][edgeId]. */
-  function offsetLabels(geo, saved) {
-    geo.labelOwner = new Map();
-    for (const e of geo.edges) {
-      const inf = geo.info.get(e.id);
-      if (!inf || !inf.item || !inf.item.source || !e.labels || !e.labels.length) continue;
-      const owner = inf.item.source.key;
-      geo.labelOwner.set(e.id, owner);
-      const off = saved[owner] && saved[owner][e.id];
-      if (Array.isArray(off) && off.length === 2 && off.every(Number.isFinite)) {
-        const l = e.labels[0];
-        e.labels = [Object.assign({}, l, { x: l.x + off[0], y: l.y + off[1], home: { x: l.x + l.w / 2, y: l.y + l.h / 2 } })];
-      }
-    }
-    return geo;
-  }
-
-  const contains = (o, i) => i.x >= o.x - 0.5 && i.y >= o.y - 0.5 && i.x + i.w <= o.x + o.w + 0.5 && i.y + i.h <= o.y + o.h + 0.5;
-  const isRound = b => b.w === b.h && b.w <= 2 * HIST_R + 0.5;
-  /* Where the ray from the centre of b along (vx, vy) leaves b. */
-  function exitPoint(b, vx, vy) {
-    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, len = Math.hypot(vx, vy) || 1;
-    if (isRound(b)) return { x: cx + vx / len * b.w / 2, y: cy + vy / len * b.w / 2 };
-    const t = Math.min(vx ? (b.w / 2) / Math.abs(vx) : Infinity, vy ? (b.h / 2) / Math.abs(vy) : Infinity);
-    return { x: cx + vx * t, y: cy + vy * t };
-  }
-  /* The point of the outer box's border nearest to the inner box, and the inner box's matching exit. */
-  function nestedRoute(outer, inner, outward) {
-    const d = [['left', inner.x - outer.x], ['right', outer.x + outer.w - inner.x - inner.w], ['top', inner.y - outer.y], ['bottom', outer.y + outer.h - inner.y - inner.h]].sort((a, b) => a[1] - b[1])[0][0];
-    const cx = inner.x + inner.w / 2, cy = inner.y + inner.h / 2;
-    const v = { left: [-1, 0], right: [1, 0], top: [0, -1], bottom: [0, 1] }[d];
-    const a = exitPoint(inner, v[0], v[1]);
-    const b = { left: { x: outer.x, y: cy }, right: { x: outer.x + outer.w, y: cy }, top: { x: cx, y: outer.y }, bottom: { x: cx, y: outer.y + outer.h } }[d];
-    return outward ? [a, b] : [b, a];
-  }
-  function routeEdge(e, s, t, index, count) {
-    let pts;
-    const off = (index - (count - 1) / 2) * 18;
-    if (s === t || (s.x === t.x && s.y === t.y && s.w === t.w)) {
-      const k = 22 + index * 12, r = s.x + s.w, top = s.y;
-      pts = [{ x: r - 16, y: top }, { x: r - 16, y: top - k }, { x: r + k, y: top - k }, { x: r + k, y: top + 16 }, { x: r, y: top + 16 }];
-    } else if (contains(t, s)) pts = nestedRoute(t, s, true);
-    else if (contains(s, t)) pts = nestedRoute(s, t, false);
-    else {
-      const sc = { x: s.x + s.w / 2, y: s.y + s.h / 2 }, tc = { x: t.x + t.w / 2, y: t.y + t.h / 2 };
-      const dx = tc.x - sc.x, dy = tc.y - sc.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
-      if (off) {
-        const m = { x: (sc.x + tc.x) / 2 + nx * off * 2, y: (sc.y + tc.y) / 2 + ny * off * 2 };
-        pts = [exitPoint(s, m.x - sc.x, m.y - sc.y), m, exitPoint(t, m.x - tc.x, m.y - tc.y)];
-      } else pts = [exitPoint(s, dx, dy), exitPoint(t, -dx, -dy)];
-    }
-    e.points = pts;
-    if (e.labels && e.labels.length) {
-      const i = Math.floor((pts.length - 1) / 2), a = pts[i], b = pts[i + 1];
-      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, l = e.labels[0];
-      const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
-      e.labels = [Object.assign({}, l, horizontal ? { x: mx - l.w / 2, y: my - l.h - 3 } : { x: mx + 5, y: my - l.h / 2 })];
-    }
-  }
-
-  async function run(model, direction, extra, base) {
+  async function run(model, direction, extra) {
     const { 'studio.spacing': spacing, 'studio.nestedPadding': paddingPercent = 100, 'studio.appearance': appearanceSettings, 'studio.liveDatamodels': liveDatamodels, 'studio.collapsed': collapsed, ...elkOptions } = extra || {};
     const appearance = normalizeAppearance(appearanceSettings);
-    const { graph, info, rootNotes } = toElk(model, direction, base, paddingPercent, appearance, liveDatamodels, collapsed, spacing);
-    const meta = { root: graph.id, parent: new Map(), kids: new Map(), min: new Map(), pad: new Map() };
-    (function scan(n) {
-      const o = n.layoutOptions || {};
-      const pad = /top=([\d.]+),left=([\d.]+),bottom=([\d.]+),right=([\d.]+)/.exec(o['elk.padding'] || '');
-      if (pad) meta.pad.set(n.id, { top: +pad[1], left: +pad[2], bottom: +pad[3], right: +pad[4] });
-      const min = /\(([\d.]+),([\d.]+)\)/.exec(o['elk.nodeSize.minimum'] || '');
-      meta.min.set(n.id, min ? [+min[1], +min[2]] : [n.width || 0, n.height || 0]);
-      meta.kids.set(n.id, (n.children || []).map(c => c.id));
-      for (const c of n.children || []) { meta.parent.set(c.id, n.id); scan(c); }
-    })(graph);
+    const { graph, info, rootNotes } = toElk(model, direction, paddingPercent, appearance, liveDatamodels, collapsed, spacing);
     const res = await elk.layout(graph, { layoutOptions: Object.assign(globalOptions(direction), elkOptions) });
     const boxes = new Map();
     (function walk(n, ox, oy) {
@@ -600,22 +416,18 @@
       }
       for (const c of n.children || []) collect(c);
     })(res);
-    /* Root datamodel notes: where the user dropped them, else in a row under the
-       chart (or, in a top-down layout, in a column to its right). */
+    /* Root datamodel notes follow the chart: a row below or a column to its right. */
     let width = res.width, height = res.height, x = 24, y = 24;
     const down = direction === 'DOWN';
-    const placed = (model.layout && model.layout['#root']) || {};
     const bottom = res.height;
     for (const note of rootNotes) {
-      const h = placed[note.id];
-      const b = h ? { x: Math.max(4, h[0]), y: Math.max(4, h[1]), w: note.width, h: note.height, labels: [] }
-                  : down ? { x: res.width, y, w: note.width, h: note.height, labels: [] }
+      const b = down ? { x: res.width, y, w: note.width, h: note.height, labels: [] }
                   : { x, y: bottom, w: note.width, h: note.height, labels: [] };
-      if (!h) { x += note.width + 20; y += note.height + 20; }
+      x += note.width + 20; y += note.height + 20;
       boxes.set(note.id, b);
       width = Math.max(width, b.x + b.w + 24); height = Math.max(height, b.y + b.h + 24);
     }
-    return { boxes, edges, info, width, height, appearance, meta };
+    return { boxes, edges, info, width, height, appearance };
   }
 
   /* ---------- SVG helpers ---------- */
@@ -849,10 +661,6 @@
       entry.push(grp);
       const lb = e.labels[0];
       if (lb && inf.label.lines.length) {
-        /* A label dragged well away from its arrow gets a faint leader line back to it. */
-        if (lb.home && Math.hypot(lb.x + lb.w / 2 - lb.home.x, lb.y + lb.h / 2 - lb.home.y) > Math.max(lb.w, lb.h) * 0.75 + 12) {
-          el('line', { class: 'label-leader', x1: lb.x + lb.w / 2, y1: lb.y + lb.h / 2, x2: lb.home.x, y2: lb.home.y }, gLabels);
-        }
         const lg = el('g', { class: 'tlabel' + (scope ? ' inner' : ''), 'data-key': key, 'data-item': key, 'data-edge': scope ? null : e.id }, gLabels);
         el('rect', { class: 'tlabel-bg', x: lb.x, y: lb.y, width: lb.w, height: lb.h, rx: 4 }, lg);
         inf.label.lines.forEach((t, i) => el('text', { class: 'line', x: lb.x + 5, y: lb.y + inf.label.baseline + i * inf.label.lineHeight }, lg, t));
@@ -936,7 +744,7 @@
   };
 
   /* Selected-state affordances: a handle on each side (click to add a
-     connected state in that direction, drag to connect or to place a new
+     connected state, drag to connect or to create a new
      state) and a small floating toolbar of state actions. */
   Diagram.prototype._editable = function () { return !this.running && !this.readOnly && !!this.h.onHandle; };
 
@@ -948,12 +756,11 @@
     const ok = !!(b && !n.scope && this._editable() && this.nodeEls.has(key));
     if (ok && (n.kind === 'state' || n.kind === 'parallel')) {
       const mid = { up: [b.x + b.w / 2, b.y], right: [b.x + b.w, b.y + b.h / 2], down: [b.x + b.w / 2, b.y + b.h], left: [b.x, b.y + b.h / 2] };
-      const titles = { up: 'above', right: 'to the right', down: 'below', left: 'to the left' };
       for (const dir of Object.keys(mid)) {
         const g = el('g', { class: 'handle', 'data-handle': dir, 'data-source': key }, layer);
         el('circle', { class: 'handle-hit', cx: mid[dir][0], cy: mid[dir][1], r: 11 }, g);
         el('circle', { class: 'handle-dot', cx: mid[dir][0], cy: mid[dir][1], r: 5 }, g);
-        el('title', {}, g, 'Click: new transition to a new state ' + titles[dir] + ' · drag: connect to a state, or drop on empty space');
+        el('title', {}, g, 'Click: new transition to a new state · drag: connect to a state, or create a new state on empty space');
       }
     }
     this._stateBarKey = ok ? key : null;
@@ -1067,16 +874,8 @@
         ev.preventDefault();
         return;
       }
-      const labelEl = ev.target.closest('[data-edge]');
-      if (labelEl && this._editable() && this.h.onMoveLabel && this.tool !== 'connect') {
-        drag = { type: 'label', edge: labelEl.getAttribute('data-edge'), el: labelEl, x: ev.clientX, y: ev.clientY, moved: false, target: ev.target };
-        svg.setPointerCapture(ev.pointerId);
-        return;
-      }
       const object = ev.target.closest('[data-key]') || ev.target.closest('.edge');
-      const noteEl = ev.target.closest('[data-note]');
-      const movable = (stateEl || noteEl) && !this.running && !this.readOnly && this.h.onMove;
-      drag = { type: movable ? 'move' : object ? 'object' : 'pan', key: movable ? (noteEl ? noteEl.getAttribute('data-note') : stateEl.getAttribute('data-state')) : null, x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
+      drag = { type: object ? 'object' : 'pan', x: ev.clientX, y: ev.clientY, tx: this.tx, ty: this.ty, moved: false, target: ev.target };
       svg.setPointerCapture(ev.pointerId);
     });
     svg.addEventListener('pointermove', ev => {
@@ -1085,22 +884,7 @@
         if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) >= 5) drag.moved = true;
         return;
       }
-      if (drag.type === 'label') {
-        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
-        if (!drag.moved && Math.hypot(dx, dy) * this.k < 4) return;
-        drag.moved = true; svg.classList.add('moving');
-        drag.dx = dx; drag.dy = dy;
-        drag.el.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
-        return;
-      }
-      if (drag.type === 'move') {
-        const dx = (ev.clientX - drag.x) / this.k, dy = (ev.clientY - drag.y) / this.k;
-        if (!drag.moved && Math.hypot(dx, dy) * this.k < 5) return;
-        const b = this.geo.boxes.get(drag.key);
-        if (!drag.moved) { drag.moved = true; svg.classList.add('moving'); drag.ghost = el('rect', { class: 'ghost', width: b.w, height: b.h, rx: 13 }, this.overlay); }
-        drag.dx = dx; drag.dy = dy;
-        drag.ghost.setAttribute('x', b.x + dx); drag.ghost.setAttribute('y', b.y + dy);
-      } else if (drag.type === 'pan') {
+      if (drag.type === 'pan') {
         const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < 4) return;
         drag.moved = true; svg.classList.add('panning');
@@ -1127,12 +911,6 @@
       const d = drag; drag = null;
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
-      if (d.type === 'label' && d.moved) {
-        svg.classList.remove('moving');
-        if (ev.type === 'pointerup') this.h.onMoveLabel(d.edge, d.dx, d.dy);
-        else d.el.removeAttribute('transform');
-        return;
-      }
       if (d.type === 'handle') {
         svg.classList.remove('moving');
         if (d.line) d.line.remove();
@@ -1151,12 +929,6 @@
         if (over && d.type === 'connect' && this.h.onConnect) this.h.onConnect(d.source, over);
         return;
       }
-      if (d.type === 'move' && d.moved) {
-        svg.classList.remove('moving');
-        d.ghost.remove();
-        if (ev.type === 'pointerup') this.h.onMove(d.key, d.dx, d.dy);
-        return;
-      }
       if (d.moved || ev.type !== 'pointerup') return;
       const t = d.target.closest ? d.target.closest('[data-key]') : null;
       const key = t ? t.getAttribute('data-key') : '#root';
@@ -1172,29 +944,6 @@
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
     svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
-  };
-
-  /* Saved positions (see freeLayout): every drawn child's offset in its
-     parent's frame, merged into a copy of `layout`. */
-  Diagram.prototype.positions = function (layout) {
-    const out = Object.assign({}, layout || {});
-    if (!this.geo || !this.geo.rel) return out;
-    for (const [k, r] of this.geo.rel) {
-      const p = this.geo.parentOf.get(k);
-      if (!p) continue;
-      out[p] = Object.assign({}, out[p] || {});
-      if (!Array.isArray(out[p][k])) out[p][k] = [Math.round(r[0]), Math.round(r[1])];
-    }
-    return out;
-  };
-  /* The saved offset that puts a new, childless node's top-left at (x, y). */
-  Diagram.prototype.offsetAt = function (parentKey, x, y) {
-    const b = this.geo && this.geo.boxes.get(parentKey), sh = (this.geo && this.geo.shift && this.geo.shift.get(parentKey)) || [0, 0];
-    return b ? [Math.round(x - b.x - sh[0]), Math.round(y - b.y - sh[1])] : [Math.round(x), Math.round(y)];
-  };
-  Diagram.prototype.offsetOf = function (key) {
-    const r = this.geo && this.geo.rel && this.geo.rel.get(key);
-    return r ? r.slice() : null;
   };
 
   /* Centre a box in the view, zooming so that it fills about half of it. */

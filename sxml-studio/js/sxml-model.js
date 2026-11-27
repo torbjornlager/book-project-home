@@ -263,23 +263,63 @@
     return out;
   }
 
-  /* ---------- manual arrangement, kept in a trailing <layout> comment ---------- */
+  /* ---------- diagram layout preferences, kept in a trailing <layout> comment ---------- */
 
   function layoutComment(doc) {
     return Array.from(doc.childNodes).find(n => n.nodeType === 8 && /^\s*<layout>/.test(n.data)) || null;
   }
 
-  /* { parentKey: { childKey: [x, y], ... }, ... } or null */
+  /* Direction and per-parallel region arrangements, or null. */
   function getLayout(doc) {
     const c = layoutComment(doc);
     if (!c) return null;
     try {
       const obj = JSON.parse(c.data.replace(/^\s*<layout>/, ''));
-      return obj && typeof obj === 'object' && Object.keys(obj).length ? obj : null;
+      const layout = automaticLayout(obj);
+      return Object.keys(layout).length ? layout : null;
     } catch (e) { return null; }
   }
 
+  /* Only direction and per-parallel region choices belong to a diagram. */
+  function automaticLayout(layout) {
+    const out = {};
+    if (!layout || typeof layout !== 'object' || Array.isArray(layout)) return out;
+    if (['RIGHT', 'DOWN'].includes(layout['@direction'])) out['@direction'] = layout['@direction'];
+    for (const key of Object.keys(layout)) {
+      if (key[0] === '@') continue;
+      const regions = layout[key] && layout[key]['@regions'];
+      if (['RIGHT', 'DOWN', 'AUTO'].includes(regions)) out[key] = { '@regions': regions };
+    }
+    return out;
+  }
+
+  /* Migrate old coordinates, including inline spawned charts, in the DOM.
+     The caller takes a source snapshot first to preserve unrelated formatting. */
+  function discardManualPositions(doc) {
+    let changed = false;
+    const comment = layoutComment(doc);
+    if (comment) {
+      try {
+        const old = JSON.parse(comment.data.replace(/^\s*<layout>/, ''));
+        const next = automaticLayout(old);
+        if (JSON.stringify(old) !== JSON.stringify(next)) { setLayout(doc, next); changed = true; }
+      } catch (_) { /* Leave malformed metadata alone; it is already ignored. */ }
+    }
+    for (const spawn of Array.from(doc.getElementsByTagName('spawn'))) {
+      if (spawn.getAttribute('type') !== 'statechart' || !spawn.textContent.trim()) continue;
+      const text = scriptText(spawn), parsed = parse(text);
+      if (!parsed.doc || parsed.doc.documentElement.localName !== 'statechart') continue;
+      const before = snapshot(text, parsed.doc);
+      if (!discardManualPositions(parsed.doc)) continue;
+      const indent = ((spawn.previousSibling?.data || '').match(/\n([ \t]*)$/) || [])[1] || '';
+      setNested(doc, spawn, serialize(parsed.doc, { snapshot: before }), indent);
+      changed = true;
+    }
+    return changed;
+  }
+
   function setLayout(doc, layout) {
+    layout = automaticLayout(layout);
     const old = layoutComment(doc);
     const keys = layout ? Object.keys(layout) : [];
     if (!keys.length) { if (old) old.remove(); return; }
@@ -700,6 +740,6 @@
   global.SXML = {
     STATE_TAGS, SCRIPT_TAGS, ATTRS, CHILDREN, SPAWN_TYPES, SPAWN_REQUIRED,
     parse, build, validate, serialize, snapshot, locate, collapse, dedent, scriptText, isState, label,
-    getLayout, setLayout, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
+    getLayout, setLayout, automaticLayout, discardManualPositions, insertChild, addState, addTransition, addItem, renameState, removeElement, retag, setAttr, setScript, setNested, move, uniqueId, blank
   };
 })(window);

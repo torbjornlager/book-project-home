@@ -66,7 +66,7 @@ horizontal and vertical gaps, including parallel regions arranged across the
 chart’s overall direction, independently of nested-state padding. The **Direction** button
 immediately after vertical spacing switches between horizontal and vertical flow;
 its icon shows the direction to switch to. Spacing tunes the automatic
-layout, so it is disabled while positions are saved: use Auto layout first.
+layout.
 **Reset** returns to
 50%; 100% uses the original gaps. At 0%, the adjustable
 gaps are removed; node sizes, label sizes, padding and label clearance still apply. They recompute the ELK
@@ -123,30 +123,17 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   (rename, add child, new transition, zoom to, Inspector, delete). Click a handle
   to add a sibling state with a transition to it (placeholder event
   `e0`, `e1`, …), then name the event on the canvas. Drag a handle onto a state
-  to connect to it, or onto empty space to place the new state there. The new
-  state is placed exactly beside its source, or where it was dropped.
-- Layout: a chart without saved positions is laid out automatically by ELK
-  (layered), and re-laid out after every change. Dragging a state freezes the
-  current drawing and puts the state exactly where it is dropped; from then on
-  all positions are exact and saved in a trailing `<layout>` comment as each
-  child's offset in its parent, `{"parent": {"child": [x, y]}}`. A parent always
-  wraps its children with its padding and header, so moving a child never moves
-  its siblings. The regions of a parallel state stay in a row or column, in the
-  order of their positions, so dragging a region past another reorders them. Transitions
-  between moved states are redrawn as straight (or, for parallel transitions,
-  bent) arrows with the label beside them; untouched ones keep ELK's routes.
-  Drag a transition label to move it; it keeps its offset from its default
-  place beside the arrow (saved with the transition's source state), so it
-  follows when states move, and a faint leader line joins a label dragged far
-  from its arrow. The first drag reproduces ELK's drawing exactly: parents grow
-  but never shrink below ELK's size, and regions only move apart if one grows.
-  New states from handles or double-clicks go where they were asked for; others
-  are placed beside their placed siblings. **Auto layout** (wand icon in the toolbar) drops
-  the saved positions and returns to automatic layout; **Direction** does the
-  same in the other direction. Undo covers both. Root datamodel notes can be
-  freely positioned in either mode. To create a new transition, use a handle or
-  the Transition shortcut (key T). Drag empty canvas to pan; scrolling and zooming remain
-  available. The layout direction is saved in the same comment.
+  to connect to it, or onto empty space to create a new connected state.
+  Automatic layout chooses the new state’s position.
+- Layout: ELK arranges the diagram automatically after edits. States, transition
+  labels and datamodel notes have no manual positions. Drag empty canvas to pan;
+  scrolling, zooming, selection, double-click editing and connection handles remain
+  available. **Auto layout** (wand icon) recomputes and fits the current layout;
+  **Direction** switches the overall flow. Layout direction and each parallel
+  state’s region arrangement are saved in a trailing `<layout>` comment.
+  Loading an older diagram discards its saved state, label and note coordinates,
+  including those in inline spawned charts, while preserving direction and region
+  arrangements. Use the spacing and Advanced layout controls to tune the drawing.
 - Parallel states have a **Region arrangement** selector under
   **Advanced layout → Selected parallel state — [name]**:
   Stacked (the default), Side by side, or Follow chart. Each parallel state can be set
@@ -155,7 +142,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   The **Whole diagram** section keeps the browser-wide layout preferences, and
   **Reset whole-diagram layout** leaves region arrangements unchanged.
   The choice is saved in the
-  layout comment and survives Auto, direction changes, renaming and reloads.
+  layout comment and survives Auto layout, direction changes, renaming and reloads.
   Transitions that cross region boundaries require the shared chart direction,
   so independent arrangements are unavailable for those parallel states.
 - Nested charts: the inline chart of a `<spawn type="statechart">` is drawn
@@ -221,7 +208,7 @@ code is copied verbatim: state IDs embedded in goals are not rewritten.
 **Move to another parent** previews containment and initial-state changes,
 plus validation results, before Apply move. Existing target IDs stay the same;
 ancestor event handlers and entry/exit behavior may change. Moving a subtree
-clears positional layout hints while retaining region arrangements.
+recomputes the automatic layout while retaining region arrangements.
 
 The **Run** tab includes an execution timeline with pause, previous/next,
 speed, and follow-live controls. Selecting an observation displays its recorded

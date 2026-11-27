@@ -111,8 +111,6 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   stateActions(key) { return stateActions(key); },
   onStateAction(key, action) { stateAction(key, action); },
   onConnect(source, target, opts) { connect(source, target, opts); },
-  onMove(key, dx, dy) { moveState(key, dx, dy); },
-  onMoveLabel(edgeId, dx, dy) { moveLabel(edgeId, dx, dy); },
   onZoom(k) { $('zoom').textContent = Math.round(k * 100) + '%'; },
   onKey(ev) { diagramKey(ev); }
 });
@@ -465,11 +463,21 @@ function reparse(opts) {
 
 /* Install a DOM as the current document. */
 function adopt(doc, text, opts) {
+  let sourceSnapshot = SXML.snapshot(text, doc);
+  if (SXML.discardManualPositions(doc)) {
+    text = SXML.serialize(doc, { snapshot: sourceSnapshot });
+    sourceSnapshot = SXML.snapshot(text, doc);
+    silent = true;
+    const scroll = editor.getScrollInfo();
+    editor.setValue(text);
+    editor.scrollTo(scroll.left, scroll.top);
+    silent = false;
+  }
   const wasRunning = run.pid && run.source !== text;
   model = SXML.build(doc);
   located = SXML.locate(text, doc);
   locatedText = text;
-  snap = SXML.snapshot(text, doc);
+  snap = sourceSnapshot;
   $('chart').classList.remove('stale');
   let entry = entryFor(selEl) || entryByKey(selKey) || model.root;
   selEl = entry.el; selKey = entry.key;
@@ -534,14 +542,14 @@ function updateChrome() {
   }
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
-  $('auto-layout').disabled = !arranged() || !!run.pid || run.starting;
+  $('auto-layout').disabled = !model || $('chart').classList.contains('stale') || !!run.pid || run.starting;
   $('direction').disabled = !!run.pid || run.starting;
   $('layout-toggle').disabled = !!run.pid || run.starting;
   if ((run.pid || run.starting) && $('layout-popover').matches(':popover-open')) $('layout-popover').hidePopover();
-  /* Spacing tunes the automatic layout, so it waits for Auto once positions are saved. */
+  /* All diagrams use automatic layout; spacing is always available while editing. */
   for (const id of ['spacing-h-toggle', 'spacing-v-toggle']) {
-    $(id).disabled = !!run.pid || run.starting || arranged();
-    $(id).title = (id === 'spacing-h-toggle' ? 'Horizontal' : 'Vertical') + ' spacing' + (arranged() ? ' · applies to automatic layout: use Auto layout first' : '');
+    $(id).disabled = !!run.pid || run.starting;
+    $(id).title = (id === 'spacing-h-toggle' ? 'Horizontal' : 'Vertical') + ' spacing';
   }
   for (const id of ['spacing-horizontal', 'spacing-vertical', 'spacing-reset-horizontal', 'spacing-reset-vertical', 'layout-compaction', 'layout-labels', 'layout-order', 'layout-loops', 'layout-alignment', 'layout-effort', 'layout-padding', 'layout-sides', 'layout-reset']) $(id).disabled = !!run.pid || run.starting;
   $('layout-run-hint').hidden = !(run.pid || run.starting);
@@ -736,34 +744,18 @@ function uniqueEvent(doc) {
   return 'e' + i;
 }
 
-/* A side handle of the selected state: create a sibling state next to it in
-   that direction (or where a handle drag was dropped) and a transition to it
-   with a placeholder event, then edit the event on the canvas. */
+/* A side handle creates a sibling state and transition. Automatic layout
+   chooses its position; the placeholder event is edited on the canvas. */
 async function extendFrom(key, dir, point) {
   if (!guard()) return;
   const s = model.byKey.get(key);
   if (!s || s.kind === 'final' || s.kind === 'history' || !s.parent) return;
   const parent = s.parent;
   if (parent.kind === 'parallel') { status('Each child of a parallel state is a region · add the new state inside a region instead'); return; }
-  const sb = diagram.geo.boxes.get(key);
   const el = SXML.addState(model.doc, parent.el, 'state');
   const id = el.getAttribute('id');
   const go = SXML.addTransition(model.doc, s.el, id);
   go.setAttribute('on', uniqueEvent(model.doc));
-  if (sb) {
-    /* Exact placement: beside the source in the handle's direction, or at the drop point. */
-    const { width: W, height: H } = SXMLDiagram.emptyStateSize(id);
-    const gapX = 90, gapY = 70;
-    let x, y;
-    if (point) { x = point.x - W / 2; y = point.y - H / 2; }
-    else {
-      x = { right: sb.x + sb.w + gapX, left: sb.x - gapX - W, up: sb.x + sb.w / 2 - W / 2, down: sb.x + sb.w / 2 - W / 2 }[dir];
-      y = { right: sb.y + sb.h / 2 - H / 2, left: sb.y + sb.h / 2 - H / 2, up: sb.y - gapY - H, down: sb.y + sb.h + gapY }[dir];
-    }
-    const layout = diagram.positions(model.layout);
-    layout[parent.key] = Object.assign({}, layout[parent.key] || {}, { [id]: diagram.offsetAt(parent.key, x, y) });
-    SXML.setLayout(model.doc, layout);
-  }
   selEl = go; commit();
   await diagram.pending;
   const t = entryFor(go);
@@ -775,12 +767,6 @@ async function extendFrom(key, dir, point) {
 async function quickAdd(parent, point) {
   if (!guard()) return;
   const el = SXML.addState(model.doc, parent.el, 'state');
-  if (point && arranged()) {
-    /* With saved positions, the new state goes where the double-click was. */
-    const layout = diagram.positions(model.layout);
-    layout[parent.key] = Object.assign({}, layout[parent.key] || {}, { [el.getAttribute('id')]: diagram.offsetAt(parent.key, point.x - 40, point.y - 20) });
-    SXML.setLayout(model.doc, layout);
-  }
   selEl = el; commit();
   await diagram.pending;
   const n = entryFor(el);
@@ -817,51 +803,6 @@ async function connect(sourceKey, targetKey, opts) {
   const f = $('inspector').querySelector('input[data-f="on"]');
   if (f) f.focus();
   status('Transition ' + s.id + ' → ' + t.id + ' added · give it an event, guard or delay');
-}
-
-/* Dragging a state rearranges it among its siblings.  The arrangement is a
-   set of position hints for the layout engine, kept in a <layout> comment. */
-function moveState(key, dx, dy) {
-  if (!guard()) return;
-  const n = model.byKey.get(key) || model.items.get(key);
-  const parentKey = diagram.geo.parentOf && diagram.geo.parentOf.get(key);
-  const rootNote = n && n.kind === 'datamodel' && (n.owner || n.parent) === model.root;
-  if (!n || (!parentKey && !rootNote)) return;
-  let layout;
-  if (rootNote) {
-    /* A datamodel note of the root has no edges, so it simply stays where it is dropped. */
-    const b = diagram.geo.boxes.get(key);
-    layout = Object.assign({}, model.layout || {});
-    layout['#root'] = Object.assign({}, layout['#root'] || {}, { [key]: [Math.max(4, Math.round(b.x + dx)), Math.max(4, Math.round(b.y + dy))] });
-  } else {
-    /* The first drag freezes the current drawing; from then on positions are exact. */
-    layout = diagram.positions(model.layout);
-    const r = layout[parentKey][key];
-    layout[parentKey][key] = [Math.round(r[0] + dx), Math.round(r[1] + dy)];
-  }
-  SXML.setLayout(model.doc, layout);
-  selEl = n.el;
-  diagram.userMoved = true;
-  commit();
-  status('Position saved in the <layout> comment · “Auto layout” returns to automatic layout');
-}
-
-/* A transition label keeps the offset it was dragged by, relative to its
-   default place beside the arrow, so it follows the arrow when states move. */
-function moveLabel(edgeId, dx, dy) {
-  if (!guard()) return;
-  const owner = diagram.geo.labelOwner && diagram.geo.labelOwner.get(edgeId);
-  if (!owner) return;
-  const layout = diagram.positions(model.layout);
-  layout[owner] = Object.assign({}, layout[owner] || {});
-  const old = Array.isArray(layout[owner][edgeId]) ? layout[owner][edgeId] : [0, 0];
-  layout[owner][edgeId] = [Math.round(old[0] + dx), Math.round(old[1] + dy)];
-  SXML.setLayout(model.doc, layout);
-  const t = entryByKey(edgeId.split('>')[0]);
-  if (t) selEl = t.el;
-  diagram.userMoved = true;
-  commit();
-  status('Label position saved · “Auto layout” resets labels and states');
 }
 
 function removeSelected() {
@@ -1748,28 +1689,28 @@ $('delete').onclick = removeSelected;
 $('undo').onclick = () => editor.undo();
 $('redo').onclick = () => editor.redo();
 $('fit').onclick = () => diagram.fit();
-$('auto-layout').onclick = () => { if (!guard()) return; SXML.setLayout(model.doc, automaticArrangement(diagram.direction)); diagram.userMoved = false; commit(); status('Automatic layout restored'); };
+$('auto-layout').onclick = async () => {
+  if (!guard()) return;
+  diagram.userMoved = false;
+  await diagram.setModel(model, { fit: true });
+  status('Automatic layout refreshed');
+};
 $('zoom-in').onclick = () => diagram.zoomBy(1.2);
 $('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
-/* The layout direction is part of the saved arrangement.  Position hints
-   mean different things in the two directions, so switching starts afresh. */
-const arranged = () => !!model && !!model.layout && Object.keys(model.layout).some(k => k[0] !== '@' && Object.keys(model.layout[k]).some(child => child[0] !== '@'));
+/* Direction changes retain each parallel state's region arrangement. */
 function automaticArrangement(direction) {
-  const layout = direction === 'DOWN' ? { '@direction': 'DOWN' } : {};
-  for (const key in model.layout || {}) {
-    if (key[0] === '@') continue;
-    const regions = model.layout[key]['@regions'];
-    if (['RIGHT', 'DOWN', 'AUTO'].includes(regions)) layout[key] = { '@regions': regions };
-  }
+  const layout = SXML.automaticLayout(model.layout);
+  if (direction === 'DOWN') layout['@direction'] = 'DOWN';
+  else delete layout['@direction'];
   return layout;
 }
 $('direction').onclick = () => {
   if (!guard()) return;
-  const next = diagram.direction === 'RIGHT' ? 'DOWN' : 'RIGHT', had = arranged();
+  const next = diagram.direction === 'RIGHT' ? 'DOWN' : 'RIGHT';
   SXML.setLayout(model.doc, automaticArrangement(next));
   diagram.userMoved = false;
   commit();
-  status((next === 'DOWN' ? 'Top-down layout' : 'Left-to-right layout') + (had ? ' · the manual arrangement was dropped, because it does not carry over (Undo restores it)' : ''));
+  status(next === 'DOWN' ? 'Top-down layout' : 'Left-to-right layout');
 };
 
 function syncSplitOrientation() {

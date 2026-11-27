@@ -20,19 +20,20 @@ function state(id, kind = 'state') {
     const geo = await D.layout(model, 'RIGHT'), box = geo.boxes.get(id);
     assert.deepEqual(D.emptyStateSize(id), {width: box.w, height: box.h}, 'Placement must use the rendered state dimensions.');
     for (const dir of ['up', 'down', 'left', 'right']) {
-      let placed;
+      let layoutWrites = 0, additions = 0;
       const source = {key: 'source', kind: 'state', parent: {key: '#root', kind: 'statechart', el: {}}};
       const sb = {x: 100, y: 100, w: 120, h: 80};
       const sandbox = {
         SXMLDiagram: D, model: {doc: {}, byKey: new Map([['source', source]]), layout: null},
         guard: () => true, uniqueEvent: () => 'event_1', commit() {}, entryFor: () => null, status() {},
-        SXML: {addState: () => ({getAttribute: () => id}), addTransition: () => ({setAttribute() {}}), setLayout() {}},
-        diagram: {geo: {boxes: new Map([['source', sb]])}, positions: () => ({}), offsetAt: (_, x, y) => {placed = {x, y}; return [x, y];}, pending: Promise.resolve()}
+        SXML: {addState: () => { additions++; return {getAttribute: () => id}; }, addTransition: () => ({setAttribute() {}}), setLayout() { layoutWrites++; }},
+        diagram: {geo: {boxes: new Map([['source', sb]])}, pending: Promise.resolve()}
       };
       vm.runInNewContext(extend, sandbox);
       await sandbox.extendFrom('source', dir, null);
-      if (dir === 'up' || dir === 'down') assert.equal(placed.x + box.w / 2, sb.x + sb.w / 2, 'Vertical transitions must share a center line.');
-      else assert.equal(placed.y + box.h / 2, sb.y + sb.h / 2, 'Horizontal transitions must share a center line.');
+      await sandbox.extendFrom('source', dir, {x: 300, y: 450});
+      assert.equal(additions, 2, 'Handle clicks and drops must still create states.');
+      assert.equal(layoutWrites, 0, 'New states must remain in automatic layout regardless of the handle or drop point.');
     }
     const go = {key: id + '/go0', source: target, to: [id], on: 'event_1', index: 0, body: ''};
     target.transitions = [go, {...go, key: id + '/go1', on: 'event_2', index: 1}];
@@ -40,5 +41,5 @@ function state(id, kind = 'state') {
     const numbered = await D.layout(model, 'RIGHT');
     assert.equal(numbered.info.get(go.key + '>0').label.full, '1.event_1', 'Numbered labels must have no space after the dot.');
   }
-  console.log('Checked measured sizes, alignment in all four directions, and compact numbering for short and long state ids.');
+  console.log('Checked measured sizes, automatic layout after handle creation in all directions and compact numbering for short and long state ids.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

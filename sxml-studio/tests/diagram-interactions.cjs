@@ -17,15 +17,15 @@ const svg = {
 };
 const diagram = {
   svg, tx: 0, ty: 0, k: 1, running: false, readOnly: true,
-  h: {onSelect: key => selected.push(key), onMove: () => edits++, onRetarget: () => edits++, onConnect: (a,b) => connected.push([a,b])},
+  h: {onSelect: key => selected.push(key), onMove: () => edits++, onMoveLabel: () => edits++, onRetarget: () => edits++, onConnect: (a,b) => connected.push([a,b])},
   overlay: {appendChild() {}}, nodeEls: new Map(),
   _point: event => ({x: event.clientX, y: event.clientY}),
   _stateAt: () => 'target', _apply() {}
 };
 SXMLDiagram.Diagram.prototype._bind.call(diagram);
-function target(key, state = false, note = false) {
+function target(key, state = false, note = false, label = false) {
   return {getAttribute: () => key, closest(selector) {
-    return selector === '[data-key]' || (state && selector === '[data-state]') || (note && selector === '[data-note]') ? this : null;
+    return selector === '[data-key]' || (state && selector === '[data-state]') || (note && selector === '[data-note]') || (label && selector === '[data-edge]') ? this : null;
   }};
 }
 function gesture(object, moved = true, cancel = false) {
@@ -52,14 +52,12 @@ assert.equal(edits, 0, 'Read-only or running object drags must not edit anything
 diagram.running = false;
 diagram.readOnly = false;
 diagram.geo = {boxes: new Map([['state', {x: 10, y: 20, w: 100, h: 50}], ['note', {x: 0, y: 0, w: 80, h: 40}]])};
-const moved = [];
-diagram.h.onMove = (...args) => moved.push(args);
 diagram.k = 2;
-gesture(target('state', true));
-gesture(target('note', false, true));
-assert.deepEqual(moved, [['state', 50, 30], ['note', 50, 30]], 'Manual moves must account for zoom.');
-gesture(target('state', true), true, true);
-assert.equal(moved.length, 2, 'Cancelling a drag must not commit a move.');
+for (const object of [target('state', true), target('note', false, true), target('label', false, false, true)]) {
+  gesture(object);
+  gesture(object, true, true);
+}
+assert.equal(edits, 0, 'State, note and label drags must remain inert while editing, including at other zoom levels.');
 gesture(target('transition'));
 assert.equal(edits, 0, 'Transition retargeting must remain disabled.');
 diagram.k = 1;
@@ -72,4 +70,4 @@ assert.equal(diagram.ty, 60);
 diagram.tool = 'connect';
 gesture(target('source', true));
 assert.deepEqual(connected, [['source', 'target']], 'The explicit Transition tool must still create transitions.');
-console.log('Checked manual state/note moves, zoom, cancellation, disabled transition retargeting, read-only runs, panning and transition creation.');
+console.log('Checked inert state/note/label drags, zoom, cancellation, disabled transition retargeting, read-only runs, panning and transition creation.');

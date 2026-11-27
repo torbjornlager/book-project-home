@@ -21,7 +21,7 @@ function collect(e,cls) {return (e.attrs.class===cls?[e]:[]).concat(e.children.f
   const transition={key:'a/go0',source:a,to:['b'],on:'next',body:''};a.transitions=[transition];
   const model={root,nodes:[root,p,a,b],byId:new Map([p,a,b].map(n=>[n.id,n])),transitions:[transition],nested:new Map(),layout:saved?{parent:{a:[60,60],b:[200,140]}}:null};
   const geo=await D.layout(model,direction,D.spacingOptions(direction,spacing,spacing));
-  const snapshot=()=>JSON.stringify({boxes:[...geo.boxes],edges:geo.edges,width:geo.width,height:geo.height,rel:[...geo.rel],shift:[...geo.shift]});
+  const snapshot=()=>JSON.stringify({boxes:[...geo.boxes],edges:geo.edges,width:geo.width,height:geo.height});
   const original=snapshot();
   const diagram={geo,model,direction,view:element('g'),svg:element('svg'),_init:D.Diagram.prototype._init,_paint() {}};
   D.Diagram.prototype._render.call(diagram);
