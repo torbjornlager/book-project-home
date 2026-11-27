@@ -137,7 +137,7 @@
     stop.onclick=()=>haltChart();
     const runGroup=document.createElement('div'); runGroup.className='toolbar-group'; runGroup.setAttribute('role','group'); runGroup.setAttribute('aria-label','Run controls');
     runGroup.append(run,stop);
-    document.getElementById('toolbar-group-edit').after(runGroup);
+    document.querySelector('.chart-toolbar').append(runGroup);
     for(const [id,label,name] of [['toggle-workspace','Files & structure','folder'],['toggle-inspector','Inspector panels','inspect']]) {
       const b=document.createElement('button'); b.id=id; b.type='button'; b.dataset.icon=name; b.textContent=label; b.className='panel-toggle compact-action'; b.setAttribute('aria-pressed','false');
       b.onclick=()=>{ const side=id==='toggle-workspace'?'workspace':'inspector'; const open=document.body.dataset.drawer===side; document.body.dataset.drawer=open?'':side; for(const t of actions.querySelectorAll('.panel-toggle'))t.setAttribute('aria-pressed',String(t===b&&!open));}; actions.append(b);
