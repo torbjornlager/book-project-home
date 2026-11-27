@@ -1,9 +1,10 @@
-/* Navigation, observed execution history and event palette. */
+/* Navigation, observed execution history and event sending. */
 'use strict';
 window.studioTools = (() => {
   let file = null, history = [], cursor = -1, paused = false, speed = 260;
   let sendGeneration = 0, lastSource = null, timelineOpen = SXMLWorkspace.preferences.timelineOpen;
-  const drafts = new Map(), actors = new Map();
+  let eventDraft = '';
+  const actors = new Map();
   const button = (text, action, attrs = {}) => h('button', Object.assign({type: 'button', onclick: action}, attrs), text);
   const hint = text => h('p', {class: 'hint'}, text);
   function data() { return SXMLStudio.metadata(model.doc); }
@@ -77,7 +78,7 @@ window.studioTools = (() => {
   function fileChanged() {
     sendGeneration++;
     file = programs[current]; lastSource = null; history = []; cursor = -1; paused = false;
-    diagram.collapsed.clear(); actors.clear(); drafts.clear();
+    diagram.collapsed.clear(); actors.clear(); eventDraft = '';
   }
 
   function structuralEditing(box, entry) {
@@ -189,17 +190,18 @@ window.studioTools = (() => {
   }
   function renderPalette() {
     const box = $('event-palette'); if (!box) return;
-    // Keep the active input intact while events and trace observations arrive.
+    // Keep typing uninterrupted when trace playback refreshes the event controls.
     if (box.contains(document.activeElement)) return;
-    box.replaceChildren();
-    if (!run.pid || run.done) { box.append(hint('Run the chart to discover event handlers.')); return; }
-    for (const t of SXMLStudio.candidates(model, run.active)) {
-      const input = h('input', {value: drafts.get(t.key) ?? t.on, 'aria-label': 'Concrete event for ' + t.source.id + ' handler ' + (t.index + 1), oninput: e => drafts.set(t.key, e.target.value)});
-      const row = h('div', {class: 'event-row'}, input, button('Send', () => safeSend(input.value), {disabled: run.busy || paused, class: 'compact-action', title: 'Send concrete event'}));
-      box.append(h('div', {class: 'event-owner'}, t.source.id + ' #' + (t.index + 1) + (t.cond ? ' · if ' + t.cond : '')), row);
-    }
-    if (!box.children.length) box.append(hint('No event handlers in the active configuration.'));
-    window.SXMLChrome?.decorate(box);
+    const disabled = !run.pid || run.starting || run.busy || run.done || paused;
+    const input = h('input', {value: eventDraft, disabled, placeholder: 'Prolog term, e.g. input([red])',
+      'aria-label': 'Event as a Prolog term', spellcheck: false, autocomplete: 'off',
+      oninput: e => { eventDraft = e.target.value; submit.disabled = disabled || !eventDraft.trim(); }});
+    const submit = h('button', {type: 'submit', class: 'event-send', 'aria-label': 'Send event', title: 'Send event',
+      disabled: disabled || !eventDraft.trim()}, '!');
+    box.replaceChildren(h('form', {class: 'event-row', onsubmit: e => {
+      e.preventDefault();
+      if (!disabled && input.value.trim()) safeSend(input.value);
+    }}, input, submit));
   }
   function exampleEventButtons() {
     const events = (model.examples || []).flatMap(goal => {
@@ -236,7 +238,7 @@ window.studioTools = (() => {
         hint('Playback only. Timers and actors continue running.')));
     timeline.querySelector('summary').onclick=()=>setTimeout(()=>{timelineOpen=timeline.open; SXMLWorkspace.save({timelineOpen});},0);
     box.replaceChildren(...[exampleEventButtons()].filter(Boolean),
-      h('div', {class:'debug-heading'}, SXMLChrome.icon('play'), 'Send an event'),
+      h('div', {class:'debug-heading'}, 'Send any event'),
       h('div', {id:'event-palette'}), timeline);
     const speedControl=box.querySelector('[data-f="playback-speed"]'); speedControl.id='playback-speed';
     renderTimeline(); $('timeline-list').scrollTop=scroll; renderPalette();
