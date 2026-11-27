@@ -250,11 +250,11 @@
     return '';
   }
 
-  /* Example-event comments are editor metadata, not part of the running machine.
+  /* XML comments are editor metadata, not part of the running machine.
      Match CDATA first so comment-like text inside executable scripts is retained. */
   function machineSource(text) {
     return String(text ?? '').replace(/<!\[CDATA\[[\s\S]*?\]\]>|<!--[\s\S]*?-->/g,
-      part => /^<!--\s*<example events>/.test(part) ? '' : part).trim();
+      part => part.startsWith('<!--') ? '' : part).trim();
   }
 
   /* Update the old bundled-example boilerplate without rewriting chart edits. */

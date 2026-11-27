@@ -176,8 +176,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Events from the document's trailing `<example events>` comment become
   **Example events** buttons in the Run panel. Events end with a period; blank
   lines are optional. Button labels and sent events omit the terminating period.
-  Editing this comment updates the buttons without stopping the chart or clearing
-  its execution history. Changes to the machine itself still stop the old run.
+  Editing XML comments, including this event list, keeps the chart running and
+  preserves its execution history. Event buttons update as the comment changes. Changes to the machine itself still stop the old run.
   Clicking a button sends its event to the running chart; buttons are disabled while stopped, busy or viewing paused
   playback. Older bundled copies saved in
   this browser have their example comments updated when opened, preserving
