@@ -18,11 +18,16 @@ const old = `<!-- <examples>
 ?- statechart_halt($Pid, Reply, 1).
 
 -->`;
-const updated = '<!-- <example events>\n\ne.\n\ninput([a, red, box]).\n\n-->';
+const updated = '<!-- <example events>\n\ne.\ninput([a, red, box]).\n\n-->';
 const chart = '<statechart initial="mine"><datamodel>t.</datamodel><state id="mine"/></statechart>\n';
 const layout = '\n<!-- <layout> {"@direction":"DOWN","mine":{"@regions":"RIGHT"}} -->';
 const edited = chart + old + layout;
 assert.equal(S.upgradeExampleEvents(edited), chart + updated + layout);
+assert.equal(S.upgradeExampleEvents(chart + updated.replace('e.\ninput', 'e.\n\ninput') + layout), chart + updated + layout, 'Update the previous bundled spacing in already converted browser copies.');
+const annotated = '<!-- <example events>\n\ne. % keep this note\n\nf.\n\n-->';
+assert.equal(S.upgradeExampleEvents(chart + annotated), chart + annotated);
+const multiline = '<!-- <example events>\n\ninput([a,\n\nred, box]).\n\nf.\n\n-->';
+assert.equal(S.upgradeExampleEvents(chart + multiline), chart + multiline);
 assert.equal(S.upgradeExampleEvents(S.upgradeExampleEvents(edited)), chart + updated + layout);
 assert.equal(S.upgradeExampleEvents('<statechart/>'), '<statechart/>');
 const custom = old.replace('?- $Pid ! e.', '?- inspect_my_chart($Pid).');

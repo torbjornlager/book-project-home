@@ -7,7 +7,7 @@ const context = {run: {pid: null, starting: false}, edit: fn => fn(), h: (tag, a
 context.XMLSerializer = class {};
 context.window = context;
 vm.runInNewContext(fs.readFileSync(path.join(root, 'js/sxml-model.js'), 'utf8'), context);
-assert.equal(context.SXML.blank(), '<statechart version="0.2" initial="s0">\n    <state id="s0"/>\n</statechart>\n');
+assert.equal(context.SXML.blank(), '<statechart version="0.2" initial="s0">\n    <state id="s0"/>\n</statechart>\n\n\n<!-- <example events>\n\n-->\n');
 const app = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
 vm.runInNewContext(app.match(/function initialStateField\(n\) \{[\s\S]*?\n\}/)[0], context);
 function element() {return {attrs: {}, setAttribute(k,v) {this.attrs[k]=v;}};}

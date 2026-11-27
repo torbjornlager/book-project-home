@@ -267,7 +267,14 @@
         }
       }
       if (!setup) return comment;
-      return events.length ? '<!-- <example events>\n\n' + events.join('\n\n') + '\n\n-->' : '';
+      return events.length ? '<!-- <example events>\n\n' + events.join('\n') + '\n\n-->' : '';
+    }).replace(/<!--\s*<example events>([\s\S]*?)-->/g, (comment, body) => {
+      const events = splitExampleEvents(body);
+      // Refresh the previous bundled spacing without changing custom comments
+      // or blank lines inside multiline terms.
+      if (!events.length || events.some(event => event.includes('\n')) ||
+          body.trim() !== events.map(event => event + '.').join('\n\n')) return comment;
+      return '<!-- <example events>\n\n' + events.map(event => event + '.').join('\n') + '\n\n-->';
     });
   }
 
@@ -792,7 +799,7 @@
   }
 
   function blank() {
-    return '<statechart version="0.2" initial="s0">\n    <state id="s0"/>\n</statechart>\n';
+    return '<statechart version="0.2" initial="s0">\n    <state id="s0"/>\n</statechart>\n\n\n<!-- <example events>\n\n-->\n';
   }
 
   global.SXML = {

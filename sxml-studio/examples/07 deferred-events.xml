@@ -36,11 +36,8 @@
 <!-- <example events>
 
 command(open).
-
 command(close).
-
 initialised.
-
 command(status).
 
 -->

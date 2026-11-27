@@ -67,11 +67,8 @@
 <!-- <example events>
 
 input([a, red, box]).
-
 input([blue]).
-
 input([a, big, box]).
-
 input([a, small, box]).
 
 -->
