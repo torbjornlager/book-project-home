@@ -702,11 +702,35 @@
     el('path', { class: 'shape', d: 'M' + b.x + ' ' + b.y + ' h' + (b.w - f) + ' l' + f + ' ' + f + ' v' + (b.h - f) + ' h' + (-b.w) + ' z' }, grp);
     el('path', { class: 'fold', d: 'M' + (b.x + b.w - f) + ' ' + b.y + ' v' + f + ' h' + f }, grp);
     el('text', { class: 'note-title', x: b.x + 10, y: b.y + 15 }, grp, 'DATAMODEL');
+    // Keep a plain SVG preview for exports; the live diagram uses native scrolling.
+    const preview = el('g', {class: 'note-preview', style: 'display:none'}, grp);
     inf.lines.forEach((t, i) => {
       const y = b.y + NOTE_TOP + i * 14;
-      if (inf.live && inf.changedLines[i]) el('rect', {class: 'fact-change', x: b.x + 6, y: y - 11, width: b.w - 12, height: 14, rx: 3}, grp);
-      el('text', { class: 'note-line', x: b.x + 10, y, 'xml:space': 'preserve' }, grp, t);
+      if (inf.live && inf.changedLines[i]) el('rect', {class: 'fact-change', x: b.x + 6, y: y - 11, width: b.w - 12, height: 14, rx: 3}, preview);
+      el('text', { class: 'note-line', x: b.x + 10, y, 'xml:space': 'preserve' }, preview, t);
     });
+    const viewport = el('foreignObject', {class: 'note-scroll', x: b.x + 6, y: b.y + NOTE_TOP - 11, width: b.w - 12, height: b.h - NOTE_TOP + 5}, grp);
+    const content = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+    content.setAttribute('class', 'note-content');
+    content.setAttribute('tabindex', '0');
+    content.setAttribute('role', 'region');
+    content.setAttribute('aria-label', 'Datamodel content');
+    viewport.appendChild(content);
+    inf.fullText.split('\n').forEach((text, i) => {
+      const line = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+      if (inf.live && inf.changedLines[i]) line.setAttribute('class', 'fact-change');
+      line.textContent = text || '\u00a0';
+      content.appendChild(line);
+    });
+    if (inf.live?.truncated) {
+      const notice = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+      notice.textContent = '… snapshot limited to 40 clauses';
+      content.appendChild(notice);
+    }
+    this.noteScrollPositions ||= new Map();
+    const position = this.noteScrollPositions.get(dm.key);
+    if (position) { content.scrollTop = position.top; content.scrollLeft = position.left; }
+    content.addEventListener('scroll', () => this.noteScrollPositions.set(dm.key, {top: content.scrollTop, left: content.scrollLeft}));
     el('title', {}, grp, inf.fullText + (inf.live?.truncated ? '\n… snapshot limited to 40 clauses' : ''));
     if (!dm.scope) this.itemEls.set(dm.key, grp);
   };
@@ -875,7 +899,7 @@
     };
     const hide = this._hideTooltip;
     this.svg.addEventListener('pointermove', ev => {
-      if (ev.buttons) { hide(); return; }
+      if (ev.buttons || ev.target.closest('.note-scroll')) { hide(); return; }
       const target = ev.target.closest('[data-tooltip]');
       if (target === owner) return;
       hide();
@@ -898,6 +922,7 @@
     let drag = null;
     const last = { key: null, time: 0 };
     svg.addEventListener('wheel', ev => {
+      if (ev.target.closest('.note-scroll') && !ev.ctrlKey && !ev.metaKey) return;
       ev.preventDefault();
       this.closeEditor(true);
       const r = this.host.getBoundingClientRect();
@@ -909,6 +934,7 @@
     }, { passive: false });
 
     svg.addEventListener('pointerdown', ev => {
+      if (ev.target.closest('.note-scroll')) return;
       if (ev.button !== 0) return;
       svg.focus({ preventScroll: true });
       const stateEl = ev.target.closest('[data-state]');
@@ -996,7 +1022,7 @@
     };
     svg.addEventListener('pointerup', finish);
     svg.addEventListener('pointercancel', finish);
-    svg.addEventListener('keydown', ev => { if (this.h.onKey) this.h.onKey(ev); });
+    svg.addEventListener('keydown', ev => { if (!ev.target.closest('.note-scroll') && this.h.onKey) this.h.onKey(ev); });
   };
 
   /* Centre a box in the view, zooming so that it fills about half of it. */
@@ -1094,6 +1120,8 @@
     clone.setAttribute('width', Math.ceil(this.geo.width));
     clone.setAttribute('height', Math.ceil(this.geo.height));
     clone.removeAttribute('tabindex');
+    for (const viewport of clone.querySelectorAll('.note-scroll')) viewport.remove();
+    for (const preview of clone.querySelectorAll('.note-preview')) preview.removeAttribute('style');
     for (const target of clone.querySelectorAll('[data-tooltip]')) {
       const title = document.createElementNS(SVGNS, 'title');
       title.textContent = target.getAttribute('data-tooltip');

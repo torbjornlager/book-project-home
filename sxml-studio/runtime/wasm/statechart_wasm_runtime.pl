@@ -521,12 +521,10 @@ datamodel_snapshot :-
     findall(ID, (statechart_wasm:n(_, ID), ID \== Root), IDs),
     findall(Owner, statechart_wasm:datamodel_block(Owner), Owners0),
     sort(Owners0, Owners),
-    findall(data(Key, Facts, More),
+    findall(data(Key, Facts, false),
             ( member(Owner, Owners),
               (Owner == Root -> Key = '#root' ; Key = Owner),
-              once(findnsols(41, Text, datamodel_fact(Owner, Text), Sample)),
-              (length(Sample, 41) -> length(Facts, 40), append(Facts, [_], Sample), More = true
-              ; Facts = Sample, More = false)
+              findall(Text, datamodel_fact(Owner, Text), Facts)
             ), Data),
     (statechart_wasm:datamodel_snapshot_cache(Data) -> true
     ; retractall(statechart_wasm:datamodel_snapshot_cache(_)),
@@ -540,21 +538,18 @@ datamodel_fact(Owner, Text) :-
     predicate_property(statechart_wasm:Head, dynamic),
     clause(statechart_wasm:Head, Body),
     copy_term(Head-Body, CopyHead-CopyBody), numbervars(CopyHead-CopyBody, 0, _),
-    with_output_to(atom(Atom), write_datamodel_clause(CopyHead, CopyBody)),
-    (atom_length(Atom, Length), Length > 240
-    -> sub_atom(Atom, 0, 240, _, Prefix), atom_concat(Prefix, '…', Text)
-    ; Text = Atom).
+    with_output_to(atom(Text), write_datamodel_clause(CopyHead, CopyBody)).
 
 write_datamodel_clause(Head, Body) :-
-    write_term(Head, [quoted(true), numbervars(true), max_depth(12)]),
+    write_term(Head, [quoted(true), numbervars(true)]),
     (Body == true -> write('.')
     ; write(' :-'), nl, write_datamodel_body(Body), write('.')).
 
 write_datamodel_body((First, Rest)) :- !,
-    write('    '), write_term(First, [quoted(true), numbervars(true), max_depth(12), priority(999)]),
+    write('    '), write_term(First, [quoted(true), numbervars(true), priority(999)]),
     write(','), nl, write_datamodel_body(Rest).
 write_datamodel_body(Goal) :-
-    write('    '), write_term(Goal, [quoted(true), numbervars(true), max_depth(12), priority(999)]).
+    write('    '), write_term(Goal, [quoted(true), numbervars(true), priority(999)]).
 
 emit_trace(Event) :-
     catch(statechart_wasm:emit_trace(Event), Error,

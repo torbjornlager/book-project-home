@@ -28,12 +28,20 @@ test(owners_and_no_rule_execution, [setup(setup_trace), cleanup(cleanup_trace)])
     assertion(member('danger :-\n    throw(rule_was_called).', RootClauses)),
     assertion(member(data(a, ['other(child).'], false), Data)).
 
-test(bounded_snapshot, [setup(setup_trace), cleanup(cleanup_trace)]) :-
+test(complete_snapshot, [setup(setup_trace), cleanup(cleanup_trace)]) :-
     XML = '<statechart version="0.2" initial="a"><datamodel>:- forall(between(1,55,N), assertz(value(N))).</datamodel><state id="a"/></statechart>',
     statechart_start(text(XML)),
-    captured(datamodel_snapshot([a], [data('#root', Facts, true)])),
-    assertion(length(Facts, 40)),
-    assertion(\+ member('value(41).', Facts)).
+    captured(datamodel_snapshot([a], [data('#root', Facts, false)])),
+    assertion(length(Facts, 55)),
+    assertion(member('value(55).', Facts)).
+
+test(complete_long_clause, [setup(setup_trace), cleanup(cleanup_trace)]) :-
+    length(Codes, 400), maplist(=(0'a), Codes), atom_codes(Value, Codes),
+    format(string(XML), '<statechart version="0.2" initial="a"><datamodel>value(~w).</datamodel><state id="a"/></statechart>', [Value]),
+    statechart_start(text(XML)),
+    captured(datamodel_snapshot([a], [data('#root', [Fact], false)])),
+    format(atom(Expected), 'value(~w).', [Value]),
+    assertion(Fact == Expected).
 
 test(disabled_trace, [setup(setup_trace), cleanup(cleanup_trace)]) :-
     statechart_wasm:set_trace_enabled(false),

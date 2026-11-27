@@ -7,14 +7,15 @@ class Element {
   setAttribute(k,v) {this.attrs[k] = String(v);}
   getAttribute(k) {return this.attrs[k] ?? null;}
   removeAttribute(k) {delete this.attrs[k];}
-  appendChild(e) {this.children.push(e); return e;}
+  appendChild(e) {this.children.push(e); e.parent = this; return e;}
+  remove() {this.parent.children = this.parent.children.filter(e => e !== this);}
   insertBefore(e) {this.children.unshift(e);}
   get firstChild() {return this.children[0];}
   get lastChild() {return this.children.at(-1);}
   addEventListener(type, fn) {this.listeners[type] = fn;}
   getBoundingClientRect() {return {width: 300, height: 100};}
-  querySelectorAll(selector) {return this.children.flatMap(e => [...(selector === '[data-tooltip]' && e.attrs['data-tooltip'] ? [e] : []), ...e.querySelectorAll(selector)]);}
-  cloneNode() {const e = new Element(this.tag); e.attrs = {...this.attrs}; e.textContent = this.textContent; e.children = this.children.map(c=>c.cloneNode()); return e;}
+  querySelectorAll(selector) {return this.children.flatMap(e => [...((selector === '[data-tooltip]' && e.attrs['data-tooltip']) || (selector.startsWith('.') && selector === '.' + e.attrs.class) ? [e] : []), ...e.querySelectorAll(selector)]);}
+  cloneNode() {const e = new Element(this.tag); e.attrs = {...this.attrs}; e.textContent = this.textContent; this.children.forEach(c=>e.appendChild(c.cloneNode())); return e;}
 }
 const realSetTimeout = global.setTimeout, realClearTimeout = global.clearTimeout;
 let timer, delay;
@@ -24,7 +25,7 @@ global.setTimeout = (fn, ms) => {timer = fn; delay = ms; return 1;};
 global.clearTimeout = () => {timer = null;};
 global.document = {createElement: tag => tag === 'canvas' ? {getContext: () => ({measureText: text => ({width: text.length * 7})})} : new Element(tag), createElementNS: (_,tag) => new Element(tag)};
 global.SXMLStudio = {description: () => 'Order completed', metadata: () => ({notes: []})};
-global.XMLSerializer = class {serializeToString(e) {return JSON.stringify(e);}};
+global.XMLSerializer = class {serializeToString(e) {return JSON.stringify(e, (key, value) => key === 'parent' ? undefined : value);}};
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, '../js/sxml-diagram.js'), 'utf8'));
 // Read the actual multiline action from the reported example.
 const xml = fs.readFileSync(path.join(__dirname, '../examples/11 boxshop-1.xml'), 'utf8');
@@ -42,7 +43,7 @@ assert.match(fs.readFileSync(path.join(__dirname, '../chart.css'), 'utf8'), /\.k
 assert(!state.children.some(e=>e.tag==='title'), 'No native tooltip should compete with the controlled delay.');
 SXMLDiagram.Diagram.prototype._bindTooltip.call(diagram);
 const tip = diagram.host.lastChild;
-const hover = {target: {closest: () => label}, clientX: 780, clientY: 590, buttons: 0};
+const hover = {target: {closest: selector => selector === '[data-tooltip]' ? label : null}, clientX: 780, clientY: 590, buttons: 0};
 diagram.svg.listeners.pointermove(hover);
 assert.equal(delay, 1000);
 assert(tip.hidden);
@@ -99,7 +100,7 @@ console.log('Checked complete boxshop final-state action, text-only action hover
   function check(owner, expected, name) {
     const full = owner.getAttribute('data-tooltip');
     for (const value of expected) assert(full.includes(value), name + ' must retain ' + value);
-    drawing.svg.listeners.pointermove({target: {closest: () => owner}, clientX: 20, clientY: 30, buttons: 0});
+    drawing.svg.listeners.pointermove({target: {closest: selector => selector === '[data-tooltip]' ? owner : null}, clientX: 20, clientY: 30, buttons: 0});
     assert.equal(delay, 1000, name + ' delay');
     assert(popup.hidden, name + ' must wait');
     timer();
@@ -125,10 +126,31 @@ console.log('Checked complete boxshop final-state action, text-only action hover
   assert(geo.info.get(dm.key).lines.length < dm.body.split('\n').length);
   const note = drawing.itemEls.get(dm.key);
   const heading = note.children.find(el => el.attrs.class === 'note-title');
-  const clauses = note.children.filter(el => el.attrs.class === 'note-line');
+  const preview = note.children.find(el => el.attrs.class === 'note-preview');
+  const clauses = preview.children.filter(el => el.attrs.class === 'note-line');
   assert.equal(Number(clauses[0].attrs.y) - Number(heading.attrs.y), 23, 'Datamodel clauses must have extra space below the heading.');
   const box = geo.boxes.get(dm.key);
   assert(Number(clauses.at(-1).attrs.y) < box.y + box.h, 'The expanded note must contain its final visible line.');
+  const viewport = note.children.find(el => el.attrs.class === 'note-scroll');
+  const content = viewport.firstChild;
+  assert.equal(content.attrs.tabindex, '0');
+  assert.equal(content.children.length, 60, 'The scrollable content must include every source line.');
+  assert.equal(content.children.at(-1).textContent, dm.body.split('\n').at(-1), 'Long lines must remain complete.');
+  content.scrollTop = 120; content.scrollLeft = 35;
+  content.listeners.scroll();
+  assert.deepEqual(drawing.noteScrollPositions.get(dm.key), {top:120, left:35});
+  const rerendered = new Element('g');
+  drawing._note(rerendered, dm, box, geo.info.get(dm.key));
+  const restored = rerendered.firstChild.children.find(el => el.attrs.class === 'note-scroll').firstChild;
+  assert.equal(restored.scrollTop, 120, 'Redrawing must preserve the scroll position.');
+  assert.equal(restored.scrollLeft, 35);
+  drawing.svg.listeners.pointermove({target: {closest: selector => selector === '.note-scroll' ? viewport : null}, buttons: 0});
+  assert.equal(timer, null, 'Reading scrollable content must not open an obstructing tooltip.');
+  drawing.svg.appendChild(drawing.view);
+  const saved = SXMLDiagram.Diagram.prototype.exportSVG.call(drawing, '');
+  assert(!saved.includes('foreignObject'), 'Saved SVGs must use the compatible SVG preview.');
+  assert(!saved.includes('display:none'), 'The exported preview must be visible.');
+  assert(saved.includes('fact_59'), 'Saved SVG hover text must retain omitted clauses.');
   check(drawing.itemEls.get(dm.key), [dm.body], 'datamodel including omitted lines');
   console.log('Checked truncated entry/exit actions, spawn goals, deferred events, internal/external transition events, guards/actions and datamodel lines: full hover text after 1000 ms.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
