@@ -498,6 +498,8 @@ function updateChrome() {
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
   $('auto-layout').disabled = !arranged() || !!run.pid || run.starting;
   $('direction').disabled = !!run.pid || run.starting;
+  $('layout-toggle').disabled = !!run.pid || run.starting;
+  if ((run.pid || run.starting) && $('layout-popover').matches(':popover-open')) $('layout-popover').hidePopover();
   /* Spacing tunes the automatic layout, so it waits for Auto once positions are saved. */
   for (const id of ['spacing-h-toggle', 'spacing-v-toggle']) {
     $(id).disabled = !!run.pid || run.starting || arranged();
