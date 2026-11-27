@@ -59,12 +59,13 @@ background as active atomic states, while keeping their child areas neutral.
 Toolbar blocks have 2.5 mm gaps and wrap onto left-aligned rows when space is
 limited, keeping every block visible.
 
-The canvas toolbar has **Auto layout** (wand icon) and **Horizontal spacing** /
+The canvas toolbar starts its Layout group with **Direction**, followed by
+**Horizontal spacing** /
 **Vertical spacing** buttons (arrows between bars); each spacing button opens a
 slider (0–100%, default 50%) with **Reset to 50%**. These sliders follow physical
 horizontal and vertical gaps, including parallel regions arranged across the
 chart’s overall direction, independently of nested-state padding. The **Direction** button
-immediately after vertical spacing switches between horizontal and vertical flow;
+switches between horizontal and vertical flow;
 its icon shows the direction to switch to. Spacing tunes the automatic
 layout.
 **Reset** returns to
@@ -128,8 +129,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - Layout: ELK arranges the diagram automatically after edits. States, transition
   labels and datamodel notes have no manual positions. Drag empty canvas to pan;
   scrolling, zooming, selection, double-click editing and connection handles remain
-  available. **Auto layout** (wand icon) recomputes and fits the current layout;
-  **Direction** switches the overall flow. Layout direction and each parallel
+  available. **Fit** fits the chart to the pane; **Direction** switches the overall
+  flow. Layout direction and each parallel
   state’s region arrangement are saved in a trailing `<layout>` comment.
   Loading an older diagram discards its saved state, label and note coordinates,
   including those in inline spawned charts, while preserving direction and region
@@ -142,7 +143,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   The **Whole diagram** section keeps the browser-wide layout preferences, and
   **Reset whole-diagram layout** leaves region arrangements unchanged.
   The choice is saved in the
-  layout comment and survives Auto layout, direction changes, renaming and reloads.
+  layout comment and survives direction changes, renaming and reloads.
   Transitions that cross region boundaries require the shared chart direction,
   so independent arrangements are unavailable for those parallel states.
 - Nested charts: the inline chart of a `<spawn type="statechart">` is drawn

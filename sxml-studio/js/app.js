@@ -542,7 +542,6 @@ function updateChrome() {
   }
   const hist = editor.historySize();
   $('undo').disabled = !hist.undo; $('redo').disabled = !hist.redo;
-  $('auto-layout').disabled = !model || $('chart').classList.contains('stale') || !!run.pid || run.starting;
   $('direction').disabled = !!run.pid || run.starting;
   $('layout-toggle').disabled = !!run.pid || run.starting;
   if ((run.pid || run.starting) && $('layout-popover').matches(':popover-open')) $('layout-popover').hidePopover();
@@ -1689,12 +1688,6 @@ $('delete').onclick = removeSelected;
 $('undo').onclick = () => editor.undo();
 $('redo').onclick = () => editor.redo();
 $('fit').onclick = () => diagram.fit();
-$('auto-layout').onclick = async () => {
-  if (!guard()) return;
-  diagram.userMoved = false;
-  await diagram.setModel(model, { fit: true });
-  status('Automatic layout refreshed');
-};
 $('zoom-in').onclick = () => diagram.zoomBy(1.2);
 $('zoom-out').onclick = () => diagram.zoomBy(1 / 1.2);
 /* Direction changes retain each parallel state's region arrangement. */
