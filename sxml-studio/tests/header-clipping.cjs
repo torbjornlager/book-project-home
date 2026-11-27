@@ -6,8 +6,21 @@ global.window = global;
 global.ELK = require('../vendor/elk.bundled.js');
 global.document = {createElement: () => ({getContext: () => ({measureText: text => ({width: text.length * 7})})})};
 const code = fs.readFileSync(path.join(__dirname, '../js/sxml-diagram.js'), 'utf8');
-vm.runInThisContext(code.replace('    protectHeadings(boxes, edges, info);', ''));
-const baseline = SXMLDiagram;
+class Element {
+  constructor(tag) {this.tag = tag; this.attrs = {}; this.children = []; this.classList = {toggle() {}};}
+  setAttribute(key, value) {this.attrs[key] = String(value);}
+  getAttribute(key) {return this.attrs[key] ?? null;}
+  removeAttribute(key) {delete this.attrs[key];}
+  appendChild(child) {this.children.push(child); return child;}
+  removeChild(child) {this.children.splice(this.children.indexOf(child), 1);}
+  insertBefore(child) {this.children.unshift(child);}
+  get firstChild() {return this.children[0];}
+  get lastChild() {return this.children.at(-1);}
+  querySelectorAll(selector) {return this.children.flatMap(child => [...(selector === '[data-tooltip]' && child.attrs['data-tooltip'] ? [child] : []), ...child.querySelectorAll(selector)]);}
+  cloneNode() {const e = new Element(this.tag); e.attrs = {...this.attrs}; e.textContent = this.textContent; e.children = this.children.map(child => child.cloneNode()); return e;}
+}
+global.document.createElementNS = (_, tag) => new Element(tag);
+global.XMLSerializer = class {serializeToString(el) {return JSON.stringify(el);}};
 vm.runInThisContext(code);
 const D = SXMLDiagram;
 function state(id, kind = 'state', children = [], initial = '') {
@@ -59,26 +72,39 @@ function collisions(geo) {
   }
   return hits;
 }
+function collect(el, predicate) {return [...(predicate(el) ? [el] : []), ...el.children.flatMap(child => collect(child, predicate))];}
 (async () => {
-  let reproduced = 0, checks = 0;
+  let crossingsCovered = 0, checks = 0;
   for (const direction of ['RIGHT','DOWN']) for (const spacing of [0,50,100]) for (const padding of ['50','100','150']) for (const collapsed of [false,true]) for (const rich of [false,true]) {
-    const model = fixture(rich), snapshot = JSON.stringify(model.transitions.map(t => ({key:t.key,to:t.to,on:t.on})));
+    const model = fixture(rich), source = JSON.stringify(model.transitions.map(t => ({key:t.key,to:t.to,on:t.on})));
     const options = {...D.spacingOptions(direction, spacing, spacing), ...D.experimentOptions({padding}), 'studio.collapsed': new Set(collapsed ? ['start'] : [])};
-    const before = await baseline.layout(model, direction, options), after = await D.layout(model, direction, options);
-    reproduced += collisions(before).length;
-    assert.deepEqual(collisions(after), [], direction + ' spacing ' + spacing + ' padding ' + padding);
-    assert.deepEqual([...after.boxes], [...before.boxes], 'Routing must not move states, headings or initial dots.');
-    assert.equal(after.width, before.width); assert.equal(after.height, before.height);
-    for (const edge of after.edges) {
-      const old = before.edges.find(e => e.id === edge.id);
-      assert.deepEqual(edge.points[0], old.points[0], 'Keep the source attached to its original node port.');
-      assert.deepEqual(edge.points.at(-1), old.points.at(-1), 'Keep the target attached to its original node port.');
-      assert.deepEqual(edge.labels, old.labels, 'Keep transition labels in place.');
-      if (!collisions({...before, edges:[old]}).length) assert.deepEqual(edge.points, old.points, 'Leave clear routes untouched.');
-    }
-    assert.equal(JSON.stringify(model.transitions.map(t => ({key:t.key,to:t.to,on:t.on}))), snapshot);
+    const geo = await D.layout(model, direction, options);
+    crossingsCovered += collisions(geo).length;
+    const geometry = JSON.stringify({boxes:[...geo.boxes], edges:geo.edges, width:geo.width, height:geo.height});
+    const svg = new Element('svg'), view = svg.appendChild(new Element('g'));
+    view.setAttribute('transform', 'translate(20,20) scale(1)');
+    const diagram = {geo, model, svg, view, _init:D.Diagram.prototype._init, _paint() {}};
+    D.Diagram.prototype._render.call(diagram);
+    const clip = collect(view, el => el.tag === 'clipPath')[0], cutout = clip.firstChild;
+    assert.equal(clip.attrs.clipPathUnits, 'userSpaceOnUse');
+    assert.equal(cutout.attrs['clip-rule'], 'evenodd');
+    const headers = collect(view, el => el.attrs.class === 'state-header');
+    assert(headers.length > 0);
+    for (const header of headers) assert(cutout.attrs.d.includes(header.attrs.d), 'The entire rounded gray area must be excluded, not just its text.');
+    const layers = view.children.filter(el => el.attrs['clip-path']);
+    assert.equal(layers.length, 2, 'Both transition paths and labels must stay behind headers.');
+    for (const layer of layers) assert.equal(layer.attrs['clip-path'], 'url(#' + clip.attrs.id + ')');
+    assert.equal(JSON.stringify({boxes:[...geo.boxes], edges:geo.edges, width:geo.width, height:geo.height}), geometry, 'Rendering must preserve the original routes, labels and node positions.');
+    assert.equal(JSON.stringify(model.transitions.map(t => ({key:t.key,to:t.to,on:t.on}))), source);
+    const exported = D.Diagram.prototype.exportSVG.call(diagram, '');
+    assert(exported.includes('"tag":"clipPath"'));
+    assert(exported.includes('url(#' + clip.attrs.id + ')'), 'SVG downloads must retain header clipping.');
+    const id = clip.attrs.id;
+    D.Diagram.prototype._render.call(diagram);
+    assert.equal(collect(view, el => el.tag === 'clipPath').length, 1, 'Redraws must replace stale header cutouts.');
+    assert.equal(collect(view, el => el.tag === 'clipPath')[0].attrs.id, id);
     checks++;
   }
-  assert(reproduced > 0, 'The regression must reproduce heading crossings before the fix.');
-  console.log('Checked ' + checks + ' layouts in both directions, spacing/padding extremes, history, initial arrows, compound boundaries, self-loops, final names and collapse; repaired ' + reproduced + ' heading crossings.');
+  assert(crossingsCovered > 0, 'Exercise routes that actually pass behind headings.');
+  console.log('Checked gray-header clipping in ' + checks + ' layouts, both directions, rounded corners, paths/labels, unchanged routes, redraws and standalone SVGs; covered ' + crossingsCovered + ' hidden crossings.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
