@@ -129,7 +129,9 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   name it at once. Enter saves, Escape cancels; every edit is undoable. While a
   chart runs, double-click opens the Inspector instead.
 - A selected state shows a small floating toolbar
-  (rename, add child, new transition, zoom to, Inspector, delete). New transition
+  (rename, add child, new transition, connect to existing state, zoom to, Inspector, delete).
+  Choose **Connect to existing state**, then click the target state; Escape cancels.
+  New transition
   adds a sibling state with a transition to it (placeholder event `e0`, `e1`, …),
   then lets you name the event on the canvas. Automatic layout chooses the new
   state’s position.

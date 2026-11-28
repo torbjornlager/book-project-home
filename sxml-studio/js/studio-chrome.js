@@ -6,6 +6,7 @@
     parallel: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z M12 7v2 M12 11v2 M12 15v2',
     final: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     history: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M9 8v8 M15 8v8 M9 12h6',
+    connect: 'M2 8h5v8H2z M17 8h5v8h-5z M7 12h10 M13 8l4 4-4 4',
     transition: 'M4 18V9a2 2 0 0 1 2-2h10',
     trash: 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',
     undo: 'M3 9h11a6 6 0 0 1 0 12h-3 M3 9l6-6 M3 9l6 6',

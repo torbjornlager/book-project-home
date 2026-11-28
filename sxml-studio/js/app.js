@@ -630,6 +630,16 @@ editor.on('cursorActivity', () => {
 });
 
 function onDiagramClick(key) {
+  if (diagram.tool === 'connect' && diagram.connectSource) {
+    const source = diagram.connectSource, target = model.byKey.get(key);
+    if (!target || !['state', 'parallel', 'final', 'history'].includes(target.kind)) {
+      status('Choose a target state · Escape cancels');
+      return;
+    }
+    setTool(null);
+    connect(source, key, { inPlace: true });
+    return;
+  }
   const entry = entryByKey(key);
   if (run.pid && entry && entry.kind === 'go' && entry.on != null) { sendTransition(entry); return; }
   select(key, { reveal: false });
@@ -719,6 +729,7 @@ function stateActions(key) {
   if (n.kind === 'state' || n.kind === 'parallel') {
     list.push({ id: 'child', icon: 'plus', label: 'Add a child state' });
     list.push({ id: 'transition', icon: 'transition', label: 'New transition to a new state' });
+    list.push({ id: 'connect', icon: 'connect', label: 'Connect to existing state' });
   }
   list.push({ id: 'zoom', icon: 'focus', label: 'Zoom to this state' });
   list.push({ id: 'inspect', icon: 'inspect', label: 'Open in the Inspector' });
@@ -732,6 +743,11 @@ function stateAction(key, action) {
   if (action === 'rename') renameInPlace(n);
   else if (action === 'child') quickAdd(n);
   else if (action === 'transition') extendFrom(key);
+  else if (action === 'connect') {
+    if (!guard()) return;
+    setTool('connect', key);
+    diagram.svg.focus({ preventScroll: true });
+  }
   else if (action === 'zoom') diagram.zoomTo(key);
   else if (action === 'inspect') openInInspector(key);
   else if (action === 'delete') { select(key, { reveal: false }); removeSelected(); }
@@ -841,10 +857,11 @@ function diagramKey(ev) {
   else if (ev.key === '0' && !mod) diagram.fit();
 }
 
-function setTool(tool) {
+function setTool(tool, sourceKey) {
   diagram.tool = tool;
+  diagram.connectSource = tool === 'connect' ? sourceKey || null : null;
   $('chart').classList.toggle('connect', tool === 'connect');
-  if (tool === 'connect') status('Transition tool · drag from the source state to the target state');
+  if (tool === 'connect') status(sourceKey ? 'Click the target state · Escape cancels' : 'Transition tool · drag from the source state to the target state');
 }
 
 /* ---------- nested charts as documents ---------- */

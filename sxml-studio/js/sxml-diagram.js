@@ -935,7 +935,7 @@
       if (ev.button !== 0) return;
       svg.focus({ preventScroll: true });
       const stateEl = ev.target.closest('[data-state]');
-      if (this.tool === 'connect' && stateEl && !this.running && !this.readOnly) {
+      if (this.tool === 'connect' && !this.connectSource && stateEl && !this.running && !this.readOnly) {
         const key = stateEl.getAttribute('data-state');
         const start = this._point(ev);
         drag = { type: 'connect', source: key, start, line: el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay) };
