@@ -107,6 +107,7 @@ let parseTimer = null;
 let focusItem = null;        // item key to highlight in the inspector
 let selectionLines = [], errLine = null, locatedText = null;
 let snap = null;             // source text of every element, for format-preserving edits
+let nextConnectionEdit = 0;
 
 const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
@@ -508,12 +509,13 @@ function adopt(doc, text, opts) {
 }
 
 /* Write the (edited) DOM back to the editor and refresh the views. */
-function commit() {
+function commit(historyOrigin) {
   const spaceSlash = (editor.getValue().match(/" \/>/g) || []).length > (editor.getValue().match(/"\/>/g) || []).length;
   const text = SXML.serialize(model.doc, { spaceSlash, snapshot: snap });
   silent = true;
   const scroll = editor.getScrollInfo();
-  editor.setValue(text);
+  if (historyOrigin) editor.replaceRange(text, { line: 0, ch: 0 }, editor.posFromIndex(editor.getValue().length), historyOrigin);
+  else editor.setValue(text);
   editor.scrollTo(scroll.left, scroll.top);
   silent = false;
   adopt(model.doc, text);
@@ -699,7 +701,7 @@ function renameInPlace(n) {
   });
 }
 
-function editTransitionInPlace(t, anchor) {
+function editTransitionInPlace(t, anchor, historyOrigin) {
   if (!guard()) return;
   select(t.key, { reveal: false });
   const label = (diagram.edgeEls.get(t.key) || []).find(g => g.classList.contains('tlabel'));
@@ -715,7 +717,7 @@ function editTransitionInPlace(t, anchor) {
       if (!same(t.on, next.on)) SXML.setAttr(el, 'on', next.on);
       if (!same(t.after, next.after)) SXML.setAttr(el, 'after', next.after);
       if (!same(t.cond, next.cond)) SXML.setAttr(el, 'if', next.cond);
-      selEl = el; commit();
+      selEl = el; commit(historyOrigin);
       status('Transition updated · the action is edited in the Inspector');
     }
   });
@@ -806,11 +808,14 @@ async function connect(sourceKey, targetKey, opts) {
   const go = SXML.addTransition(model.doc, s.el, t.id);
   selEl = go;
   if (opts && opts.inPlace) {
+    // CodeMirror's * origin groups creation and naming even after a long pause.
+    // Each connection gets its own origin; intervening edits break the group.
+    const historyOrigin = '*connect-' + (++nextConnectionEdit);
     go.setAttribute('on', uniqueEvent(model.doc));
-    commit();
+    commit(historyOrigin);
     await diagram.pending;
     const entry = entryFor(go);
-    if (entry) editTransitionInPlace(entry, null);
+    if (entry) editTransitionInPlace(entry, null, historyOrigin);
     status('Transition ' + s.id + ' → ' + t.id + ' added · name its event');
     return;
   }
