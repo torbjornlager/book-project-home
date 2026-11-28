@@ -205,5 +205,7 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 #run .log-title{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;letter-spacing:0;flex:none}
 #run .log-title button{margin-left:auto}
 #run .log{flex:1;min-height:0;overflow:auto;font-size:calc(12px * var(--ui-font-scale,1))}
+#run .log .trace{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;padding:3px 0;margin:0}
+#run .log .trace+.trace{border-top:1px solid var(--line)}
 
 @media(pointer:coarse){#run button,#run input:not([type=checkbox]),#run select{min-height:44px}#run .event-row button{height:44px;width:44px;min-width:44px}}

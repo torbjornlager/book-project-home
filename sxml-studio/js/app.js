@@ -1412,7 +1412,7 @@ function play(item) {
   if (t.name === 'guard_result') {
     const transition = traceModel?.byId.get(unquote(t.args[0] || ''))?.transitions[Number(t.args[1])];
     if (transition && !transition.cond?.trim()) return false;
-    logRow('trace', '  guard ' + t.args[0] + ' #' + (Number(t.args[1]) + 1) + ': ' + t.args[2]);
+    logRow('trace', 'IF: ' + t.args[0] + ' #' + (Number(t.args[1]) + 1) + ': ' + t.args[2]);
     return false;
   }
   if (t.name === 'datamodel_snapshot') {
@@ -1443,13 +1443,13 @@ function play(item) {
     if (!window.studioTools && model && !ids.every(id => model.byId.has(id))) {
       for (const [k, nm] of model.nested) if (ids.every(id => nm.byId.has(id))) {
         run.nested.set(k, ids);
-        logRow('trace conf', ['configuration of ' + nm.title + ' ', bold('{' + ids.join(', ') + '}')]);
+        logRow('trace conf', ['IN: ' + nm.title + ' ', bold('{' + ids.join(', ') + '}')]);
         diagram.setRun(true, run.active, run.fired, run.nested);
         return true;
       }
     }
     run.active = ids;
-    logRow('trace conf', ['configuration ', bold('{' + run.active.join(', ') + '}')]);
+    logRow('trace conf', ['IN: ', bold('{' + run.active.join(', ') + '}')]);
     diagram.setRun(true, run.active, run.fired, run.nested);
     const only = run.active.length === 1 && model && model.byId.get(run.active[0]);
     run.done = !!(only && only.kind === 'final' && only.parent === model.root);
@@ -1461,19 +1461,19 @@ function play(item) {
     const inner = item.text.slice(t.name.length + 1, -1);
     run.lastEvent = termOf(inner);
     run.fired = new Set();
-    logRow('trace', [t.name === 'external_event' ? 'event ' : 'internal ', bold(inner)]);
+    logRow('trace', [t.name === 'external_event' ? 'ON: ' : 'ON: (internal) ', bold(inner)]);
     return false;
   }
   if (t.name === 'transition') {
     const src = unquote(t.args[0] || ''), targets = listOf(t.args[1] || '[]');
     const tr = window.studioTools ? null : firedTransition(src, targets);
     if (tr) run.fired.add(tr.key);
-    logRow('trace', ['  transition ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
+    logRow('trace', ['TO: ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
     if (!targets.length) { diagram.setRun(true, run.active, run.fired, run.nested); return true; }
     return false;
   }
   if (t.name === 'microstep' || t.name === 'macrostep_complete') return false;
-  if (t.name === 'execution') { logRow('trace', ['  run ', h('code', {}, item.text.slice(10, -1))]); return false; }
+  if (t.name === 'execution') { logRow('trace', ['DO: ', h('code', {}, item.text.slice(10, -1))]); return false; }
   if (t.name === 'unmatched') { logRow('trace', ['  unmatched ', bold(item.text.slice(10, -1))]); return false; }
   logRow('trace', '  ' + item.text);
   return false;

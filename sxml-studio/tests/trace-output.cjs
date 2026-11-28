@@ -27,6 +27,23 @@ const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 assert(html.includes('Trace and output'));assert(html.includes('role="log"'));
 assert(!/id="(?:suggestions|show-trace)"/.test(html));
 console.log('Checked live trace/output ordering, startup queuing, message/error rendering, follow-scroll, bounded log and the simplified Run markup.');
+// Compact trace labels retain event terms, transition direction, guard results and actions.
+{
+  const rows=[],s1={transitions:[{cond:'ready(X)'}]},s2={kind:'state'};
+  const trace={window:{studioTools:{scope:()=>null}},model:{byId:new Map([['s1',s1],['s2',s2]]),nested:new Map()},
+    run:{active:[],fired:new Set(),nested:new Map()},diagram:{setRun(){}},runControls(){},status(){},
+    bold:text=>text,h:(tag,attrs,text)=>text,logRow:(kind,parts)=>rows.push(Array.isArray(parts)?parts.join(''):parts)};
+  vm.createContext(trace);
+  vm.runInContext(app.slice(app.indexOf('function splitTop('),app.indexOf('function firedTransition('))+app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
+  for(const text of ['external_event(input([red]))','guard_result(s1,0,true)','transition(s1,[s2])',"execution(writeln('red'))",'configuration([s2])']) trace.play({type:'trace',text});
+  assert.deepEqual(rows,['ON: input([red])','IF: s1 #1: true','TO: s1 → s2',"DO: writeln('red')",'IN: {s2}']);
+  rows.length=0;
+  trace.play({type:'trace',text:'internal_event(retry)'});
+  trace.play({type:'trace',text:'transition(s1,[])'});
+  trace.play({type:'output',text:'Plain program output'});
+  assert.deepEqual(rows,['ON: (internal) retry','TO: s1 (stay)','Plain program output']);
+  console.log('Checked ON/TO/IF/DO/IN labels, preserved details, internal events, targetless transitions and plain output.');
+}
 // The displayed event uses its event term, while transport-only bindings stay hidden.
 (async()=>{
   const entries=[], answer={type:'success',data:[{Ref:'internal-ref',From:'worker@localhost',Event:'e'}]};
