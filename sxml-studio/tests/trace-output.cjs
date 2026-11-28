@@ -36,7 +36,7 @@ console.log('Checked live trace/output ordering, startup queuing, message/error 
   vm.createContext(trace);
   vm.runInContext(app.slice(app.indexOf('function splitTop('),app.indexOf('function firedTransition('))+app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
   for(const text of ['external_event(input([red]))','guard_result(s1,0,true)','transition(s1,[s2])',"execution(writeln('red'))",'configuration([s2])']) trace.play({type:'trace',text});
-  assert.deepEqual(rows,['ON: input([red])','IF: s1 #1: true','TO: s1 → s2',"DO: writeln('red')",'IN: {s2}']);
+  assert.deepEqual(rows,['ON: input([red])','IF: ready(X) → true','TO: s1 → s2',"DO: writeln('red')",'IN: {s2}']);
   rows.length=0;
   trace.play({type:'trace',text:'internal_event(retry)'});
   trace.play({type:'trace',text:'transition(s1,[])'});
@@ -61,18 +61,22 @@ console.log('Checked live trace/output ordering, startup queuing, message/error 
 
 // Runtime emits a true result for unguarded transitions; show only real guards.
 {
-  const rows=[], state={transitions:[{cond:null},{cond:'  '},{cond:'ready(X)'}]};
+  const rows=[], state={transitions:[{cond:null},{cond:'  '},{cond:'ready(X)'},{cond:' true '},{cond:'X < 3,\n    allowed(X)'}]};
   const nested={byId:new Map([['s1',state]])};let scope=null;
   const trace={window:{studioTools:{scope:()=>scope}},model:{byId:new Map([['s1',state]]),nested:new Map([['child',nested]])},
     termOf:input=>({name:'guard_result',args:input.split('|')}),unquote:text=>text.replace(/^'|'$/g,''),logRow:(kind,text)=>rows.push(text)};
   vm.createContext(trace);vm.runInContext(app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
   for(const child of [null,'child']) {
     scope=child;rows.length=0;
-    trace.play({type:'trace',text:'s1|0|true'});trace.play({type:'trace',text:'s1|1|true'});
+    trace.play({type:'trace',text:'s1|0|true'});trace.play({type:'trace',text:'s1|1|true'});trace.play({type:'trace',text:'s1|3|true'});
     assert.equal(rows.length,0,'No explicit guard means no guard-result noise.');
     trace.play({type:'trace',text:"'s1'|2|true"});trace.play({type:'trace',text:'s1|2|false'});
     assert.equal(rows.length,2,'Keep both passed and failed outcomes for explicit guards.');
+    assert.deepEqual(rows,['IF: ready(X) → true','IF: ready(X) → false']);
     trace.play({type:'trace',text:'unknown|0|true'});assert.equal(rows.length,3,'Do not silently hide unresolved guard results.');
+    assert.equal(rows[2],'IF: (guard unavailable) → true');
+    trace.play({type:'trace',text:'s1|4|false'});
+    assert.equal(rows[3],'IF: X < 3,\n    allowed(X) → false','Keep the complete guard, including line breaks and operators.');
   }
   console.log('Checked implicit/empty guard suppression and explicit true/false guard results for root and inline charts.');
 }

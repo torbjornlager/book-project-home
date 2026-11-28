@@ -1411,8 +1411,9 @@ function play(item) {
   }
   if (t.name === 'guard_result') {
     const transition = traceModel?.byId.get(unquote(t.args[0] || ''))?.transitions[Number(t.args[1])];
-    if (transition && !transition.cond?.trim()) return false;
-    logRow('trace', 'IF: ' + t.args[0] + ' #' + (Number(t.args[1]) + 1) + ': ' + t.args[2]);
+    const guard = transition?.cond?.trim();
+    if (transition && (!guard || guard === 'true')) return false;
+    logRow('trace', 'IF: ' + (guard || '(guard unavailable)') + ' → ' + t.args[2]);
     return false;
   }
   if (t.name === 'datamodel_snapshot') {
