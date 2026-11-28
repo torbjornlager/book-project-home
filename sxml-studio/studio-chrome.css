@@ -15,7 +15,7 @@ button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-vi
 .panel-toggle{display:none}
 .studio{grid-template-columns:minmax(240px,var(--left)) 5px minmax(260px,1fr) 5px var(--right)}
 .workspace .panel-heading,.workspace-title,.workspace-note{display:none}
-.workspace-tabs{display:flex;align-items:center;padding:8px;gap:4px;min-height:52px;border-bottom:1px solid var(--line);flex:none}
+.workspace-tabs{display:flex;align-items:center;padding:4px 8px;gap:4px;min-height:52px;border-bottom:1px solid var(--line);flex:none}
 .workspace-tabs button{flex:1;min-width:0;height:35px;border:0;background:transparent;font-size:calc(13px * var(--ui-font-scale,1));color:var(--muted)}
 .workspace-tabs button[aria-selected=true]{background:var(--raised);color:var(--fg);font-weight:650}
 .workspace .structure-panel{flex:1;max-height:none;border:0;padding:12px;overflow:auto}
@@ -222,6 +222,6 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 .editor-foot,#run .log-filters{box-sizing:border-box;height:calc(15px * var(--ui-font-scale,1) + 15px);min-height:0;flex:none}
 
 /* Keep the editor and side-panel header baselines aligned. */
-.editor-tabs,.side-tabs{box-sizing:border-box;height:52px;min-height:52px;flex:none}
-.side-tabs button{box-sizing:border-box;height:100%}
-@media(max-width:860px){.editor-tabs,.side-tabs{height:50px;min-height:50px}}
+.workspace-tabs,.editor-tabs,.side-tabs{box-sizing:border-box;height:52px;min-height:52px;flex:none}
+.workspace-tabs button,.side-tabs button{box-sizing:border-box;height:100%}
+@media(max-width:860px){.workspace-tabs,.editor-tabs,.side-tabs{height:50px;min-height:50px}}
