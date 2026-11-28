@@ -14,14 +14,14 @@
 <script defer src="runtime/vendor/swi-wasm-node.js?v=20261123-studio-tools"></script>
 <script defer src="vendor/elk.bundled.js"></script>
 <script defer src="js/sxml-model.js?v=20261127-xml-comments"></script>
-<script defer src="js/sxml-diagram.js?v=20261128-ipad-datamodel"></script>
+<script defer src="js/sxml-diagram.js?v=20261128-state-datamodel-notes"></script>
 <script defer src="js/studio-model.js?v=20261126-inspector-cog"></script>
 <script defer src="js/studio-workspace.js?v=20261127-trace-output"></script>
 <script defer src="js/studio-chrome.js?v=20261127-runner-datamodel"></script>
 <script defer src="js/app.js?v=20261128-log-filter-preferences"></script>
 <script defer src="js/studio-tools.js?v=20261127-runner-datamodel"></script>
 <link rel="stylesheet" href="studio-tools.css?v=20261127-trace-output">
-<link rel="stylesheet" href="studio-chrome.css?v=20261128-log-filter-preferences">
+<link rel="stylesheet" href="studio-chrome.css?v=20261128-log-clear-toolbar">
 </head>
 <body class="light" data-view="split" data-layout="vertical">
 <script src="js/ui-preferences.js"></script>
@@ -49,11 +49,12 @@
 <div id="run" class="side-view run-view" role="tabpanel" aria-labelledby="tab-run" hidden>
 <div id="debug-tools"></div>
 <section class="trace-output" aria-labelledby="trace-output-title">
-<div class="section-title log-title"><span id="trace-output-title">Trace and output</span><button id="clear" type="button">Clear</button></div>
-<div class="log-filters" role="toolbar" aria-label="Trace and output filters">
+<div class="section-title log-title"><span id="trace-output-title">Trace and output</span></div>
+<div class="log-filters" role="toolbar" aria-label="Trace and output controls">
 <label><input id="log-trace" type="checkbox" checked>Trace</label>
 <label><input id="log-output" type="checkbox" checked>Output</label>
 <label title="Prolog calls and answers"><input id="log-prolog" type="checkbox" checked>Prolog</label>
+<button id="clear" type="button">Clear</button>
 </div>
 <div id="log" class="log" role="log" aria-labelledby="trace-output-title" aria-live="polite" tabindex="0"></div>
 </section>

@@ -204,7 +204,7 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 
 #run .trace-output{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 #run .log-title{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;letter-spacing:0;flex:none}
-#run .log-title button{margin-left:auto}
+#run .log-filters button{margin-left:auto;padding:2px 6px;min-height:24px;font-size:calc(11px * var(--ui-font-scale,1))}
 #run .log{flex:1;min-height:0;overflow:auto;font-size:calc(12px * var(--ui-font-scale,1))}
 #run .log>div{padding:3px 0;margin:0;border-bottom:1px solid var(--line)}
 #run .log>div:last-child{border-bottom:0}

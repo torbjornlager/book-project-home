@@ -47,6 +47,19 @@ const fake = {model, liveDatamodels:new Map(), calls:0, setModel(m, options) {as
   assert.equal(runtimePreview.lines[16], '… more clauses (hover to view)');
   assert.equal(runtimePreview.fullText, facts.join('\n\n'));
   assert.equal(dm.body, original);
+  const stateData = {key:'init/datamodel0', body:'local_value(1).'};
+  child.datamodels = [stateData];
+  for (const direction of ['RIGHT','DOWN']) {
+    const outside = await SXMLDiagram.layout(model, direction);
+    const note = outside.boxes.get(stateData.key), chart = outside.boxes.get(root.key);
+    assert(note.x >= chart.x + chart.w || note.y >= chart.y + chart.h, 'State-owned datamodel notes must sit outside the chart states in both directions.');
+    assert.equal(outside.info.get(stateData.key).title, 'DATAMODEL · init', 'The note heading must identify its owning state.');
+    const updated = await SXMLDiagram.layout(model, direction, {'studio.liveDatamodels':new Map([[stateData.key,{facts:['local_value(2).'],changed:[true]}]])});
+    assert.equal(updated.info.get(stateData.key).fullText,'local_value(2).');
+    assert.equal(child.datamodels[0],stateData, 'Drawing outside must not change datamodel ownership.');
+    assert.equal(stateData.body,'local_value(1).', 'Live notes must not rewrite source clauses.');
+  }
+  child.datamodels = [];
   const app = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf8');
   const helpers = app.slice(app.indexOf('function splitTop('), app.indexOf('function firedTransition('));
   const playback = app.slice(app.indexOf('function play(item)'), app.indexOf('/* ---------- side panel, files, chrome ---------- */'));

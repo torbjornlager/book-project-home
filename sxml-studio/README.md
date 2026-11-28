@@ -166,6 +166,8 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - Run chart spawns the document in the real SWI-WASM interpreter with
   tracing on, and animates the active configuration and fired transitions.
   Datamodel notes update in place with current facts and rules during a run.
+  In the main chart, notes sit outside their owning states; state-owned notes name the owner in
+  their heading. This does not change where the datamodel is declared in XML.
   Snapshots follow live chart actions, with new clauses briefly
   highlighted; source XML is unchanged. Rules retain line breaks and indentation.
   Notes show up to 16 lines at once, with native vertical and horizontal scrolling

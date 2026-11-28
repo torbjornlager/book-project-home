@@ -177,9 +177,10 @@
       } else all.push(...dm.body.replace(/\t/g, '    ').split('\n'));
       let lines = all.slice(0, MAX_NOTE_LINES).map(l => cut(l.replace(/\s+$/, ''), MAX_NOTE));
       if (all.length > MAX_NOTE_LINES || live?.truncated) lines.push('… more clauses (hover to view)');
-      const w = Math.max(76, ...lines.map(l => width(l, F_NOTE))) + 22;
+      const title = owner.kind === 'statechart' ? 'DATAMODEL' : 'DATAMODEL · ' + (owner.id || '(unnamed state)');
+      const w = Math.max(76, width(title, F_NOTE), ...lines.map(l => width(l, F_NOTE))) + 22;
       const h = NOTE_TOP + lines.length * 14;
-      info.set(dm.key, { type: 'note', item: dm, lines, live, changedLines, fullText: all.join('\n') });
+      info.set(dm.key, { type: 'note', item: dm, title, lines, live, changedLines, fullText: all.join('\n') });
       return { id: dm.key, width: w, height: h };
     }
     function node(n) {
@@ -205,8 +206,8 @@
         return {id: n.key, width: Math.max(140, headW, linesW), height: top + 26};
       }
       const realKids = n.children.filter(c => c.kind !== 'history');
-      /* Notes of the root are placed outside the layout engine (see run). */
-      for (const dm of n.datamodels) { const note = noteNode(dm, n); if (n.kind === 'statechart' && !n.scope) rootNotes.push(note); else kids.push(note); }
+      /* Keep main-chart notes outside their states without changing XML ownership. */
+      for (const dm of n.datamodels) { const note = noteNode(dm, n); if (!n.scope) rootNotes.push(note); else kids.push(note); }
       for (const sp of n.spawns) { const nm = model.nested && model.nested.get(sp.key); if (nm) kids.push(node(nm.root)); }
       if ((n.kind === 'statechart' || n.kind === 'state') && n.initial && realKids.some(c => c.id === n.initial)) {
         const id = n.key + '/init';
@@ -417,7 +418,7 @@
       }
       for (const c of n.children || []) collect(c);
     })(res);
-    /* Root datamodel notes follow the chart: a row below or a column to its right. */
+    /* Datamodel notes follow the chart: a row below or a column to its right. */
     let width = res.width, height = res.height, x = 24, y = 24;
     const down = direction === 'DOWN';
     const bottom = res.height;
@@ -583,7 +584,7 @@
     const clearHeaders = el('path', {'clip-rule': 'evenodd'}, clip), headerHoles = [];
     const gStates = el('g', {}, g), gEdges = el('g', {'clip-path': 'url(#' + this.headerClipId + ')'}, g),
       gLabels = el('g', {'clip-path': 'url(#' + this.headerClipId + ')'}, g);
-    const gNotes = el('g', {}, g);       // root notes go on top, so a note dropped onto the chart stays visible
+    const gNotes = el('g', {}, g);       // notes are drawn above the chart
     this.overlay = el('g', {}, g);
     this.handleLayer = el('g', { class: 'handles' }, this.overlay);
 
@@ -653,7 +654,7 @@
         el('text', {class: 'note-title collapse-status', x: b.x + 10, y: b.y + b.h - 8}, grp, '+ ' + n.children.length + ' children');
         return;
       }
-      for (const dm of n.datamodels) this._note(gStates, dm, boxes.get(dm.key), info.get(dm.key));
+      for (const dm of n.datamodels) this._note(n.scope ? gStates : gNotes, dm, boxes.get(dm.key), info.get(dm.key));
       this._init(gStates, n, boxes);
       if (n.kind === 'parallel') this._regions(grp, n, boxes);
       for (const sp of n.spawns) { const nm = model.nested.get(sp.key); if (nm) draw(nm.root); }
@@ -701,7 +702,7 @@
     const f = 9;
     el('path', { class: 'shape', d: 'M' + b.x + ' ' + b.y + ' h' + (b.w - f) + ' l' + f + ' ' + f + ' v' + (b.h - f) + ' h' + (-b.w) + ' z' }, grp);
     el('path', { class: 'fold', d: 'M' + (b.x + b.w - f) + ' ' + b.y + ' v' + f + ' h' + f }, grp);
-    el('text', { class: 'note-title', x: b.x + 10, y: b.y + 15 }, grp, 'DATAMODEL');
+    el('text', { class: 'note-title', x: b.x + 10, y: b.y + 15 }, grp, inf.title || 'DATAMODEL');
     // Keep a plain SVG preview for exports; the live diagram uses native scrolling.
     const preview = el('g', {class: 'note-preview', style: 'display:none'}, grp);
     inf.lines.forEach((t, i) => {
