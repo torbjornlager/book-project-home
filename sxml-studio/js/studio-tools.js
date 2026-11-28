@@ -167,8 +167,8 @@ window.studioTools = (() => {
     });
     if (!events.length) return null;
     const disabled = !run.pid || run.starting || run.busy || run.done;
-    return h('section', {class: 'example-events', 'aria-label': 'Example events'},
-      h('div', {class: 'debug-heading'}, 'Example events'),
+    return h('section', {class: 'example-events', 'aria-label': 'Send example events'},
+      h('div', {class: 'debug-heading'}, 'Send example events'),
       h('div', {class: 'example-event-buttons'}, ...events.map(event =>
         button(event.replace(/\s+/g, ' '), () => safeSend(event), {disabled, title: 'Send ' + event}))));
   }

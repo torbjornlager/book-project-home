@@ -177,7 +177,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   Halt or restart clears the live display. Try example 09 and send its integers
   query to watch the GCD calculation update `int/1`.
   Events from the document's trailing `<example events>` comment become
-  **Example events** buttons in the Runner panel. Events end with a period; blank
+  **Send example events** buttons in the Runner panel. Events end with a period; blank
   lines are optional. Button labels and sent events omit the terminating period.
   Editing XML comments, including this event list, keeps the chart running and
   preserves its trace log. Event buttons update as the comment changes. Changes

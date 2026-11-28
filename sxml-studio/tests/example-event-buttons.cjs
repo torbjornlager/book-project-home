@@ -8,7 +8,7 @@ const sent = [], context = {model:{examples:['$Pid ! input([a, red, box])','$Pid
 vm.createContext(context);
 vm.runInContext(source.match(/  function exampleEventButtons\(\) \{[\s\S]*?\n  \}/)[0], context);
 let section = context.exampleEventButtons();
-assert.equal(section.attrs['aria-label'],'Example events');
+assert.equal(section.attrs['aria-label'],'Send example events');
 const buttons = section.children[1].children;
 assert.deepEqual(Array.from(buttons,b=>b.text),['input([a, red, box])','input([blue])']);
 assert(buttons.every(b=>!b.disabled));
