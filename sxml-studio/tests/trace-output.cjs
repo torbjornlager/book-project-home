@@ -30,8 +30,9 @@ assert(!/id="(?:suggestions|show-trace)"/.test(html));
   const classes=new Set(),controls={};
   const filteredLog={scrollTop:100,clientHeight:100,scrollHeight:200,classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}}};
   for(const kind of ['trace','output','prolog']) controls['log-'+kind]={checked:true};
-  const filters={$:id=>id==='log'?filteredLog:controls[id]};
-  vm.createContext(filters);vm.runInContext(app.match(/function applyLogFilters\(\) \{[\s\S]*?\n\}/)[0],filters);
+  let stored=null;
+  const filters={$:id=>id==='log'?filteredLog:controls[id],localStorage:{getItem:()=>stored,setItem:(key,value)=>{stored=value;}}};
+  vm.createContext(filters);vm.runInContext(app.match(/function applyLogFilters\(\) \{[\s\S]*?\n\}/)[0]+app.match(/function restoreLogFilters\(\) \{[\s\S]*?\n\}/)[0],filters);
   filters.applyLogFilters();assert.equal(classes.size,0,'All categories start visible.');
   for(const kind of ['trace','output','prolog']) {
     controls['log-'+kind].checked=false;filters.applyLogFilters();
@@ -42,8 +43,26 @@ assert(!/id="(?:suggestions|show-trace)"/.test(html));
   filteredLog.scrollTop=0;filteredLog.scrollHeight=500;
   controls['log-trace'].checked=false;filters.applyLogFilters();
   assert.equal(filteredLog.scrollTop,0,'Filtering must not force readers to the bottom.');
+  const kinds=['trace','output','prolog'];
+  for(let mask=0;mask<8;mask++) {
+    kinds.forEach((kind,i)=>controls['log-'+kind].checked=!!(mask & (1<<i)));
+    filters.applyLogFilters();
+    kinds.forEach(kind=>controls['log-'+kind].checked=true);
+    filters.restoreLogFilters();
+    kinds.forEach((kind,i)=>assert.equal(controls['log-'+kind].checked,!!(mask & (1<<i)),'Restore every filter combination across reloads.'));
+  }
+  for(const value of [null,'invalid JSON','null','{"trace":"false","output":0}']) {
+    stored=value;kinds.forEach(kind=>controls['log-'+kind].checked=true);
+    filters.restoreLogFilters();
+    assert(kinds.every(kind=>controls['log-'+kind].checked),'Invalid preferences retain defaults.');
+  }
+  stored='{"trace":false}';filters.restoreLogFilters();
+  assert.equal(controls['log-trace'].checked,false);assert.equal(controls['log-output'].checked,true);
+  filters.localStorage={getItem(){throw Error('Storage denied');},setItem(){throw Error('Storage denied');}};
+  filters.restoreLogFilters();filters.applyLogFilters();
+  assert(classes.has('hide-trace'),'Filters remain usable when storage is unavailable.');
   for(const kind of ['trace','output','prolog']) assert(html.includes('id="log-'+kind+'" type="checkbox" checked'));
-  console.log('Checked independent log filters, default visibility and reading-position preservation.');
+  console.log('Checked independent log filters, reload restoration, invalid/unavailable storage, default visibility and reading-position preservation.');
 }
 console.log('Checked live trace/output ordering, startup queuing, message/error rendering, follow-scroll, bounded log and the simplified Run markup.');
 // Compact trace labels retain event terms, transition direction, guard results and actions.

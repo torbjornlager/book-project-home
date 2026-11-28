@@ -1180,8 +1180,23 @@ const bold = t => { const b = document.createElement('b'); b.textContent = t; re
 function applyLogFilters() {
   const log = $('log');
   const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
-  for (const kind of ['trace', 'output', 'prolog']) log.classList.toggle('hide-' + kind, !$('log-' + kind).checked);
+  const settings = {};
+  for (const kind of ['trace', 'output', 'prolog']) {
+    settings[kind] = $('log-' + kind).checked;
+    log.classList.toggle('hide-' + kind, !settings[kind]);
+  }
+  try { localStorage.setItem('trinity-sxml-studio.logFilters.v1', JSON.stringify(settings)); }
+  catch (e) { /* Filtering still works when browser storage is unavailable. */ }
   if (stick) log.scrollTop = log.scrollHeight;
+}
+
+function restoreLogFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('trinity-sxml-studio.logFilters.v1'));
+    for (const kind of ['trace', 'output', 'prolog']) {
+      if (typeof saved?.[kind] === 'boolean') $('log-' + kind).checked = saved[kind];
+    }
+  } catch (e) { /* Keep the default filters if browser storage is unavailable or invalid. */ }
 }
 
 function runControls() {
@@ -1826,6 +1841,7 @@ for (const b of document.querySelectorAll('.view-switch button')) b.onclick = ()
 
 $('clear').onclick = () => $('log').replaceChildren();
 for (const kind of ['trace', 'output', 'prolog']) $('log-' + kind).onchange = applyLogFilters;
+restoreLogFilters();
 applyLogFilters();
 function updateUI(settings) {
   const preferences = SXMLUI.apply(settings);

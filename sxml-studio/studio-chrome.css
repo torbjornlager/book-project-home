@@ -206,8 +206,9 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 #run .log-title{font-size:calc(12px * var(--ui-font-scale,1));font-weight:600;letter-spacing:0;flex:none}
 #run .log-title button{margin-left:auto}
 #run .log{flex:1;min-height:0;overflow:auto;font-size:calc(12px * var(--ui-font-scale,1))}
-#run .log .trace{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;padding:3px 0;margin:0}
-#run .log .trace+.trace{border-top:1px solid var(--line)}
+#run .log>div{padding:3px 0;margin:0;border-bottom:1px solid var(--line)}
+#run .log>div:last-child{border-bottom:0}
+#run .log .trace{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
 #run .log-filters{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;padding:4px 14px;border-bottom:1px solid var(--line);flex:none;font-size:calc(12px * var(--ui-font-scale,1))}
 #run .log-filters label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 #run .log-filters input{width:14px;height:14px;min-height:0;margin:0;padding:0;accent-color:var(--accent)}
