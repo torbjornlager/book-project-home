@@ -774,10 +774,11 @@ async function extendFrom(key) {
   const id = el.getAttribute('id');
   const go = SXML.addTransition(model.doc, s.el, id);
   go.setAttribute('on', uniqueEvent(model.doc));
-  selEl = go; commit();
+  const historyOrigin = '*new-state-transition-' + (++nextConnectionEdit);
+  selEl = go; commit(historyOrigin);
   await diagram.pending;
   const t = entryFor(go);
-  if (t) editTransitionInPlace(t, null);
+  if (t) editTransitionInPlace(t, null, historyOrigin);
   status('New state ' + id + ' added · name the event, then double-click ' + id + ' to rename it');
 }
 

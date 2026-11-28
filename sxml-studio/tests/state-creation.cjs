@@ -21,11 +21,14 @@ function state(id, kind = 'state') {
     assert.deepEqual(D.emptyStateSize(id), {width: box.w, height: box.h}, 'Placement must use the rendered state dimensions.');
     {
       let layoutWrites = 0, additions = 0;
+      const origins = [], namingOrigins = [];
       const source = {key: 'source', kind: 'state', parent: {key: '#root', kind: 'statechart', el: {}}};
       const sb = {x: 100, y: 100, w: 120, h: 80};
       const sandbox = {
         SXMLDiagram: D, model: {doc: {}, byKey: new Map([['source', source]]), layout: null},
-        guard: () => true, uniqueEvent: () => 'event_1', commit() {}, entryFor: () => null, status() {},
+        nextConnectionEdit: 0,
+        guard: () => true, uniqueEvent: () => 'event_1', commit(origin) { origins.push(origin); }, entryFor: () => ({}), status() {},
+        editTransitionInPlace(t, anchor, origin) { namingOrigins.push(origin); },
         SXML: {addState: () => { additions++; return {getAttribute: () => id}; }, addTransition: () => ({setAttribute() {}}), setLayout() { layoutWrites++; }},
         diagram: {geo: {boxes: new Map([['source', sb]])}, pending: Promise.resolve()}
       };
@@ -33,6 +36,10 @@ function state(id, kind = 'state') {
       await sandbox.extendFrom('source');
       assert.equal(additions, 1, 'The new-transition action must still create a state.');
       assert.equal(layoutWrites, 0, 'New states must remain in automatic layout.');
+      assert.match(origins[0], /^\*/);
+      assert.deepEqual(origins, namingOrigins, 'Creation and event naming must share one undo group.');
+      await sandbox.extendFrom('source');
+      assert.notEqual(origins[0], origins[1], 'Consecutive creations must have separate undo groups.');
     }
     const go = {key: id + '/go0', source: target, to: [id], on: 'event_1', index: 0, body: ''};
     target.transitions = [go, {...go, key: id + '/go1', on: 'event_2', index: 1}];
