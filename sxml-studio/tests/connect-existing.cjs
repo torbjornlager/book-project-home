@@ -7,8 +7,9 @@ const code = names.map(name => app.match(new RegExp('function '+name+'\\([^]*?\\
 const state = {kind:'state'}, final = {kind:'final'}, parallel = {kind:'parallel'};
 const connections = [], messages = [];
 let allowed = true, focused = 0;
+let pressed;
 const sandbox = {model:{byKey:new Map([['source',state],['target',state],['final',final],['parallel',parallel]])},
-  run:{pid:null}, diagram:{svg:{focus(){focused++;}}}, guard:()=>allowed,
+  run:{pid:null}, diagram:{svg:{focus(){focused++;}}, _renderStateBar(){pressed=sandbox.stateActions('source').find(a=>a.id==='connect').pressed;}}, guard:()=>allowed,
   $:()=>({classList:{toggle(){}}}), status:message=>messages.push(message),
   connect:(...args)=>connections.push(args), entryByKey:()=>null, select(){}, showSide(){}};
 vm.runInNewContext(code,sandbox);
@@ -18,15 +19,20 @@ assert(!sandbox.stateActions('final').some(a=>a.id==='connect'));
 sandbox.stateAction('source','connect');
 assert.equal(focused,1);
 assert.equal(sandbox.diagram.connectSource,'source');
+assert.equal(pressed,true,'The source toolbar button must stay pressed while choosing a target.');
+assert.equal(sandbox.stateActions('target').find(a=>a.id==='connect').pressed,false);
 sandbox.onDiagramClick('#root');
 assert.equal(connections.length,0);
 assert.equal(sandbox.diagram.connectSource,'source','Non-state clicks must not consume the source.');
+assert.equal(pressed,true);
 sandbox.onDiagramClick('target');
 assert.equal(JSON.stringify(connections),JSON.stringify([['source','target',{inPlace:true}]]));
 assert.equal(sandbox.diagram.tool,null,'Complete the action after choosing a target.');
 assert.equal(sandbox.diagram.connectSource,null);
+assert.equal(pressed,false,'Connecting must clear the pressed state.');
 sandbox.stateAction('source','connect');
 sandbox.setTool(null);
+assert.equal(pressed,false,'Cancelling must clear the pressed state.');
 sandbox.onDiagramClick('target');
 assert.equal(connections.length,1,'Cancellation must prevent a connection.');
 allowed=false;

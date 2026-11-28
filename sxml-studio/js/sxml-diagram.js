@@ -827,6 +827,7 @@
     for (const a of actions) {
       const btn = document.createElement('button');
       btn.type = 'button'; btn.title = a.label; btn.setAttribute('aria-label', a.label); btn.dataset.action = a.id;
+      if (typeof a.pressed === 'boolean') btn.setAttribute('aria-pressed', String(a.pressed));
       const icon = global.SXMLChrome && global.SXMLChrome.icon ? global.SXMLChrome.icon(a.icon) : null;
       if (icon) btn.append(icon); else btn.textContent = a.text || a.label[0];
       btn.onclick = () => this.h.onStateAction(key, a.id);

@@ -729,7 +729,7 @@ function stateActions(key) {
   if (n.kind === 'state' || n.kind === 'parallel') {
     list.push({ id: 'child', icon: 'plus', label: 'Add a child state' });
     list.push({ id: 'transition', icon: 'transition', label: 'New transition to a new state' });
-    list.push({ id: 'connect', icon: 'connect', label: 'Connect to existing state' });
+    list.push({ id: 'connect', icon: 'connect', label: 'Connect to existing state', pressed: diagram.tool === 'connect' && diagram.connectSource === key });
   }
   list.push({ id: 'zoom', icon: 'focus', label: 'Zoom to this state' });
   list.push({ id: 'inspect', icon: 'inspect', label: 'Open in the Inspector' });
@@ -861,6 +861,7 @@ function setTool(tool, sourceKey) {
   diagram.tool = tool;
   diagram.connectSource = tool === 'connect' ? sourceKey || null : null;
   $('chart').classList.toggle('connect', tool === 'connect');
+  diagram._renderStateBar();
   if (tool === 'connect') status(sourceKey ? 'Click the target state · Escape cancels' : 'Transition tool · drag from the source state to the target state');
 }
 
