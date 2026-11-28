@@ -6,8 +6,8 @@
     parallel: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z M12 7v2 M12 11v2 M12 15v2',
     final: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     history: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M9 8v8 M15 8v8 M9 12h6',
-    connect: 'M2 8h5v8H2z M17 8h5v8h-5z M7 12h10 M13 8l4 4-4 4',
-    transition: 'M4 18V9a2 2 0 0 1 2-2h10',
+    connect: 'M2 7h5v10H2z M17 7h5v10h-5z M7 12h10 M13 9l3 3-3 3',
+    transition: 'M11 5h11v14H11z M2 12h9 M7 8l4 4-4 4 M14 12h5 M16.5 9.5v5',
     trash: 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',
     undo: 'M3 9h11a6 6 0 0 1 0 12h-3 M3 9l6-6 M3 9l6 6',
     redo: 'M21 9H10a6 6 0 0 0 0 12h3 M21 9l-6-6 M21 9l-6 6',
@@ -49,7 +49,7 @@
     for (const [key, value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',class:'ui-icon'})) svg.setAttribute(key,value);
     const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',paths[name] || paths.state); svg.append(path);
     if (name === 'extras') { path.setAttribute('fill', 'currentColor'); path.setAttribute('stroke', 'none'); }
-    const arrowheads = {transition: 'M15 3L21 7L15 11Z', 'flow-right': 'M10 12.5L16 16.5L10 20.5Z', 'flow-down': 'M13.5 10L17.5 16L21.5 10Z'};
+    const arrowheads = {'flow-right': 'M10 12.5L16 16.5L10 20.5Z', 'flow-down': 'M13.5 10L17.5 16L21.5 10Z'};
     if (arrowheads[name]) {
       const head = document.createElementNS(svg.namespaceURI, 'path');
       head.setAttribute('d', arrowheads[name]); head.setAttribute('fill', 'currentColor'); head.setAttribute('stroke', 'none'); svg.append(head);
