@@ -12,8 +12,6 @@ class Element {
   insertBefore(e) {this.children.unshift(e);}
   get firstChild() {return this.children[0];}
   get lastChild() {return this.children.at(-1);}
-  get offsetTop() {return this.parent.children.indexOf(this) * 14;}
-  get offsetHeight() {return 14;}
   get clientHeight() {return 196;}
   addEventListener(type, fn) {this.listeners[type] = fn;}
   getBoundingClientRect() {return {width: 300, height: 100};}

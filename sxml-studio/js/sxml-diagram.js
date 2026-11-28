@@ -716,12 +716,12 @@
     content.setAttribute('role', 'region');
     content.setAttribute('aria-label', 'Datamodel content');
     viewport.appendChild(content);
-    let latestAddition = null;
+    let latestAdditionBottom = null;
     inf.fullText.split('\n').forEach((text, i) => {
       const line = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
       if (inf.live && inf.changedLines[i]) {
         line.setAttribute('class', 'fact-change');
-        latestAddition = line;
+        latestAdditionBottom = (i + 1) * 14;
       }
       line.textContent = text || '\u00a0';
       content.appendChild(line);
@@ -735,8 +735,9 @@
     const position = this.noteScrollPositions.get(dm.key);
     if (position) { content.scrollTop = position.top; content.scrollLeft = position.left; }
     this.followedDatamodels ||= new WeakSet();
-    if (latestAddition && !this.followedDatamodels.has(inf.live)) {
-      content.scrollTop = Math.max(0, latestAddition.offsetTop + latestAddition.offsetHeight - content.clientHeight);
+    if (latestAdditionBottom !== null && !this.followedDatamodels.has(inf.live)) {
+      // Fixed 14px rows avoid positioned HTML inside SVG, which WebKit mispaints.
+      content.scrollTop = Math.max(0, latestAdditionBottom - content.clientHeight);
       this.followedDatamodels.add(inf.live);
       this.noteScrollPositions.set(dm.key, {top: content.scrollTop, left: content.scrollLeft});
     }
