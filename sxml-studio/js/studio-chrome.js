@@ -86,7 +86,7 @@
   function inspector(root) {
     if (!root || root.querySelector('.ui-section')) { decorate(root); return; }
     const headings = [...root.querySelectorAll(':scope > .section-title')];
-    const names = {'DATAMODEL · PROLOG SOURCE':['Data','code'],'ENTRY ACTIONS':['Entry actions','play'],'EXIT ACTIONS':['Exit actions','stop'],'DEFERRED EVENTS':['Deferred events','clock'],'SPAWNED ACTORS':['Actors','structure'],'SUBCHART':['Subchart tools','copy']};
+    const names = {'DATAMODEL · PROLOG SOURCE':['Datamodel','code'],'ENTRY ACTIONS':['Entry actions','play'],'EXIT ACTIONS':['Exit actions','stop'],'DEFERRED EVENTS':['Deferred events','clock'],'SPAWNED ACTORS':['Actors','structure'],'SUBCHART':['Subchart tools','copy']};
     for (const heading of headings) {
       const key=[...heading.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
       if (!names[key]) continue;

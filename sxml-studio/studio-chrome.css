@@ -220,3 +220,8 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 
 /* Align the Runner controls with the SXML status strip, including on touch devices. */
 .editor-foot,#run .log-filters{box-sizing:border-box;height:calc(15px * var(--ui-font-scale,1) + 15px);min-height:0;flex:none}
+
+/* Keep the editor and side-panel header baselines aligned. */
+.editor-tabs,.side-tabs{box-sizing:border-box;height:52px;min-height:52px;flex:none}
+.side-tabs button{box-sizing:border-box;height:100%}
+@media(max-width:860px){.editor-tabs,.side-tabs{height:50px;min-height:50px}}
