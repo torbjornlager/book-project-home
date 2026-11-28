@@ -1174,6 +1174,7 @@ function logRow(cls, parts) {
   log.append(d);
   while (log.childElementCount > 1500) log.firstChild.remove();
   if (stick) log.scrollTop = log.scrollHeight;
+  return d;
 }
 const bold = t => { const b = document.createElement('b'); b.textContent = t; return b; };
 
@@ -1226,6 +1227,7 @@ function disposeNode() {
   run.node = null; run.pid = null; run.busy = false; run.starting = false; run.done = false;
   run.queue = []; clearTimeout(run.timer); run.timer = null;
   run.active = []; run.fired = new Set(); run.lastEvent = null; run.nested = new Map();
+  run.eventRows = new Map();
   diagram.setRun(false);
 }
 
@@ -1484,7 +1486,9 @@ function play(item) {
     const inner = item.text.slice(t.name.length + 1, -1);
     run.lastEvent = termOf(inner);
     run.fired = new Set();
-    logRow('trace', [t.name === 'external_event' ? 'ON: ' : 'ON: (internal) ', bold(inner)]);
+    const row = logRow('trace', [t.name === 'external_event' ? 'ON: ' : 'ON: (internal) ', bold(inner)]);
+    run.eventRows ||= new Map();
+    run.eventRows.set(item.actor || scope || '#root', {term: inner, row});
     return false;
   }
   if (t.name === 'transition') {
@@ -1497,7 +1501,17 @@ function play(item) {
   }
   if (t.name === 'microstep' || t.name === 'macrostep_complete') return false;
   if (t.name === 'execution') { logRow('trace', ['DO: ', h('code', {}, item.text.slice(10, -1))]); return false; }
-  if (t.name === 'unmatched') { logRow('trace', ['  unmatched ', bold(item.text.slice(10, -1))]); return false; }
+  if (t.name === 'unmatched') {
+    const inner = item.text.slice(10, -1), key = item.actor || scope || '#root';
+    const event = run.eventRows?.get(key);
+    if (event?.term === inner && event.row?.isConnected) {
+      const log = $('log'), stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+      event.row.append(' = Unmatched!');
+      if (stick) log.scrollTop = log.scrollHeight;
+    } else logRow('trace', ['ON: ', bold(inner), ' = Unmatched!']);
+    run.eventRows?.delete(key);
+    return false;
+  }
   logRow('trace', '  ' + item.text);
   return false;
 }

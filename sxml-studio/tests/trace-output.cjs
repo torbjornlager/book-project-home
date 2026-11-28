@@ -83,6 +83,24 @@ console.log('Checked live trace/output ordering, startup queuing, message/error 
   console.log('Checked ON/GO/IF/DO/IN labels, preserved details, internal events, targetless transitions and plain output.');
 }
 // The displayed event uses its event term, while transport-only bindings stay hidden.
+{
+  const rows=[], state={transitions:[{cond:'ready'}]}, chart={byId:new Map([['s',state]])};
+  const log={scrollTop:100,clientHeight:100,scrollHeight:200};
+  const trace={window:{studioTools:{scope:item=>item.actor==='child'?'child':null}},
+    model:{...chart,nested:new Map([['child',chart]])},run:{fired:new Set()},$:()=>log,bold:text=>text,
+    logRow(kind,parts){const row={text:[].concat(parts).join(''),isConnected:true,append(text){this.text+=text;}};rows.push(row);return row;}};
+  vm.createContext(trace);
+  vm.runInContext(app.slice(app.indexOf('function splitTop('),app.indexOf('function firedTransition('))+app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
+  const play=(text,actor='root')=>trace.play({type:'trace',text,actor});
+  play('external_event(pause)');play('guard_result(s,0,false)');
+  play('internal_event(retry)','child');play('unmatched(pause)');play('unmatched(retry)','child');
+  assert.deepEqual(rows.map(row=>row.text),['ON: pause = Unmatched!','IF: ready → false','ON: (internal) retry = Unmatched!'],'Annotate each actor’s event while retaining intervening guard results.');
+  play('external_event(pause)');play('unmatched(pause)');
+  assert.equal(rows.at(-1).text,'ON: pause = Unmatched!');assert.equal(rows.length,4,'Repeated unmatched events each produce only one event row.');
+  play('external_event(pause)');rows.at(-1).isConnected=false;play('unmatched(pause)');
+  assert.equal(rows.at(-1).text,'ON: pause = Unmatched!','If Clear removed the event row, show a complete standalone unmatched event.');
+  console.log('Checked single-row unmatched events, failed guards, interleaved actors, internal/repeated events and cleared rows.');
+}
 (async()=>{
   const entries=[], answer={type:'success',data:[{Ref:'internal-ref',From:'worker@localhost',Event:'e'}]};
   const sandbox={run:{pid:'chart@localhost',generation:1,busy:false,starting:false},window:{},editor:{getValue:()=>'<statechart/>'},
