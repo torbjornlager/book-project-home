@@ -112,7 +112,6 @@ const diagram = new SXMLDiagram.Diagram($('chart'), {
   onSelect(key) { onDiagramClick(key); },
   onOpen(key) { openInInspector(key); },
   onDouble(key, info) { diagramDouble(key, info); },
-  onHandle(key, dir, point) { extendFrom(key, dir, point); },
   stateActions(key) { return stateActions(key); },
   onStateAction(key, action) { stateAction(key, action); },
   onConnect(source, target, opts) { connect(source, target, opts); },
@@ -732,7 +731,7 @@ function stateAction(key, action) {
   if (!n) return;
   if (action === 'rename') renameInPlace(n);
   else if (action === 'child') quickAdd(n);
-  else if (action === 'transition') extendFrom(key, diagram.direction === 'DOWN' ? 'down' : 'right', null);
+  else if (action === 'transition') extendFrom(key);
   else if (action === 'zoom') diagram.zoomTo(key);
   else if (action === 'inspect') openInInspector(key);
   else if (action === 'delete') { select(key, { reveal: false }); removeSelected(); }
@@ -745,9 +744,9 @@ function uniqueEvent(doc) {
   return 'e' + i;
 }
 
-/* A side handle creates a sibling state and transition. Automatic layout
+/* The new-transition action creates a sibling state and transition. Automatic layout
    chooses its position; the placeholder event is edited on the canvas. */
-async function extendFrom(key, dir, point) {
+async function extendFrom(key) {
   if (!guard()) return;
   const s = model.byKey.get(key);
   if (!s || s.kind === 'final' || s.kind === 'history' || !s.parent) return;

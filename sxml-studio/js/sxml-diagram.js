@@ -586,7 +586,6 @@
       gLabels = el('g', {'clip-path': 'url(#' + this.headerClipId + ')'}, g);
     const gNotes = el('g', {}, g);       // notes are drawn above the chart
     this.overlay = el('g', {}, g);
-    this.handleLayer = el('g', { class: 'handles' }, this.overlay);
 
     const draw = n => {
       const b = boxes.get(n.key), inf = info.get(n.key);
@@ -801,26 +800,12 @@
     this._drawSelectionTools();
   };
 
-  /* Selected-state affordances: a handle on each side (click to add a
-     connected state, drag to connect or to create a new
-     state) and a small floating toolbar of state actions. */
-  Diagram.prototype._editable = function () { return !this.running && !this.readOnly && !!this.h.onHandle; };
+  /* Selected states retain their floating toolbar of state actions. */
+  Diagram.prototype._editable = function () { return !this.running && !this.readOnly; };
 
   Diagram.prototype._drawSelectionTools = function () {
-    const layer = this.handleLayer;
-    if (!layer) return;
-    while (layer.firstChild) layer.removeChild(layer.firstChild);
     const key = this.selected, n = key && this.nodeOf && this.nodeOf.get(key), b = n && this.geo && this.geo.boxes.get(key);
     const ok = !!(b && !n.scope && this._editable() && this.nodeEls.has(key));
-    if (ok && (n.kind === 'state' || n.kind === 'parallel')) {
-      const mid = { up: [b.x + b.w / 2, b.y], right: [b.x + b.w, b.y + b.h / 2], down: [b.x + b.w / 2, b.y + b.h], left: [b.x, b.y + b.h / 2] };
-      for (const dir of Object.keys(mid)) {
-        const g = el('g', { class: 'handle', 'data-handle': dir, 'data-source': key }, layer);
-        el('circle', { class: 'handle-hit', cx: mid[dir][0], cy: mid[dir][1], r: 11 }, g);
-        el('circle', { class: 'handle-dot', cx: mid[dir][0], cy: mid[dir][1], r: 5 }, g);
-        el('title', {}, g, 'Click: new transition to a new state · drag: connect to a state, or create a new state on empty space');
-      }
-    }
     this._stateBarKey = ok ? key : null;
     this._renderStateBar();
   };
@@ -950,13 +935,6 @@
       if (ev.button !== 0) return;
       svg.focus({ preventScroll: true });
       const stateEl = ev.target.closest('[data-state]');
-      const handleEl = ev.target.closest('[data-handle]');
-      if (handleEl && this._editable()) {
-        drag = { type: 'handle', source: handleEl.getAttribute('data-source'), dir: handleEl.getAttribute('data-handle'), start: this._point(ev), x: ev.clientX, y: ev.clientY, moved: false };
-        svg.setPointerCapture(ev.pointerId);
-        ev.preventDefault();
-        return;
-      }
       if (this.tool === 'connect' && stateEl && !this.running && !this.readOnly) {
         const key = stateEl.getAttribute('data-state');
         const start = this._point(ev);
@@ -981,10 +959,6 @@
         drag.moved = true; svg.classList.add('panning');
         this.tx = drag.tx + dx; this.ty = drag.ty + dy; this.userMoved = true; this._apply();
       } else {
-        if (drag.type === 'handle' && !drag.moved) {
-          if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 6) return;
-          drag.moved = true; svg.classList.add('moving');
-        }
         const p = this._point(ev);
         if (!drag.line) drag.line = el('path', { class: 'rubber', 'marker-end': 'url(#arrow-sel)' }, this.overlay);
         const from = drag.start, to = p;
@@ -1002,17 +976,6 @@
       const d = drag; drag = null;
       svg.classList.remove('panning');
       try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ }
-      if (d.type === 'handle') {
-        svg.classList.remove('moving');
-        if (d.line) d.line.remove();
-        if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
-        if (ev.type !== 'pointerup') return;
-        if (!d.moved) { this.h.onHandle(d.source, d.dir, null); return; }
-        const over = this._stateAt(ev);
-        if (over) this.h.onConnect(d.source, over, { inPlace: true });
-        else this.h.onHandle(d.source, d.dir, this._point(ev));
-        return;
-      }
       if (d.type === 'connect') {
         if (d.line) d.line.remove();
         if (d.over && this.nodeEls.get(d.over)) this.nodeEls.get(d.over).classList.remove('drop');
@@ -1141,7 +1104,7 @@
       target.removeAttribute('data-tooltip');
     }
     clone.lastChild.removeAttribute('transform');
-    for (const o of clone.querySelectorAll('.handle,.rubber,.ghost,.end')) o.remove();
+    for (const o of clone.querySelectorAll('.rubber,.ghost,.end')) o.remove();
     const notes = global.SXMLStudio?.metadata(this.model.doc).notes || [];
     if (notes.length) {
       let y = Math.ceil(this.geo.height) + 16;

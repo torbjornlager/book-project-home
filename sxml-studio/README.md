@@ -116,7 +116,7 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
 - Editing: add states on the canvas; use the Inspector’s Type field to choose
   parallel, final or history. Default labels
   are `s0`, `s1`, … for states, `p0`, `p1`, … for parallel states, `f0`, `f1`, …
-  for final states, `h0`, `h1`, … for history states, and `e0`, `e1`, … for events. Use diagram handles or the
+  for final states, `h0`, `h1`, … for history states, and `e0`, `e1`, … for events. Use the
   Transition shortcut (key T) to connect states, and edit in the Inspector. Transition
   order determines priority. Renaming a state updates references; Delete removes
   it together with transitions that target it.
@@ -128,16 +128,15 @@ Run `node tests/layout-experiments.cjs` for the nested-chart regression checks.
   or the body of an expanded compound or parallel state, to add a state there and
   name it at once. Enter saves, Escape cancels; every edit is undoable. While a
   chart runs, double-click opens the Inspector instead.
-- A selected state shows a handle on each side and a small floating toolbar
-  (rename, add child, new transition, zoom to, Inspector, delete). Click a handle
-  to add a sibling state with a transition to it (placeholder event
-  `e0`, `e1`, …), then name the event on the canvas. Drag a handle onto a state
-  to connect to it, or onto empty space to create a new connected state.
-  Automatic layout chooses the new state’s position.
+- A selected state shows a small floating toolbar
+  (rename, add child, new transition, zoom to, Inspector, delete). New transition
+  adds a sibling state with a transition to it (placeholder event `e0`, `e1`, …),
+  then lets you name the event on the canvas. Automatic layout chooses the new
+  state’s position.
 - Layout: ELK arranges the diagram automatically after edits. States, transition
   labels and datamodel notes have no manual positions. Gray state headers cover transition lines and labels
   in both layout directions; the original automatic routes stay intact. Drag empty canvas to pan;
-  scrolling, zooming, selection, double-click editing and connection handles remain
+  scrolling, zooming, selection, double-click editing and the state toolbar remain
   available. **Fit** fits the chart to the pane; **Direction** switches the overall
   flow. Layout direction and each parallel
   state’s region arrangement are saved in a trailing `<layout>` comment.

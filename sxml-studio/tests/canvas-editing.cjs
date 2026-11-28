@@ -59,30 +59,4 @@ assert.deepEqual(doubles, [['#root', false, {x: 5, y: 7}]]);
 const name = {getAttribute: () => 'idle', closest(sel) { return sel === '[data-key]' ? this : null; }, classList: {contains: c => c === 'name'}};
 click(name); click(name);
 assert.deepEqual(doubles[1].slice(0, 2), ['idle', true]);
-// Side handles: a click extends in that direction, a drag connects or places a new state.
-const handled = [], connects = [];
-diagram.h.onHandle = (...a) => handled.push(a);
-diagram.h.onConnect = (...a) => connects.push(a);
-diagram.overlay = {style: {}};
-let over = 'busy';
-diagram._stateAt = () => over;
-const handle = {getAttribute: n => n === 'data-source' ? 'idle' : 'down', closest(sel) { return sel === '[data-handle]' ? this : null; }, classList: {contains: () => false}};
-function press(target, dx = 0) {
-  const e = {button: 0, pointerId: 1, clientX: 5, clientY: 7, target, preventDefault() {}};
-  listeners.pointerdown(e);
-  if (dx) listeners.pointermove({...e, clientX: 5 + dx});
-  listeners.pointerup({...e, type: 'pointerup', clientX: 5 + dx});
-}
-global.document.createElementNS = () => ({setAttribute() {}, remove() {}});
-diagram.overlay.appendChild = () => {};
-press(handle);
-assert.deepEqual(handled, [['idle', 'down', null]]);
-press(handle, 40);
-assert.deepEqual(connects, [['idle', 'busy', {inPlace: true}]]);
-over = null;
-press(handle, 40);
-assert.deepEqual(handled[1], ['idle', 'down', {x: 45, y: 7}]);
-diagram.readOnly = true;
-press(handle);
-assert.equal(handled.length, 2, 'Handles do nothing while read-only.');
 console.log('canvas-editing: ok');
