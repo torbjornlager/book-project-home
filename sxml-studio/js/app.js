@@ -1491,7 +1491,7 @@ function play(item) {
     const src = unquote(t.args[0] || ''), targets = listOf(t.args[1] || '[]');
     const tr = window.studioTools ? null : firedTransition(src, targets);
     if (tr) run.fired.add(tr.key);
-    logRow('trace', ['TO: ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
+    logRow('trace', ['GO: ', bold(src + (targets.length ? ' → ' + targets.join(' ') : ' (stay)'))]);
     if (!targets.length) { diagram.setRun(true, run.active, run.fired, run.nested); return true; }
     return false;
   }

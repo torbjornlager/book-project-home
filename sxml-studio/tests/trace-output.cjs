@@ -74,13 +74,13 @@ console.log('Checked live trace/output ordering, startup queuing, message/error 
   vm.createContext(trace);
   vm.runInContext(app.slice(app.indexOf('function splitTop('),app.indexOf('function firedTransition('))+app.match(/function play\(item\) \{[\s\S]*?\n\}/)[0],trace);
   for(const text of ['external_event(input([red]))','guard_result(s1,0,true)','transition(s1,[s2])',"execution(writeln('red'))",'configuration([s2])']) trace.play({type:'trace',text});
-  assert.deepEqual(rows,['ON: input([red])','IF: ready(X) → true','TO: s1 → s2',"DO: writeln('red')",'IN: {s2}']);
+  assert.deepEqual(rows,['ON: input([red])','IF: ready(X) → true','GO: s1 → s2',"DO: writeln('red')",'IN: {s2}']);
   rows.length=0;
   trace.play({type:'trace',text:'internal_event(retry)'});
   trace.play({type:'trace',text:'transition(s1,[])'});
   trace.play({type:'output',text:'Plain program output'});
-  assert.deepEqual(rows,['ON: (internal) retry','TO: s1 (stay)','Plain program output']);
-  console.log('Checked ON/TO/IF/DO/IN labels, preserved details, internal events, targetless transitions and plain output.');
+  assert.deepEqual(rows,['ON: (internal) retry','GO: s1 (stay)','Plain program output']);
+  console.log('Checked ON/GO/IF/DO/IN labels, preserved details, internal events, targetless transitions and plain output.');
 }
 // The displayed event uses its event term, while transport-only bindings stay hidden.
 (async()=>{
