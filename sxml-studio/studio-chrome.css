@@ -210,7 +210,7 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 #run .log>div{padding:3px 0;margin:0;border-bottom:1px solid var(--line)}
 #run .log>div:last-child{border-bottom:0}
 #run .log .trace{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace}
-#run .log-filters{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;padding:4px 14px;border-bottom:1px solid var(--line);flex:none;font-size:calc(12px * var(--ui-font-scale,1))}
+#run .log-filters{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;padding:4px 14px;border-top:1px solid var(--line);background:var(--panel);flex:none;font-size:calc(12px * var(--ui-font-scale,1))}
 #run .log-filters label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 #run .log-filters input{width:14px;height:14px;min-height:0;margin:0;padding:0;accent-color:var(--accent)}
 #run .log.hide-trace .trace,#run .log.hide-output .out,#run .log.hide-output .note,#run .log.hide-prolog .goal,#run .log.hide-prolog .answer{display:none}
