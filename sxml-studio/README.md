@@ -206,6 +206,8 @@ visible **Trace and output** log that fills the remaining panel space. Enter a
 concrete Prolog term and click **!** or press Return to send it. Once the
 interpreter accepts the event, the field clears and regains focus immediately.
 Events, state changes, program output and errors appear live in the log.
+The toolbar checkboxes filter **Trace**, **Output**, and **Prolog** calls and
+answers, including earlier entries. All start visible; errors always remain visible.
 Guard results are shown only for transitions with an explicit guard. It
 follows new entries while scrolled to the bottom; **Clear** empties the log.
 

@@ -26,6 +26,25 @@ for(let i=0;i<1500;i++)logging.logRow('out',String(i));assert.equal(log.children
 const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 assert(html.includes('Trace and output'));assert(html.includes('role="log"'));
 assert(!/id="(?:suggestions|show-trace)"/.test(html));
+{
+  const classes=new Set(),controls={};
+  const filteredLog={scrollTop:100,clientHeight:100,scrollHeight:200,classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}}};
+  for(const kind of ['trace','output','prolog']) controls['log-'+kind]={checked:true};
+  const filters={$:id=>id==='log'?filteredLog:controls[id]};
+  vm.createContext(filters);vm.runInContext(app.match(/function applyLogFilters\(\) \{[\s\S]*?\n\}/)[0],filters);
+  filters.applyLogFilters();assert.equal(classes.size,0,'All categories start visible.');
+  for(const kind of ['trace','output','prolog']) {
+    controls['log-'+kind].checked=false;filters.applyLogFilters();
+    assert(classes.has('hide-'+kind));
+    controls['log-'+kind].checked=true;filters.applyLogFilters();
+    assert.equal(classes.size,0,'Each filter can be toggled independently without deleting entries.');
+  }
+  filteredLog.scrollTop=0;filteredLog.scrollHeight=500;
+  controls['log-trace'].checked=false;filters.applyLogFilters();
+  assert.equal(filteredLog.scrollTop,0,'Filtering must not force readers to the bottom.');
+  for(const kind of ['trace','output','prolog']) assert(html.includes('id="log-'+kind+'" type="checkbox" checked'));
+  console.log('Checked independent log filters, default visibility and reading-position preservation.');
+}
 console.log('Checked live trace/output ordering, startup queuing, message/error rendering, follow-scroll, bounded log and the simplified Run markup.');
 // Compact trace labels retain event terms, transition direction, guard results and actions.
 {

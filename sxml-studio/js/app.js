@@ -1177,6 +1177,13 @@ function logRow(cls, parts) {
 }
 const bold = t => { const b = document.createElement('b'); b.textContent = t; return b; };
 
+function applyLogFilters() {
+  const log = $('log');
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  for (const kind of ['trace', 'output', 'prolog']) log.classList.toggle('hide-' + kind, !$('log-' + kind).checked);
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+
 function runControls() {
   const triggerMode = $('transition-trigger-mode');
   if (triggerMode && triggerMode.disabled !== (!!run.pid || run.starting)) renderInspector();
@@ -1818,6 +1825,8 @@ function setView(view) {
 for (const b of document.querySelectorAll('.view-switch button')) b.onclick = () => b.dataset.view === 'split' ? openSplitMenu(b) : setView(b.dataset.view);
 
 $('clear').onclick = () => $('log').replaceChildren();
+for (const kind of ['trace', 'output', 'prolog']) $('log-' + kind).onchange = applyLogFilters;
+applyLogFilters();
 function updateUI(settings) {
   const preferences = SXMLUI.apply(settings);
   diagram.appearanceTheme = preferences.theme;

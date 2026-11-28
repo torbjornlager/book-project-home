@@ -171,8 +171,9 @@ body[data-focus=true] .workspace,body[data-focus=true] .query-pane,body[data-foc
 #run .hint{font-size:calc(11px * var(--ui-font-scale,1));line-height:1.4;margin:4px 0 6px}
 #run .event-row{padding:2px 0 4px;gap:6px}
 #run input,#run select{font-family:inherit;font-size:calc(12px * var(--ui-font-scale,1));line-height:1.4;padding:5px 8px;min-height:32px}
-#run .event-row input{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:calc(12px * var(--ui-font-scale,1))}
-#run .event-row button{width:32px;min-width:32px;height:32px;min-height:32px;padding:6px!important}
+#run .event-row input{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:calc(12px * var(--ui-font-scale,1));min-height:24px;padding:2px 8px}
+#run .event-row button{width:32px;min-width:32px;height:24px;min-height:24px;padding:2px 6px!important}
+#run .example-event-buttons button{padding:2px 9px;min-height:24px}
 #run .log-title{padding:5px 14px;font-family:inherit}
 #run .log-title input{min-height:0;padding:0}
 #run .log{padding:6px 14px;font-family:inherit;line-height:1.4}
@@ -207,5 +208,10 @@ input::placeholder,textarea::placeholder{font-weight:300;color:var(--muted);opac
 #run .log{flex:1;min-height:0;overflow:auto;font-size:calc(12px * var(--ui-font-scale,1))}
 #run .log .trace{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;padding:3px 0;margin:0}
 #run .log .trace+.trace{border-top:1px solid var(--line)}
+#run .log-filters{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;padding:4px 14px;border-bottom:1px solid var(--line);flex:none;font-size:calc(12px * var(--ui-font-scale,1))}
+#run .log-filters label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+#run .log-filters input{width:14px;height:14px;min-height:0;margin:0;padding:0;accent-color:var(--accent)}
+#run .log.hide-trace .trace,#run .log.hide-output .out,#run .log.hide-output .note,#run .log.hide-prolog .goal,#run .log.hide-prolog .answer{display:none}
 
 @media(pointer:coarse){#run button,#run input:not([type=checkbox]),#run select{min-height:44px}#run .event-row button{height:44px;width:44px;min-width:44px}}
+@media(pointer:coarse){#run .example-event-buttons button,#run .event-row input,#run .event-row button{min-height:33px}#run .event-row button{height:33px}}

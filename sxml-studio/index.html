@@ -18,10 +18,10 @@
 <script defer src="js/studio-model.js?v=20261126-inspector-cog"></script>
 <script defer src="js/studio-workspace.js?v=20261127-trace-output"></script>
 <script defer src="js/studio-chrome.js?v=20261127-runner-datamodel"></script>
-<script defer src="js/app.js?v=20261128-guard-expression"></script>
+<script defer src="js/app.js?v=20261128-log-filters"></script>
 <script defer src="js/studio-tools.js?v=20261127-runner-datamodel"></script>
 <link rel="stylesheet" href="studio-tools.css?v=20261127-trace-output">
-<link rel="stylesheet" href="studio-chrome.css?v=20261128-trace-labels">
+<link rel="stylesheet" href="studio-chrome.css?v=20261128-log-filters">
 </head>
 <body class="light" data-view="split" data-layout="vertical">
 <script src="js/ui-preferences.js"></script>
@@ -50,6 +50,11 @@
 <div id="debug-tools"></div>
 <section class="trace-output" aria-labelledby="trace-output-title">
 <div class="section-title log-title"><span id="trace-output-title">Trace and output</span><button id="clear" type="button">Clear</button></div>
+<div class="log-filters" role="toolbar" aria-label="Trace and output filters">
+<label><input id="log-trace" type="checkbox" checked>Trace</label>
+<label><input id="log-output" type="checkbox" checked>Output</label>
+<label title="Prolog calls and answers"><input id="log-prolog" type="checkbox" checked>Prolog</label>
+</div>
 <div id="log" class="log" role="log" aria-labelledby="trace-output-title" aria-live="polite" tabindex="0"></div>
 </section>
 </div>
